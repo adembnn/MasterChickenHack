@@ -33,6 +33,8 @@ def repair_head_ridge(features, original_logits, weight, bias, alpha=0.25, ridge
     A = torch.cat([X, torch.ones((n, 1), dtype=X.dtype)], dim=1)
     before = X @ W.T + b
     residual = Y - before
+    # Softmax and KL are invariant to per-image constant logit shifts.
+    residual = residual - residual.mean(dim=1, keepdim=True)
     gram = A.T @ A / n
     scale = gram.diagonal()[:d].mean().clamp_min(1e-8)
     R = torch.eye(d + 1, dtype=X.dtype) * (ridge * scale)
