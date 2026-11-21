@@ -23,7 +23,8 @@ Réseau : `default-network` / `default-subnet-eqxzbx6y`. Ping nœud 3 → nœud 
 Autres guides : [`acces-h200-nebius.md`](acces-h200-nebius.md),
 [`acces-h200-nebius-noeud-2.md`](acces-h200-nebius-noeud-2.md),
 [`acces-h200-nebius-noeud-3.md`](acces-h200-nebius-noeud-3.md),
-[`acces-h200-nebius-noeud-4.md`](acces-h200-nebius-noeud-4.md).
+[`acces-h200-nebius-noeud-4.md`](acces-h200-nebius-noeud-4.md),
+[`acces-h200-nebius-noeud-6.md`](acces-h200-nebius-noeud-6.md).
 
 ## Accès SSH (obligatoire via saut)
 
@@ -80,8 +81,8 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOrcQHTRXMvoEw7wPBkshhzFP9mQL5oyd7YFsPIVy2gP
 ssh -F /clients/ami/.ssh/eac_nebius_h200_5_config eac-h200-5 nvidia-smi
 ```
 
-Cette config fait `ProxyJump` via `eac-h200-3` (`66.201.6.94`). Test OK : GPU vu,
-`torch.cuda` → `True`.
+Cette config fait `ProxyJump` via `eac-h200-3-jump` (`66.201.6.94`). Test OK : GPU vu,
+`torch.cuda` → `True`, `~/.curlcfg` présent.
 
 ## Environnement partagé
 
