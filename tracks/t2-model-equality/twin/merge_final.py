@@ -34,8 +34,14 @@ def main():
     a = ap.parse_args()
     d = Path(a.ep_dir)
     fam = json.load(open(d / "assign.json"))["family_twin"]
-    fb = {r["endpoint"]: r["model"] for r in csv.DictReader(open(d / "submission_ep_fallback.csv"))}
+    fbp = d / "submission_ep_fallback.csv"
+    fb = {r["endpoint"]: r["model"] for r in csv.DictReader(open(fbp))} if fbp.exists() else {}
     lab = read_labels(a.labels)
+    # étiquette « base » de chaque famille côté fp8 (ex. "qwen3b_base"), pour qu'un endpoint sans étiquette la rejoigne
+    base_of = {}
+    for e, l in lab.items():
+        if l.endswith("_base") and e in fam:
+            base_of.setdefault(fam[e], l)
     out, src = {}, {}
     for e in sorted(fam):
         f = SHORT.get(fam[e].split("/")[-1], fam[e].split("/")[-1].lower()).replace(".", "")
@@ -43,7 +49,7 @@ def main():
             out[e] = (f, f + "_" + lab[e].replace(",", "_").replace(" ", "_"))
             src[e] = "fp8"
         else:
-            out[e] = (f, f + "_repli_" + fb.get(e, e))
+            out[e] = (f, f + ("_repli_" + fb[e] if e in fb else "_" + base_of.get(fam[e], "base")))
             src[e] = "repli"
     with open(a.out, "w") as fh:
         fh.write("endpoint,family,model\n")
