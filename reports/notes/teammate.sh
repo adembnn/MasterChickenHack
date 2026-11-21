@@ -45,7 +45,7 @@ if [[ -z "$TEAM_LEAD" || -z "$TEAM_FOLDER" || "$TEAM_LEAD" == */* || "$TEAM_FOLD
     return 1
 fi
 
-PROJECT_NAME="training2625"
+PROJECT_NAME="training2666"
 WRITE_TO_BASHRC="yes"
 
 SCRATCH_BASE="/p/scratch/$PROJECT_NAME"
