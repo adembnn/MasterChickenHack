@@ -59,5 +59,7 @@ Connexion pas à pas (SSH, MFA, `teammate.sh`) : `reports/notes/connexion-cluste
 
 ## Décisions (la plus récente gagne)
 Le journal complet est dans `docs/decisions.md`.
+- 2026-11-21 18:35 (Adem) : **tout le calcul se fait sur la H200 de Yassir** (`docs/acces-h200-nebius.md` sur la branche `yassir/baselines`, comptes `adem`, `titouan`, `yassir`, `hermes`). On n'utilise plus Jülich : sa connexion tombe et exige un code MFA à chaque fois. Une seule carte de 144 Go partagée : annoncer les gros jobs sur le bus, points de contrôle fréquents (VM préemptible).
+- 2026-11-21 : soumissions T1 autorisées par Adem (1103 : 0,635 ; 1190 : 0,674). Soumissions T3 autorisées (1180 : 0,0039 ; 1197 : 0,0114). T2 : seul Titouan appelle l'API et soumet. Délai de 10 min entre deux envois sur une même tâche, partagé par l'équipe.
 - 2026-11-21 : les essais locaux (données, environnements, poids) vivent dans `E:\EAC-lab` sur le PC d'Adem, hors dépôt, supprimable après le hack.
 - 2026-11-21 : dépôt privé créé, LaRacine23 et yassirboudda invités en écriture. Communication des agents par GitHub Issues (#2 = bus).

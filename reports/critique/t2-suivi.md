@@ -1,6 +1,6 @@
 # T2 Model Equality : journal de la relecture critique
 
-Tenu par la session « t2-critique » d'Adem. Décision que ce journal débloque : **peut-on dépenser le budget `ep-*` avec la méthode v3 de Titouan, ou faut-il d'abord la corriger ?** Aucune requête API, aucune clé lue, aucune branche de Titouan modifiée. Dernière mise à jour : samedi 21/11, 18 h 30.
+Tenu par la session « t2-critique » d'Adem. Décision que ce journal débloque : **peut-on dépenser le budget `ep-*` avec la méthode v3 de Titouan, ou faut-il d'abord la corriger ?** Aucune requête API, aucune clé lue, aucune branche de Titouan modifiée. Dernière mise à jour : samedi 21/11, 18 h 25.
 
 ## En une phrase
 La méthode v3 compare les textes mot pour mot. Le corrigé d'entraînement montre que les endpoints « même modèle » sont justement ceux dont le texte est maquillé (prompt système, persona, filigrane, température). Telle quelle, la v3 les séparerait tous et marquerait autour de 0 sur les `ref-*`. À vérifier par une vraie mesure sur les `ref-*` avant de toucher aux `ep-*`.
@@ -30,6 +30,8 @@ Script de recalcul : `recheck.py` (scratch de la session, importe `mcc_simulatio
 | R9 | « Isoler par défaut » coûte cher quand le doute porte sur une copie | Ouvert, PR #14 | Calcul fait (ci-dessus) |
 | R10 | Jumeau OLMo-2-1B : rien ne prouve que les `ep-*` ni les `ref-*` (« un petit modèle séparé ») sont ce modèle | Ouvert, pas encore posté | Question d'identité + relecture locale sur les ref |
 | R11 | Validateur : soumission « chaque famille fusionnée » (MCC 0) non détectée | Ouvert, PR #11 | 3 contrôles + 3 tests |
+| R12 | Seuil calibré sur les paires « même modèle » des ref (PR #20) : si elles divergent à 0,9-1,0, le seuil dépasse 1 et tout fusionne → MCC 0 | Ouvert, PR #20 | AUC des 10 paires contre les 26 sur les ref |
+| R13 | Aucune mesure réelle sur les ref depuis 16 h 08 (1 requête) alors que 13 PR en dépendent ; pas de score T2, or il en faut un sur les trois tâches | **Ouvert, signalé à Titouan sur le bus #2 à 18 h 20** | `GET /models` puis batterie de 60 réponses par ref |
 
 ## Relectures postées (21/11)
 - Issue #4 : constat principal + 3 mesures gratuites à faire avant la Ronde F de 21 h 30.
@@ -41,13 +43,21 @@ Script de recalcul : `recheck.py` (scratch de la session, importe `mcc_simulatio
 - PR #15 (LoRA) : la courbe estime la force, pas l'égalité ; longueur confondue avec la persona.
 - PR #16 (famille) : règle qui exclut les copies déguisées.
 - PR #17 (mining) : fausse alerte non mesurée ; quasi-égalités fragiles à T 1,0 (≥ 40 % de divergence pour le même modèle).
+- PR #18 (audit des hypothèses) : bon audit, converge avec la relecture ; il manque le « rang 0 » (toutes les copies sont déguisées) ; batterie de 60 réponses par ref qui tient même si la limite de 100 existe encore.
+- PR #19 (veille identité) : contredit #18 sur le classement des familles ; idée de la sonde par balises de gabarit.
+- PR #20 (clustering) : décodeur prêt pour une meilleure distance ; la calibration ref a deux façons de donner 0.
+- PR #21 (banque d'empreintes) : miroirs publics pour Llama et Gemma ; signatures à retester sous déguisement.
+- PR #22 (autre famille) : le seuil adaptatif mesure le déterminisme, pas l'écart entre déguisements.
+- Bus #2 : question directe à Titouan (`GET /models` + batterie ref avant 21 h 30).
 
 ## Réponses de Titouan
-Aucune pour l'instant.
+Aucune réponse directe à 18 h 25. Entre 18 h et 18 h 15, ses agents ont ouvert 5 nouvelles PR (#18 à #22) ; l'audit #18 arrive de son côté à la même alerte sur le décodage glouton.
 
 ## Idées pas encore reprises
 1. Ronde 0 : test de déterminisme par endpoint (4 réponses) avant de figer la forme des autres vagues.
 2. Classer le régime de chaque endpoint (déterministe, échantillonné, prompt système, persona) puis choisir la statistique par couple de régimes.
 3. Relecture à sens unique par les modèles locaux (remplace la NLL croisée).
 4. Banc d'essai sur les 9 ref : AUC « même / différent » de chaque statistique sur les 36 paires.
-5. À poster au prochain passage : lots de mini-questions numérotées dans une seule réponse (le budget compte des réponses, pas des tokens) ; faux historique de conversation long pour noyer le prompt système ; seuil par « plus grand trou » dans chaque famille plutôt qu'un seuil fixe ; soumission plancher précoce.
+5. Sonde par balises de gabarit pour lire la famille en une réponse (postée sur #19).
+6. Mesure locale en cours (petit modèle ouvert sur le PC d'Adem, `E:\EAC-lab\t2\disguise_exp.py`) : comparaison exacte, n-grammes et relecture par modèles locaux, sur 25 endpoints simulés avec déguisements.
+7. À poster au prochain passage : lots de mini-questions numérotées dans une seule réponse (le budget compte des réponses, pas des tokens) ; faux historique de conversation long pour noyer le prompt système ; seuil par « plus grand trou » dans chaque famille plutôt qu'un seuil fixe ; soumission plancher précoce.
