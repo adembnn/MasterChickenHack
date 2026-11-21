@@ -3,6 +3,14 @@
 **Décision débloquée** : comment dépenser 25 des 75 réponses `ep` restantes pour séparer une copie fp8 de la base.
 Zéro requête. Jumeau SmolLM2-360M (h200c), positions prises dans les 225 vraies réponses `ref` du bloc 0.
 
+> **⚠ 21/11 23 h 45 : protocole NON VALIDÉ sur les vrais ref, ne pas envoyer les fichiers ep.** Le serveur ne continue
+> pas le préfixe `assistant` : il ferme ce tour et en ouvre un nouveau. Log p_base moyen du token rendu (166 réponses) :
+> −2,46 sous « nouveau tour », contre −18,96 sous « continuation » (−14,20 avec une espace). Réponses typiques :
+> « I », « These », « Remove », « 1 ». Critère pré-enregistré (ref-02 LLR > 0) : **échec**, ref-02 = −1,00 sous
+> l'hypothèse « nouveau tour ». AUC ref-02 contre les copies S = 0,80, sur des positions non choisies pour ce gabarit
+> (bruit). Relecture : `score2.py`. Les positions des fichiers `prefill_*` supposaient la continuation : elles ne
+> valent rien tant que le gabarit n'est pas corrigé.
+
 ## Principe
 L'API respecte un préfixe `assistant` imposé et accepte `max_tokens=1`. On impose donc un texte de réponse coupé
 juste avant un token où la base et sa copie fp8 ne prédisent pas la même chose, et on tire un token.
