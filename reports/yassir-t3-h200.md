@@ -34,6 +34,47 @@ Le fichier respecte le format `state_dict` strict, float32, valeurs finies,
   `forget_images.npz`. Ajouter `reports/sources/t3` du dépôt à `PYTHONPATH`
   pour réutiliser le chargeur officiel.
 
-La voie de soumission est le client officiel T3 avec la configuration
-d'équipe déjà sur JURECA. Le candidat est prêt à transmettre à un membre
-ayant cet accès. Garder la clé API dans la configuration d'équipe.
+## Deux variantes avec les derniers blocs entraînables
+
+`t3_suffix.py` garde les dix premiers blocs figés, met leurs activations
+en cache sur H200 et entraîne les deux derniers blocs, la normalisation
+finale et la tête. Les 700 images réservées suivent le même split que
+l'essai de la tête. Les mélanges d'images ancrent le comportement au
+professeur, dont les poids restent figés.
+
+| Candidat sur la réserve | KL exact | KL recadrage léger | KL rétention | Accord top-1 rétention |
+|---|---:|---:|---:|---:|
+| Original | 0,05839 | 0,04964 | 0 | 100 % |
+| Tête seule | 0,04690 | 0,03768 | 0,02498 | 97,43 % |
+| Deux blocs, ancrage 2,0 | 0,05411 | 0,04524 | 0,00101 | 99,14 % |
+| **Deux blocs, ancrage 0,45 (v2)** | **0,04738** | **0,03822** | **0,00908** | **98,14 %** |
+
+La v2 réduit le KL du proxy d'oubli de 18,9 % sur les images exactes et de
+23,0 % sur les recadrages légers. Elle est le premier candidat de ce lot
+pour une soumission officielle. Le checkpoint ne modifie que 32 tenseurs
+du suffixe, se recharge en mode strict et produit des logits finis.
+
+Depuis le dossier des données, avec le même `PYTHONPATH` que pour la tête :
+
+```bash
+python "$REPO/tracks/t3-unlearning/experiments/t3_suffix.py" \
+  --lr 4e-5 --epochs 8 --anchor-weight 0.45 --out candidate_suffix_v2_t3.pt
+```
+
+## Dépôt officiel
+
+- H200, comptes `adem` et `titouan` :
+  `$HOME/eac-h200/t3-codex/candidate_suffix_v2_t3.pt`.
+- H200, compte `hermes` :
+  `/home/hermes/eac/t3-codex/candidate_suffix_v2_t3.pt`.
+- Taille : 343 631 070 octets. SHA-256 :
+  `05cd0dde2c6bc1e3f1dc41c5098780b853ebe935420003f900488d25afb5f082`.
+
+Déposer le fichier via le client officiel
+`reports/sources/t3/submission.py` et la configuration d'équipe existante.
+Le seul endpoint concerné est `/submit/31-unlearning`. Le fichier a été
+copié et vérifié sur les trois comptes H200. Les agents peuvent l'envoyer
+depuis une session qui a déjà accès à la clé du concours. Elle reste dans
+la configuration privée. Reporter le score exact retourné par le serveur
+dans l'[issue T3](https://github.com/adembnn/EAC/issues/5) avant de choisir
+la prochaine expérience.
