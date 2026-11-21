@@ -969,11 +969,10 @@ def cmd_decide(a):
         T_of = {n: (best[n][1].get("T_star", 0.0) if E[n]["sampling"] else 0.0) for n in names}
         refset = [n for n in names if T_of[n] < 1.0]
         P(f"\nLecteurs ({', '.join(Rd['schemes'])}) ; référence = endpoints de T* < 1,0 : {refset}")
-        labels, variants = {}, []
-        for n in names:
+        def reader_z(n, ref_eps):
             zs = {}
             for sch in Rd["schemes"]:
-                others = [m for m in refset if m != n]
+                others = [m for m in ref_eps if m != n]
                 if len(others) < 2:
                     continue
                 d = [Rd["S"][sch][n][i] - mean([Rd["S"][sch][m][i] for m in others]) for i in range(len(Rd["S"][sch][n]))]
@@ -981,6 +980,21 @@ def cmd_decide(a):
                 mu = mean(d)
                 sd = (sum((x - mu) ** 2 for x in d) / (len(d) - 1)) ** 0.5
                 zs[sch] = mu / (sd / len(d) ** 0.5) if sd > 0 else 0.0
+            return zs
+        # référence élaguée itérativement : les endpoints déjà isolés par un lecteur sortent de la référence, puis on
+        # recalcule, jusqu'à stabilité (les LoRA fortes ne tirent plus la référence vers le haut)
+        flagged = set()
+        for _ in range(10):
+            ref_eps = [m for m in refset if m not in flagged]
+            zall = {n: reader_z(n, ref_eps) for n in names}
+            new_flag = {n for n, zs in zall.items() if any(z >= a.t_crit for z in zs.values())}
+            if new_flag == flagged:
+                break
+            flagged = new_flag
+        P(f"Référence élaguée (endpoints isolés retirés) : {[m for m in refset if m not in flagged]}")
+        labels, variants = {}, []
+        for n in names:
+            zs = zall[n]
             fired = [sch for sch, z in zs.items() if z >= a.t_crit]
             dump[n]["readers_z"] = {sch: round(z, 3) for sch, z in zs.items()}
             P(f"  {n}: T*={T_of[n]} z=" + " ".join(f"{sch}:{z:+.1f}" for sch, z in zs.items())

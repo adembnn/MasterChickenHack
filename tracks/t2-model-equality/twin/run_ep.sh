@@ -21,7 +21,7 @@ for m in $($P -c "import json;print(' '.join(sorted(set(json.load(open('$D/assig
   mem=$($P -c "import json;a=json.load(open('$D/assign.json'))['family_twin'];print(','.join(sorted(e for e,v in a.items() if v=='$m')))")
   n=$(echo $mem | tr ',' '\n' | wc -l)
   pool=""   # pré-enregistré : plancher local (MCC réel ref 0,273) plutôt que référence pool (0,000)
-  LORA_EST="${LORA_EST-$HOME/casser-fp8/lora_est_bloc0}"; LORA_SCALE="${LORA_SCALE:-0.4667}"
+  LORA_EST="${LORA_EST-$HOME/casser-fp8/lora_est_bloc0}"; LORA_SCALE="${LORA_SCALE:-1.0}"
   lora=""; [ -n "${LORA_EST:-}" ] && [ "$t" = "SmolLM2-360M-Instruct" ] && lora="--lora $LORA_EST --lora_scale ${LORA_SCALE:-1.0}"
   ( $P method_v4.py from_journal --journal "$J" --endpoints $mem --model $m --out $D/raw_$t.json --answers practice_answers.csv > $D/from_$t.log 2>&1 \
     && $P method_v4.py reread --raw $D/raw_$t.json --out $D/reread_$t.json > $D/reread_$t.log 2>&1 \
