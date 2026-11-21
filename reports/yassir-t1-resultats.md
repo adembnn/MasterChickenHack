@@ -44,8 +44,17 @@ haut veut dire que la carte est franche : peu de cellules hésitent entre propre
 du test présents une fois, format conforme. Part de cellules à 1 : 0,497 PixelSeal, 0,360 TrustMark,
 0,390 StegaStamp.
 
-La soumission 1103 d'Adem mène le classement public à 0,634988. Garder la
-baseline canevas comme diagnostic et conserver la soumission 1103.
+La soumission 1103 d'Adem a atteint 0,634988. La soumission **1190** a repris
+la première place à **0,674178901** au relevé de 18 h 21. Elle assemble
+PixelSeal v2 (décodeur ConvNeXt), TrustMark v3 mixr et StegaStamp v3 mixr
+(U-Net ResNet-34 et moyenne de cinq plis). Elle reste la référence.
+[Annonce de la soumission](https://github.com/adembnn/EAC/issues/3).
+
+Pour comparer les variantes, conserver les ID de la réserve de chaque
+checkpoint. Le `index % 5 == 0` global de `seg2.py` donne 30 PixelSeal,
+39 TrustMark et 33 StegaStamp. Le même calcul après filtrage par méthode
+donne 34 images par filigrane et des ID différents. Comparer les candidats
+sur une réserve commune indépendante.
 
 ## Test de calibration contextuelle sur la réserve
 

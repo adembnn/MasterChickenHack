@@ -78,3 +78,30 @@ depuis une session qui a déjà accès à la clé du concours. Elle reste dans
 la configuration privée. Reporter le score exact retourné par le serveur
 dans l'[issue T3](https://github.com/adembnn/EAC/issues/5) avant de choisir
 la prochaine expérience.
+
+## Diagnostic de confiance et résultat officiel
+
+`t3_diagnostic.py` compare chaque checkpoint à la classe prédite par le
+modèle d'origine, sur 700 images réservées. La v2 brute conserve cette classe
+pour les 700 images exactes. Sa cross-entropy proxy est de 0,000678, contre
+0,000380 pour l'original. Une baisse de KL vers les vues augmentées peut donc
+coexister avec une confiance presque inchangée sur les images exactes.
+
+`t3_temperature.py` a essayé d'atténuer cette surconfiance en multipliant
+les poids et biais de la tête de la v2 par 0,35. Sur un sous-ensemble fixé
+de 192 images réservées, la loss proxy passe de 0,000579 à **0,142372**,
+avec le même top-1 de la v2. Le KL de rétention proxy monte de 0,00851 à
+1,25838. Ces nombres décrivent la loss et la rétention locales.
+
+**Soumission 1180** : HTTP 200, acceptée et amélioration de 0 à **0,003861573**
+sur le classement public. Le serveur affiche 0,0039 dans la réponse JSON
+et le tableau exact donnait le rang 14 à 18 h 17. Le leader T3 était à
+0,126194. Le checkpoint envoyé est `candidate_suffix_temp_t3.pt`,
+343 631 430 octets, SHA-256
+`438be0354e717266540e5fc218eb04399629841f9e18d21b0795c49d76f3aadd`.
+
+Le test montre qu'une hausse de la loss locale par étalonnage global peut
+faire perdre beaucoup de fidélité au modèle d'origine. Le prochain candidat
+d'équipe est le modèle à cibles par quantiles `S1_A85_l30.pt` d'Adem.
+Les soumissions T3 suivent la file unique de l'équipe et le délai indiqué
+par le serveur, observé autour de dix minutes.
