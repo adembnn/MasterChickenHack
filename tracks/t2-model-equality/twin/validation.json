@@ -1,0 +1,84 @@
+{
+ "config": {
+  "prompts": "discriminating_prompts.json",
+  "out": "validation.json",
+  "max_new": 20,
+  "bs": 32,
+  "dtype": "bfloat16",
+  "lora_steps": 150,
+  "lora_seed": 4242,
+  "n_temp_samples": 5
+ },
+ "model": "allenai/OLMo-2-0425-1B-Instruct",
+ "results": {
+  "final": {
+   "greedy": {
+    "dtype": 0.04,
+    "int8": 0.26,
+    "lora03": 0.81,
+    "noise": 0.04,
+    "n": 100
+   },
+   "system_prompt": {
+    "dtype": 0.02,
+    "int8": 0.11,
+    "lora03": 0.42,
+    "noise": 0.03,
+    "n": 100
+   },
+   "temp07": {
+    "dtype": 0.048,
+    "int8": 0.112,
+    "lora03": 0.572,
+    "n": 100,
+    "samples": 5
+   }
+  },
+  "top50": {
+   "greedy": {
+    "dtype": 0.02,
+    "int8": 0.42,
+    "lora03": 0.8,
+    "noise": 0.04,
+    "n": 50
+   },
+   "system_prompt": {
+    "dtype": 0.02,
+    "int8": 0.14,
+    "lora03": 0.66,
+    "noise": 0.04,
+    "n": 50
+   },
+   "temp07": {
+    "dtype": 0.052,
+    "int8": 0.084,
+    "lora03": 0.52,
+    "n": 50,
+    "samples": 5
+   }
+  },
+  "control_random": {
+   "greedy": {
+    "dtype": 0.02,
+    "int8": 0.03,
+    "lora03": 0.4,
+    "noise": 0.0,
+    "n": 100
+   },
+   "system_prompt": {
+    "dtype": 0.03,
+    "int8": 0.06,
+    "lora03": 0.16,
+    "noise": 0.02,
+    "n": 100
+   },
+   "temp07": {
+    "dtype": 0.018,
+    "int8": 0.034,
+    "lora03": 0.406,
+    "n": 100,
+    "samples": 5
+   }
+  }
+ }
+}
