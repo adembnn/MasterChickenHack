@@ -8,10 +8,14 @@ Plan (par endpoint, 100 réponses exactement) :
   échantillonné  : 16 sondes libres x 2 (12 meta, 4 open) = 32, pour le test à deux échantillons sur les textes ;
                    16 sondes fermées x 4 (6 ab5 dont les 2 de la ronde 0, 4 nb5, 6 lp) = 64 dont 4 déjà payées = 60.
                    Total 8 + 32 + 60 = 100.
+  tout échantillonné (si la ronde 0 montre que TOUS les endpoints échantillonnent) : 4 lots de 10 questions A/B,
+                   3 lots de 10 questions chiffrées et les 2 lots A/B de la ronde 0, 10 tirages chacun = 90 dont 4 déjà
+                   payés = 86 ; 3 sondes d'extraction x 2 = 6. Total 8 + 86 + 6 = 100.
 Fichiers écrits (format accepté par task_template.py : .jsonl avec id et prompt) :
   probes_gelees.jsonl, plan.json, ronde0.jsonl (REPEATS=2), deterministe.jsonl (REPEATS=1),
   echantillonne_x2.jsonl (REPEATS=2), echantillonne_x4.jsonl (REPEATS=4 ; task_template saute ce qui est déjà fait)
-Usage : python geler.py probes_v3.jsonl probes_meta2.jsonl
+  tout_echantillonne_x10.jsonl (REPEATS=10), tout_echantillonne_x2.jsonl (REPEATS=2)
+Usage : python geler.py probes_v3.jsonl probes_meta2.jsonl probes_S3.jsonl
 """
 import json, sys, os
 from collections import defaultdict
@@ -24,10 +28,13 @@ SAMP2 = {"meta": 12, "open": 4}
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     rows = [json.loads(l) for f in sys.argv[1:] for l in open(f, encoding="utf-8") if l.strip()]
+    seen = set()   # un identifiant déjà vu dans un fichier précédent n'est pas repris (les ab5 de probes_S3 par exemple)
+    rows = [r for r in rows if not (r["id"] in seen or seen.add(r["id"]))]
     by = defaultdict(list)
     for r in sorted(rows, key=lambda r: r["id"]):
         by[r["kind"]].append(r)
     keep = {k: by[k][:n] for k, n in DET.items()}
+    lots10 = by["ab10"][:4] + by["nb10"][:3]          # lots de 10 questions du régime tout échantillonné
     assert all(len(keep[k]) == n for k, n in DET.items()), {k: len(v) for k, v in keep.items()}
     ronde0 = [r["id"] for r in keep["ab5"][:2] + keep["q1"][:2]]
     allp = [r for k in DET for r in keep[k]]
@@ -38,7 +45,13 @@ def main():
     samp.update({p: 2 for p in x2})
     samp.update({p: 4 for p in x4})
     assert len(det) == 92 and sum(samp.values()) == 100, sum(samp.values())
-    byid = {r["id"]: r for r in allp}
+    byid = {r["id"]: r for r in allp + lots10}
+    t10 = [r["id"] for r in lots10] + ronde0[:2]
+    t2 = [r["id"] for r in keep["meta"][:3]]
+    tout = {p: 2 for p in ronde0}
+    tout.update({p: 10 for p in t10})
+    tout.update({p: 2 for p in t2})
+    assert len(lots10) == 7 and sum(tout.values()) == 100, sum(tout.values())
 
     def dump(name, ids):
         with open(os.path.join(here, name), "w", encoding="utf-8") as f:
@@ -46,7 +59,9 @@ def main():
                 r = byid[i]
                 f.write(json.dumps({"id": r["id"], "kind": r["kind"], "prompt": r["prompt"]}, ensure_ascii=False) + "\n")
 
-    dump("probes_gelees.jsonl", [r["id"] for r in allp])
+    dump("probes_gelees.jsonl", [r["id"] for r in allp + lots10])
+    dump("tout_echantillonne_x10.jsonl", t10)
+    dump("tout_echantillonne_x2.jsonl", t2)
     dump("ronde0.jsonl", ronde0)
     dump("deterministe.jsonl", det)
     dump("echantillonne_x2.jsonl", x2)
@@ -54,7 +69,7 @@ def main():
     for old in ("echantillonne_x1.jsonl", "echantillonne_x3.jsonl"):
         if os.path.exists(os.path.join(here, old)):
             os.remove(os.path.join(here, old))
-    json.dump({"ronde0": ronde0, "deterministe": det, "echantillonne": samp},
+    json.dump({"ronde0": ronde0, "deterministe": det, "echantillonne": samp, "tout_echantillonne": tout},
               open(os.path.join(here, "plan.json"), "w"), indent=1)
     print(f"{len(allp)} sondes gelées ; ronde 0 = {ronde0} ; déterministe 8 + {len(det)} = 100 ; "
           f"échantillonné : {sum(samp.values())} réponses ({len(x2)} libres x 2, {len(x4)} fermées x 4)")

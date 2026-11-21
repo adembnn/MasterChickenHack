@@ -154,7 +154,7 @@ def build(data, kinds, only=None, plan=None, prompts=None):
     if prompts:
         Endpoint.prompts = prompts
     for name, d in data.items():
-        o, mr = plan(name, d) if plan else (only, 3)
+        o, mr = plan(name, d) if plan else (only, 99)   # sans plan : toutes les répétitions reçues
         eps[name] = Endpoint(name, d, kinds, o, mr)
     for name, e in eps.items():  # mots récurrents propres
         for w, v in e.df.items():
@@ -211,7 +211,8 @@ def pair_features(A, B):
         else:
             keys = set(ma) | set(mb)
             if keys:
-                acc[("a_" if k == "seq" else "m_") + k].append(
+                alias = {"ab10": "ab5", "nb10": "nb5", "eq10": "word", "eq5": "word"}.get(k, k)  # lots de 10 : même colonne
+                acc[("a_" if k == "seq" else "m_") + alias].append(
                     sum(1 for q in keys if q in ma and ma.get(q) == mb.get(q)) / len(keys))
             if k == "ab5":
                 for q in keys:

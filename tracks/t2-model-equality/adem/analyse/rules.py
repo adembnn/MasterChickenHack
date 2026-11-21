@@ -127,34 +127,31 @@ def family_partition(names, F, cut=0.4):
     return linkage(names, S, cut)
 
 
-def decode_sampled(eps, F, E, zcut=3.0, attach=True):
-    """Régime où tous les endpoints échantillonnent (aucun endpoint P). Plus de comparaison exacte possible : on teste
-    l'égalité des distributions de réponses (analyse/sampled.py). Pour chaque paire, z = le plus grand de trois tests à
-    deux échantillons (réponses fermées par item, textes libres, longueur). Le centre est l'endpoint sans prompt système
-    dont le z médian contre les autres est le plus bas ; un endpoint sans prompt système rejoint le centre si son z
-    contre lui est sous zcut, sinon il forme un modèle à part ; les endpoints à prompt système vont au centre.
-    Mesuré (rapport, section 3.7) : à 100 réponses, seuls les écarts de poids grossiers dépassent z = 3."""
+def decode_sampled(eps, F, E, zcut=3.0):
+    """Régime où tous les endpoints échantillonnent (aucun endpoint P) : plus de comparaison exacte possible. Pour chaque
+    paire, z du test sans biais sur les distributions de réponses fermées (analyse/sampled.py) ; lien moyen, deux groupes
+    fusionnent tant que leur z moyen reste sous zcut. Mesuré (rapport, section 3.7) avec 7 lots de 10 questions A/B ou
+    chiffrées + 2 lots de 5, 10 tirages chacun : MCC 0,40 sur Qwen et 0,00 sur OLMo dans la structure du corrigé."""
     import sampled
     eps = list(eps)
     A = {e: sampled.answers(E[e]) for e in eps}
-    nz = lambda v: -9.0 if v != v else v
     Z = {}
     for i, x in enumerate(eps):
         for y in eps[i + 1:]:
-            c = sampled.compare(A[x], A[y])
-            t = sampled.compare_text(E[x].texts, E[y].texts, E[x].kinds)
-            Z[frozenset((x, y))] = max(nz(c["z"]), nz(t["zt"]), nz(t["zlen"]))
-    ps = [e for e in eps if not E[e].sys]
-    if not ps:
-        return {e: i for i, e in enumerate(eps)}, {"hub": None, "w": [], "attach": {}}
-    hub = min(ps, key=lambda e: statistics.median([Z[frozenset((e, o))] for o in ps if o != e] or [0]))
-    lab, nxt, att = {}, 1, {}
-    for e in eps:
-        if e == hub or (E[e].sys and attach) or (not E[e].sys and Z[frozenset((e, hub))] < zcut):
-            lab[e] = 0
-        else:
-            lab[e] = nxt
-            nxt += 1
-        if e != hub:
-            att[e] = (lab[e] == 0, round(Z[frozenset((e, hub))], 1))
-    return lab, {"hub": hub, "w": [], "attach": att}
+            z = sampled.compare(A[x], A[y])["z"]
+            Z[frozenset((x, y))] = 99.0 if z != z else z
+    cl = [[e] for e in eps]
+    while len(cl) > 1:
+        best, bi = None, None
+        for i in range(len(cl)):
+            for j in range(i + 1, len(cl)):
+                w = statistics.mean(Z[frozenset((a, b))] for a in cl[i] for b in cl[j])
+                if best is None or w < best:
+                    best, bi = w, (i, j)
+        if best >= zcut:
+            break
+        i, j = bi
+        cl[i] += cl[j]
+        del cl[j]
+    lab = {e: k for k, c in enumerate(cl) for e in c}
+    return lab, {"hub": None, "w": [], "attach": {}}

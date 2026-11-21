@@ -34,6 +34,9 @@ def main():
     open("endpoints_echantillonnes.txt", "w").write("\n".join(samp) + ("\n" if samp else ""))
     print(f"{len(det)} déterministes : {' '.join(det)}")
     print(f"{len(samp)} échantillonnés : {' '.join(samp)}")
+    if samp and not det:
+        print("TOUS les endpoints échantillonnent : utiliser le plan « tout échantillonné » = tout_echantillonne_x10.jsonl "
+              "x10 (86 nouvelles réponses) + tout_echantillonne_x2.jsonl x2 (6) pour chacun, à la place du plan ci-dessous.")
     if missing:
         print("ATTENTION, ronde 0 incomplète (moins de 2 réponses sur une sonde) :", " ".join(missing))
     print("reste à payer : déterministe = deterministe.jsonl x1 (92) ; échantillonné = echantillonne_x2.jsonl x2 (32) "
