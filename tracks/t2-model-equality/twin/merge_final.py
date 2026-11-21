@@ -46,7 +46,9 @@ def main():
     for e in sorted(fam):
         f = SHORT.get(fam[e].split("/")[-1], fam[e].split("/")[-1].lower()).replace(".", "")
         if e in lab:
-            out[e] = (f, f + "_" + lab[e].replace(",", "_").replace(" ", "_"))
+            l = lab[e].replace(",", "_").replace(" ", "_")
+            # chaque variante désignée = SON propre modèle (jamais deux variantes fusionnées) ; seule la base est partagée
+            out[e] = (f, f + "_" + l if l.endswith("_base") else f + "_" + l + "_" + e.replace("-", ""))
             src[e] = "fp8"
         else:
             out[e] = (f, f + ("_repli_" + fb[e] if e in fb else "_" + base_of.get(fam[e], "base")))
