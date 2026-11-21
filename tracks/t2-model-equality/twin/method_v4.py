@@ -159,6 +159,13 @@ WORLDS = {  # même structure de labels que practice_answers.csv ; déguisements
                   "ref-09": dict(system=SYSTEM_PROMPT)},
     "combinedB": {"ref-02": dict(wm=True), "ref-04": dict(system=SYSTEM_PROMPT), "ref-07": dict(system=PERSONA_PROMPT),
                   "ref-09": dict(temperature=1.0)},
+    # régime « tout échantillonne » (code des organisateurs à T=0,7 par défaut) : mêmes déguisements que practice
+    "allT07": {n: dict(temperature=0.7) for n in ["ref-01", "ref-02", "ref-03", "ref-04", "ref-05", "ref-06", "ref-07", "ref-09"]},
+    # pire cas : tout échantillonne ET les variantes de poids sont déguisées
+    "allT07combined": {"ref-01": dict(temperature=0.7), "ref-03": dict(temperature=0.7), "ref-05": dict(temperature=0.7),
+                       "ref-06": dict(temperature=0.7), "ref-02": dict(temperature=0.7, wm=True),
+                       "ref-04": dict(temperature=0.7, system=SYSTEM_PROMPT), "ref-07": dict(temperature=0.7, system=PERSONA_PROMPT),
+                       "ref-09": dict(temperature=0.7, system=PERSONA_PROMPT)},
 }
 
 
@@ -175,18 +182,15 @@ def build_endpoints(tok, dtype, lora_steps, max_new, log, world="practice"):
     log("endpoints cachés : base, fp8_e4m3, LoRA (graine 123) prêts")
     V = base_m.get_output_embeddings().weight.shape[0]
     wm = KGW(V, gamma=0.25, delta=6.0, key=424242, device=base_m.device)
-    extra = {n: ({**d, "wm": wm} if d.get("wm") else d) for n, d in WORLDS[world].items()}
-    return {
-        "ref-01": Endpoint("ref-01", base_m, tok, max_new),
-        "ref-02": Endpoint("ref-02", fp8_m, tok, max_new, **extra.get("ref-02", {})),
-        "ref-03": Endpoint("ref-03", base_m, tok, max_new, system=SYSTEM_PROMPT),
-        "ref-04": Endpoint("ref-04", lora_m, tok, max_new, lora=(store, 0.7), **extra.get("ref-04", {})),
-        "ref-05": Endpoint("ref-05", base_m, tok, max_new, system=PERSONA_PROMPT),
-        "ref-06": Endpoint("ref-06", base_m, tok, max_new, wm=wm),
-        "ref-07": Endpoint("ref-07", lora_m, tok, max_new, lora=(store, 1.5), **extra.get("ref-07", {})),
-        "ref-08": Endpoint("ref-08", base_m, tok, max_new, temperature=1.0),
-        "ref-09": Endpoint("ref-09", lora_m, tok, max_new, lora=(store, 0.3), **extra.get("ref-09", {})),
+    spec = {
+        "ref-01": dict(model=base_m), "ref-02": dict(model=fp8_m), "ref-03": dict(model=base_m, system=SYSTEM_PROMPT),
+        "ref-04": dict(model=lora_m, lora=(store, 0.7)), "ref-05": dict(model=base_m, system=PERSONA_PROMPT),
+        "ref-06": dict(model=base_m, wm=wm), "ref-07": dict(model=lora_m, lora=(store, 1.5)),
+        "ref-08": dict(model=base_m, temperature=1.0), "ref-09": dict(model=lora_m, lora=(store, 0.3)),
     }
+    for n, d in WORLDS[world].items():
+        spec[n].update({**d, "wm": wm} if d.get("wm") else d)
+    return {n: Endpoint(n, d.pop("model"), tok, max_new, **d) for n, d in spec.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -194,9 +198,24 @@ def build_endpoints(tok, dtype, lora_steps, max_new, log, world="practice"):
 # ---------------------------------------------------------------------------
 
 
-def read_stats(model, tok, contexts, gens, bs=16):
-    """Pour chaque (contexte formaté, ids générés) : nb de tokens, nb hors argmax local, marges (logp top1 -
-    logp token) des tokens hors argmax, NLL totale."""
+def penalize(logits, row, plen, penalty):
+    """Pénalité de répétition HF (RepetitionPenaltyLogitsProcessor) appliquée en lecture enseignée : à la position t,
+    les tokens déjà vus (prompt + t premiers tokens générés) sont pénalisés, comme pendant la génération."""
+    import torch
+    if penalty == 1.0:
+        return logits
+    n, V = logits.shape
+    seen = torch.zeros((n, V), dtype=torch.bool, device=logits.device)
+    seen[:, torch.tensor(row[:plen], device=logits.device)] = True
+    for t in range(1, n):
+        seen[t:, row[plen + t - 1]] = True
+    pen = torch.where(logits > 0, logits / penalty, logits * penalty)
+    return torch.where(seen, pen, logits)
+
+
+def read_stats(model, tok, contexts, gens, bs=16, penalty=1.0):
+    """Pour chaque (contexte formaté, ids générés) : nb de tokens, positions et marges (logp top1 - logp token) des
+    tokens hors argmax local, NLL totale. `penalty` rejoue la pénalité de répétition du décodeur."""
     import torch
     out = []
     with torch.no_grad():
@@ -213,19 +232,18 @@ def read_stats(model, tok, contexts, gens, bs=16):
                 ids[j, :len(r)] = torch.tensor(r)
                 att[j, :len(r)] = 1
             ids, att = ids.to(model.device), att.to(model.device)
-            logp = torch.log_softmax(model(input_ids=ids, attention_mask=att).logits.float(), dim=-1)
+            logits = model(input_ids=ids, attention_mask=att).logits.float()
             for j, r in enumerate(rows):
                 n = len(r) - plens[j]
                 if n <= 0:
-                    out.append({"n": 0, "mis": 0, "margins": [], "nll": 0.0})
+                    out.append({"n": 0, "mis": 0, "margins": [], "pos": [], "nll": 0.0})
                     continue
-                sl = logp[j, plens[j] - 1:len(r) - 1]
+                sl = torch.log_softmax(penalize(logits[j, plens[j] - 1:len(r) - 1], r, plens[j], penalty), -1)
                 tgt = ids[j, plens[j]:len(r)]
                 lp_t = sl.gather(-1, tgt[:, None]).squeeze(-1)
-                top = sl.max(-1).values
                 mis = (sl.argmax(-1) != tgt)
-                out.append({"n": n, "mis": int(mis.sum()), "margins": [round(float(x), 4) for x in (top - lp_t)[mis].tolist()],
-                            "nll": float(-lp_t.sum())})
+                out.append({"n": n, "mis": int(mis.sum()), "margins": [round(float(x), 4) for x in (sl.max(-1).values - lp_t)[mis].tolist()],
+                            "pos": mis.nonzero().squeeze(-1).tolist(), "nll": float(-lp_t.sum())})
     return out
 
 
@@ -340,10 +358,10 @@ def cmd_collect(a):
     log("FIN ->", a.out)
 
 
-TEMPS = [0.6, 0.8, 1.0, 1.2, 1.4]
+TEMPS = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.4]
 
 
-def sample_stats(model, tok, contexts, gens, bs=16):
+def sample_stats(model, tok, contexts, gens, bs=16, penalty=1.0):
     """Pour des sorties ÉCHANTILLONNÉES : par token et par température T de lecture, [logp_T(token), H_T,
     pmax_T, token==argmax]. Un échantillon tiré du même modèle à la température T vérifie E[-logp_T] = E[H_T]
     et P(token==argmax | pmax_T) = pmax_T (calibration) ; un autre modèle s'en écarte (KL > 0)."""
@@ -367,7 +385,7 @@ def sample_stats(model, tok, contexts, gens, bs=16):
                 if len(r) == plens[j]:
                     out.append([])
                     continue
-                lg = logits[j, plens[j] - 1:len(r) - 1]
+                lg = penalize(logits[j, plens[j] - 1:len(r) - 1], r, plens[j], penalty)
                 tgt = ids[j, plens[j]:len(r)].to(lg.device)
                 per_t = []
                 for T in TEMPS:
@@ -419,28 +437,41 @@ def cmd_reread(a):
     dtype = getattr(torch, raw["config"]["dtype"])
     ref = load(dtype)
     bc = raw["bc_prompts"]
+    # décodages candidats : logits bruts, et la configuration de génération propre au modèle (vLLM et HF l'appliquent
+    # par défaut ; ex. Qwen2.5 : repetition_penalty 1.1). On garde ensuite celui qui explique le mieux chaque endpoint.
+    rp = float(getattr(ref.generation_config, "repetition_penalty", None) or 1.0)
+    decs = {"raw": 1.0} | ({"gencfg": rp} if rp != 1.0 else {})
+    log("décodages candidats :", decs)
     reads_ctx, samp = {}, {}
     for n, e in raw["endpoints"].items():
         cands = context_candidates(e["extracted"])
-        if e["sampling"]:
-            samp[n] = {c: sample_stats(ref, tok, chat(tok, bc, s), e["bc_ids"]) for c, s in cands.items()}
-        else:
-            reads_ctx[n] = {c: read_stats(ref, tok, chat(tok, bc, s), e["bc_ids"]) for c, s in cands.items()}
-    log("relectures par contexte candidat faites")
-    samp_floor = {f"seed{sd}": sample_stats(ref, tok, chat(tok, bc), local_sample(ref, tok, bc, raw["config"]["max_new"], 1.0, sd))
-                  for sd in [11, 12]}
-    log("plancher échantillonné local fait")
+        fn = sample_stats if e["sampling"] else read_stats
+        res = {f"{c}|{d}": fn(ref, tok, chat(tok, bc, sp), e["bc_ids"], penalty=pv) for c, sp in cands.items() for d, pv in decs.items()}
+        (samp if e["sampling"] else reads_ctx)[n] = res
+    log("relectures par contexte et décodage candidats faites")
+    floor_dec = {d: {f"bs{bs}": read_stats(ref, tok, chat(tok, bc), local_generate(ref, tok, bc, raw["config"]["max_new"], bs), penalty=pv)
+                     for bs in [16, 7]} for d, pv in decs.items()}
+    samp_floor = {f"seed{sd}|{d}": sample_stats(ref, tok, chat(tok, bc), local_sample(ref, tok, bc, raw["config"]["max_new"], 1.0, sd), penalty=pv)
+                  for sd in [11, 12] for d, pv in decs.items()}
+    log("planchers locaux faits")
     cal_prompts = build_prompts(120, seed=456)
     cal_base = local_generate(ref, tok, cal_prompts, 40, 16)
     cal_texts = [(t, " " + tok.decode(i, skip_special_tokens=True) + tok.eos_token) for t, i in zip(chat(tok, cal_prompts), cal_base)]
     cal_lora = train_lora(tok, dtype, raw["config"]["lora_steps"], 4, cal_texts)
     store = {}
-    samp_calib = {}
-    for s in [0.3, 0.7, 1.5]:
+    samp_calib, calib_dec = {}, {d: {} for d in decs}
+    for s in [0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0]:
         scale_lora(cal_lora, s, store)
-        samp_calib[str(s)] = sample_stats(ref, tok, chat(tok, bc), local_sample(cal_lora, tok, bc, raw["config"]["max_new"], 1.0, 21))
-    log("calibration échantillonnée (LoRA locale) faite")
-    json.dump({"reads_ctx": reads_ctx, "samp": samp, "samp_floor": samp_floor, "samp_calib": samp_calib, "temps": TEMPS},
+        g = local_generate(cal_lora, tok, bc, raw["config"]["max_new"], 16)
+        for d, pv in decs.items():
+            calib_dec[d][str(s)] = read_stats(ref, tok, chat(tok, bc), g, penalty=pv)
+        if s in (0.3, 0.7, 1.5):
+            gs = local_sample(cal_lora, tok, bc, raw["config"]["max_new"], 1.0, 21)
+            for d, pv in decs.items():
+                samp_calib[f"{s}|{d}"] = sample_stats(ref, tok, chat(tok, bc), gs, penalty=pv)
+    log("calibrations LoRA locales faites")
+    json.dump({"reads_ctx": reads_ctx, "samp": samp, "samp_floor": samp_floor, "samp_calib": samp_calib, "temps": TEMPS,
+               "decodings": decs, "floor_dec": floor_dec, "calib_dec": calib_dec},
               open(a.out, "w"))
     log("FIN ->", a.out)
 
@@ -475,6 +506,54 @@ def cmd_crossread(a):
     print("FIN ->", a.out, flush=True)
 
 
+def cmd_from_journal(a):
+    """Journal réel de collecte_reelle.py (plan probes_v4) -> fichier « raw » lisible par reread/decide, pour UN jumeau
+    candidat (les textes sont re-tokenisés avec son tokenizer). Aucune requête : lecture de fichiers seulement."""
+    import csv
+    import glob
+    from transformers import AutoTokenizer
+    tok = AutoTokenizer.from_pretrained(a.model)
+    recs = []
+    for path in sorted(glob.glob(a.journal)):
+        if path.endswith("_dryrun.jsonl") and not a.allow_dryrun:
+            continue
+        for line in open(path, encoding="utf-8"):
+            r = json.loads(line)
+            if r.get("type") == "answer" and r.get("response") is not None:
+                recs.append(r)
+    by_ep = {}
+    for r in recs:
+        by_ep.setdefault(r["endpoint"], {})[(r["probe_id"], r["repeat"])] = r
+    # prompts de lecture communs à TOUS les guichets, dans l'ordre du plan (slot)
+    reading = sorted({(r["slot"], r["probe_id"], r["prompt"]) for r in recs if r["kind"] == "reading"})
+    common = [(pid, pr) for _, pid, pr in reading if all((pid, 0) in by_ep[e] for e in by_ep)]
+    endpoints = {}
+    for e, d in sorted(by_ep.items()):
+        reps = [d[k]["response"] for k in sorted(d) if d[k]["kind"] == "repeat"]
+        repeat_diff = float(len(set(reps)) > 1) if len(reps) >= 2 else 0.0
+        ext = next((d[k]["response"] for k in d if d[k]["kind"] == "extract"), "")
+        ident = next((d[k]["response"] for k in d if d[k]["kind"] == "identity"), "")
+        bc_ids = [tok(d[(pid, 0)]["response"], add_special_tokens=False)["input_ids"] + [tok.eos_token_id]
+                  if d[(pid, 0)].get("finish_reason") == "stop" else tok(d[(pid, 0)]["response"], add_special_tokens=False)["input_ids"]
+                  for pid, _ in common]
+        endpoints[e] = {"sampling": repeat_diff > 0.5, "repeat_diff": repeat_diff, "extracted": ext, "identity": ident,
+                        "a_answers": [["∅"] * 20], "bc_ids": bc_ids,
+                        "lengths": [len(x) for x in bc_ids], "finish": [d[(pid, 0)].get("finish_reason") for pid, _ in common]}
+    truth = {}
+    if a.answers and Path(a.answers).exists():
+        for row in csv.DictReader(open(a.answers)):
+            truth[row["endpoint"]] = (row["family"], row["model"], row.get("kind", ""))
+    out = {"config": {"model": a.model, "dtype": a.dtype, "max_new": a.max_new, "lora_steps": a.lora_steps, "source": a.journal},
+           "bc_prompts": [pr for _, pr in common], "endpoints": endpoints, "floor": {}, "calib": {},
+           "ground_truth_for_audit_only": {e: truth.get(e, ("?", "?", "?")) for e in endpoints}}
+    json.dump(out, open(a.out, "w"), ensure_ascii=False)
+    print(f"{len(endpoints)} guichets, {len(common)} prompts de lecture communs, régime : "
+          + ", ".join(f"{e[-2:]}={'éch.' if v['sampling'] else 'glouton'}" for e, v in endpoints.items()))
+    print("longueur moyenne des réponses (tokens " + a.model.split('/')[-1] + ") : "
+          + ", ".join(f"{e[-2:]}={sum(v['lengths']) / max(len(v['lengths']), 1):.0f}" for e, v in endpoints.items()))
+    print("-> " + a.out)
+
+
 # ---------------------------------------------------------------------------
 # decide (CPU)
 # ---------------------------------------------------------------------------
@@ -503,8 +582,10 @@ def sampled_summary(per_prompt, temps, k=None):
         ece = sum(len(b) * abs(sum(t[3] for t in b) / len(b) - sum(t[2] for t in b) / len(b)) for b in bins.values()) / len(toks)
         rows.append((T, gap, ece))
     best = min(rows, key=lambda r: abs(r[1]))
-    return {"T_star": best[0], "gap_at_T_star": best[1], "ece_at_T_star": best[2], "gap_T1": rows[temps.index(1.0)][1],
-            "ece_T1": rows[temps.index(1.0)][2]}
+    i1 = temps.index(1.0)
+    toks1 = [t for p in pp for t in p[i1]]
+    return {"T_star": best[0], "gap_at_T_star": best[1], "ece_at_T_star": best[2], "gap_T1": rows[i1][1],
+            "ece_T1": rows[i1][2], "nll_T1": sum(-t[0] for t in toks1) / len(toks1)}
 
 
 def agreement(e1, e2):
@@ -549,11 +630,21 @@ def cmd_decide(a):
     #  R2 : ancre du pool = l'endpoint glouton dont la lecture est la plus basse (sous son meilleur contexte),
     #       c'est-à-dire le bruit « même modèle » réellement observé dans le pool ; on prend la plus haute des deux.
     rates_of = lambda stats: [st["mis"] / st["n"] for st in (stats[:k] if k else stats) if st["n"] > 0]
-    local_ref = [x for f in raw["floor"] for x in rates_of(raw["floor"][f])]
-    calib = {float(s): summarize(v, k, a.near_tie) for s, v in raw["calib"].items()}
+    mean = lambda xs: sum(xs) / len(xs)
+    if "floor_dec" in rr:  # décodage retenu = celui qui explique le mieux les générations de la copie locale elle-même
+        dec = min(rr["floor_dec"], key=lambda d: mean([x for f in rr["floor_dec"][d] for x in rates_of(rr["floor_dec"][d][f])]))
+        floors, calib_src = rr["floor_dec"][dec], rr["calib_dec"][dec]
+        sfl = {f: v for f, v in rr["samp_floor"].items() if f.endswith("|" + dec)}
+        scl = {f.split("|")[0]: v for f, v in rr["samp_calib"].items() if f.endswith("|" + dec)}
+    else:
+        dec, floors, calib_src, sfl, scl = "raw", raw["floor"], raw["calib"], rr["samp_floor"], rr["samp_calib"]
+    raw = dict(raw, floor=floors)
+    local_ref = [x for f in floors for x in rates_of(floors[f])]
+    calib = {float(s): summarize(v, k, a.near_tie) for s, v in calib_src.items()}
     temps = rr["temps"]
-    sfloor = {f: sampled_summary(v, temps, k) for f, v in rr["samp_floor"].items()}
-    scal = {s: sampled_summary(v, temps, k) for s, v in rr["samp_calib"].items()}
+    sfloor = {f: sampled_summary(v, temps, k) for f, v in sfl.items()}
+    scal = {s: sampled_summary(v, temps, k) for s, v in scl.items()}
+    P(f"\nDécodage de référence retenu (celui qui explique le mieux la copie locale) : {dec} {rr.get('decodings', {})}")
     ece_floor = max(v["ece_at_T_star"] for v in sfloor.values())
 
     best = {}
@@ -566,19 +657,9 @@ def cmd_decide(a):
             c = min(cands, key=lambda c: cands[c]["mis_rate"])
         best[n] = (c, cands[c])
     greedy = [n for n in names if not E[n]["sampling"]]
-    anchor = min(greedy, key=lambda n: best[n][1]["mis_rate"])
-    anchor_ref = rates_of(rr["reads_ctx"][anchor][best[anchor][0]])
+    sampled = [n for n in names if E[n]["sampling"]]
     mean = lambda xs: sum(xs) / len(xs)
     hard_of = lambda stats: [sum(m > a.near_tie for m in st["margins"]) / st["n"] for st in (stats[:k] if k else stats) if st["n"] > 0]
-    ref = anchor_ref if mean(anchor_ref) > mean(local_ref) else local_ref
-    P(f"\nRéférence locale (copie relit ses propres sorties) : {mean(local_ref):.4f} ; "
-      f"ancre du pool {anchor} ({best[anchor][0]}) : {mean(anchor_ref):.4f} -> référence = "
-      f"{'ancre du pool' if ref is anchor_ref else 'locale'} {mean(ref):.4f}")
-    P("Bruit serveur observé (même requête 2 fois, part des réponses différentes) : "
-      + ", ".join(f"{n[-2:]}={E[n].get('repeat_diff', 0):.2f}" for n in names))
-    P("Calibration LoRA locale : " + ", ".join(f"s={s}: {c['mis_rate']:.3f}/p99 {c['p99_margin']:.1f}" for s, c in sorted(calib.items())))
-    P("Plancher échantillonné local : " + ", ".join(f"{f}: ece={v['ece_at_T_star']:.4f}" for f, v in sfloor.items())
-      + " | LoRA locale échantillonnée : " + ", ".join(f"s={s}: ece={v['ece_at_T_star']:.4f}" for s, v in scal.items()))
 
     def welch_t(xs, ys):
         mx, my = mean(xs), mean(ys)
@@ -586,12 +667,40 @@ def cmd_decide(a):
         vy = sum((y - my) ** 2 for y in ys) / (len(ys) - 1)
         return (mx - my) / max((vx / len(xs) + vy / len(ys)) ** 0.5, 1e-12)
 
-    # garde « jumeau » : le bruit de service ne fait basculer que des quasi-égalités ; si même l'endpoint le plus
-    # proche (l'ancre) a des écarts DURS significativement au-dessus du plancher local, la copie locale n'est pas
-    # le bon modèle et toute la lecture est invalide.
-    twin_t = welch_t(hard_of(rr["reads_ctx"][anchor][best[anchor][0]]), [x for f in raw["floor"] for x in hard_of(raw["floor"][f])])
-    P(f"Garde jumeau : écarts durs de l'ancre {best[anchor][1]['hard_rate']:.4f} vs plancher local, Welch t={twin_t:.1f}")
-    if twin_t >= a.t_crit and not a.no_guard:
+    P("Bruit serveur observé (même requête 2 fois, part des réponses différentes) : "
+      + ", ".join(f"{n[-2:]}={E[n].get('repeat_diff', 0):.2f}" for n in names))
+    P("Calibration LoRA locale : " + ", ".join(f"s={s}: {c['mis_rate']:.3f}/p99 {c['p99_margin']:.1f}" for s, c in sorted(calib.items())))
+    P("Plancher échantillonné local : " + ", ".join(f"{f}: ece={v['ece_at_T_star']:.4f}" for f, v in sfloor.items())
+      + " | LoRA locale échantillonnée : " + ", ".join(f"s={s}: ece={v['ece_at_T_star']:.4f}" for s, v in scal.items()))
+    refuse = False
+    ref = local_ref
+    if greedy:
+        anchor = min(greedy, key=lambda n: best[n][1]["mis_rate"])
+        anchor_ref = rates_of(rr["reads_ctx"][anchor][best[anchor][0]])
+        ref = anchor_ref if mean(anchor_ref) > mean(local_ref) else local_ref
+        P(f"\nRéférence locale (copie relit ses propres sorties) : {mean(local_ref):.4f} ; "
+          f"ancre du pool {anchor} ({best[anchor][0]}) : {mean(anchor_ref):.4f} -> référence = "
+          f"{'ancre du pool' if ref is anchor_ref else 'locale'} {mean(ref):.4f}")
+        # garde « jumeau » (glouton) : le bruit de service ne fait basculer que des quasi-égalités ; si même l'ancre a
+        # des écarts DURS significativement au-dessus du plancher local, la copie locale n'est pas le bon modèle.
+        twin_t = welch_t(hard_of(rr["reads_ctx"][anchor][best[anchor][0]]), [x for f in raw["floor"] for x in hard_of(raw["floor"][f])])
+        P(f"Garde jumeau (glouton) : écarts durs de l'ancre {best[anchor][1]['hard_rate']:.4f} vs plancher local, Welch t={twin_t:.1f}")
+        refuse |= twin_t >= a.t_crit
+    ece_ref = ece_floor
+    if sampled:
+        # régime échantillonné : ancre = l'endpoint dont les tirages sont le mieux expliqués par la copie locale
+        s_anchor = min(sampled, key=lambda n: best[n][1]["ece_at_T_star"])
+        ece_anchor = best[s_anchor][1]["ece_at_T_star"]
+        ece_ref = max(ece_floor, ece_anchor)
+        P(f"\nRégime échantillonné : ancre {s_anchor} ({best[s_anchor][0]}, T*={best[s_anchor][1]['T_star']}) ece={ece_anchor:.4f} ; "
+          f"plancher local ece={ece_floor:.4f} -> référence ece={ece_ref:.4f}")
+        nll_pool = mean([best[n][1]["nll_T1"] for n in sampled])
+        P(f"Sélecteur de jumeau (échantillonné) : NLL/token moyenne des endpoints sous ce jumeau à T=1 = {nll_pool:.4f} "
+          f"(comparer entre jumeaux candidats : le plus bas est retenu)")
+        if not greedy:
+            P(f"Garde jumeau (échantillonné) : ece de l'ancre {ece_anchor:.4f} vs {a.ece_mult}×plancher {a.ece_mult * ece_floor:.4f}")
+            refuse |= ece_anchor > a.ece_mult * ece_floor
+    if refuse and not a.no_guard:
         P("=> AUCUN JUMEAU NE COLLE : la copie locale n'est pas le modèle de ce pool. Pas de soumission écrite.")
         if a.log:
             Path(a.log).write_text("\n".join(lines))
@@ -616,9 +725,9 @@ def cmd_decide(a):
     for n in names:
         c, r = best[n]
         if E[n]["sampling"]:
-            same = r["ece_at_T_star"] <= a.ece_mult * ece_floor
-            txt = (f"échantillonne ; ctx={c} T*={r['T_star']} ece={r['ece_at_T_star']:.4f} "
-                   f"(≤ {a.ece_mult}×{ece_floor:.4f} ?) -> " + ("S" if same else "variante"))
+            same = r["ece_at_T_star"] <= a.ece_mult * ece_ref
+            txt = (f"échantillonne ; ctx={c} T*={r['T_star']} ece={r['ece_at_T_star']:.4f} gap={r['gap_at_T_star']:+.4f} "
+                   f"(≤ {a.ece_mult}×{ece_ref:.4f} ?) -> " + ("S" if same else "variante"))
         else:
             t = welch_t(rates_of(rr["reads_ctx"][n][c]), ref)
             at_floor = t < a.t_crit
@@ -634,10 +743,11 @@ def cmd_decide(a):
         else:
             variants.append((n, r))
 
+    # lien complet : une variante ne rejoint un groupe que si elle est « même modèle » avec TOUS ses membres
     groups = []
     for n, r in variants:
         for g in groups:
-            if identical_frac(E[n]["bc_ids"][:k], E[g[0][0]]["bc_ids"][:k]) >= a.same_variant:
+            if all(identical_frac(E[n]["bc_ids"][:k], E[m]["bc_ids"][:k]) >= a.same_variant for m, _ in g):
                 g.append((n, r))
                 break
         else:
@@ -688,6 +798,16 @@ def main():
     r.add_argument("--raw", default="raw_v4.json")
     r.add_argument("--out", default="reread_v4.json")
     r.set_defaults(func=cmd_reread)
+    j = sub.add_parser("from_journal")
+    j.add_argument("--journal", required=True, help="motif glob des journaux collecte_v4_*.jsonl")
+    j.add_argument("--model", required=True, help="jumeau candidat")
+    j.add_argument("--out", required=True)
+    j.add_argument("--answers", default=str(HERE.parents[2] / "reports/sources/t2/practice_answers.csv"))
+    j.add_argument("--dtype", default="bfloat16")
+    j.add_argument("--max_new", type=int, default=256)
+    j.add_argument("--lora_steps", type=int, default=150)
+    j.add_argument("--allow_dryrun", action="store_true")
+    j.set_defaults(func=cmd_from_journal)
     x = sub.add_parser("crossread")
     x.add_argument("--raw", required=True)
     x.add_argument("--ref_model", required=True)
