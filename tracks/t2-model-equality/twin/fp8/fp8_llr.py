@@ -125,7 +125,7 @@ def generate(model, tok, prompts, bs, max_new, system=False, wm=None, temperatur
 
 
 @torch.no_grad()
-def token_logprobs(model, tok, prompts, gens, bs, system=False):
+def token_logprobs(model, tok, prompts, gens, bs=16, system=False):
     """Log-probabilités par token de chaque réponse (lecture enseignée)."""
     texts = encode(tok, prompts, system)
     out = []
