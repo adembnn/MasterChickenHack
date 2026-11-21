@@ -33,6 +33,7 @@ VARIANTES = {
     "centre": {"margin": 9.0},                               # tout endpoint déguisé va au groupe central
     "ancre": {"margin": 0.0, "attach_t": "nearest"},         # plus proche ancre en clair, sans a priori
     "prudent": {"attach_s": False, "attach_t": False, "detect_w": False},   # déguisés isolés
+    "sans_seuil": {"margin": 9.0, "tau_pp": 2.0},            # aucun P fusionné avec un autre, tout déguisé au centre
     "repli": {},   # mode dégradé : familles seules, chaque endpoint isolé (le CSV principal est alors le repli)
 }
 

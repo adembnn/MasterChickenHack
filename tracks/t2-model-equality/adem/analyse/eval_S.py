@@ -179,6 +179,38 @@ def main():
                             nxt += 1
                     ms.append(mcc(truth, lab, w))
                 print(f"   {vn:44s} {np.mean(ms):8.3f} [{np.percentile(ms, 10):.2f} ; {np.percentile(ms, 90):.2f}]")
+            # Règle « typé -> base » (proposée par t2-critique) : le centre est l'endpoint non typé de z médian le plus
+            # bas ; un endpoint typé (prompt système extrait ; option : filigrane par biais d'étiquettes slp >= 0,25 ;
+            # option : chaud par taux de collision) prend l'étiquette du centre ; un endpoint non typé rejoint le centre
+            # si son z (réponses fermées) est sous zcut ; sinon il est seul.
+            def slp(x, y):
+                common = [L for L in eps[x].lp if L in eps[y].lp]
+                return statistics.pstdev([eps[x].lp[L] - eps[y].lp[L] for L in common]) if len(common) >= 4 else 0.0
+            print(f"G. {'règle « typé -> base »':44s} {'MCC ref':>8s} {'[p10 ; p90]':>14s}")
+            for vn, (use_w, gap, zc, ZZ) in {"S typé ; fermées z < 3": (False, None, 3.0, Zc), "S + filigrane typés ; fermées z < 3": (True, None, 3.0, Zc),
+                                             "S + filigrane typés ; fermées z < 2": (True, None, 2.0, Zc),
+                                             "S + filigrane typés ; fermées+textes z < 3": (True, None, 3.0, Za),
+                                             "S + filigrane typés ; fermées+textes z < 3,5": (True, None, 3.5, Za),
+                                             "S + filigrane + chaud ; fermées+textes z < 3,5": (True, 0.10, 3.5, Za),
+                                             "S + filigrane typés ; fermées+textes z < 4,5": (True, None, 4.5, Za)}.items():
+                ms = []
+                for w in worlds:
+                    m = statistics.median(selfr[e] for e in w)
+                    typed = {e: sysf[e] or (gap is not None and selfr[e] < m - gap) for e in w}
+                    un = [e for e in w if not typed[e]]
+                    if not un:
+                        ms.append(0.0)
+                        continue
+                    hub = min(un, key=lambda e: statistics.median([ZZ[frozenset((e, o))] for o in un if o != e] or [0]))
+                    lab, nxt = {}, 1
+                    for e in w:
+                        if e == hub or typed[e] or (use_w and slp(e, hub) >= 0.25) or ZZ[frozenset((e, hub))] < zc:
+                            lab[e] = 0
+                        else:
+                            lab[e] = nxt
+                            nxt += 1
+                    ms.append(mcc(truth, lab, w))
+                print(f"   {vn:44s} {np.mean(ms):8.3f} [{np.percentile(ms, 10):.2f} ; {np.percentile(ms, 90):.2f}]")
             if base in eps:
                 print("   z max contre la base en clair : " + "  ".join(f"{e[len(fam) + 1:]}={Za[frozenset((base, e))]:.1f}"
                       for e in names if e != base and (wt(e) == "base" or dis(e) == "plain")))

@@ -68,8 +68,9 @@ règles : + T rattaché au centre                     0.240  [0.00 ; 0.27] 0.041
 règles : + S rattaché                               0.658  [0.22 ; 0.72] 0.112 0.192 |   0.706  [0.72 ; 0.72] 0.088 0.020
 règles complètes (+ filigrane)                      0.926  [0.45 ; 1.00] 0.124 0.190 |   0.706  [0.72 ; 0.72] 0.081 0.004
 plus proche ancre, sans a priori                    0.732  [0.39 ; 1.00] 0.203 0.326 |   0.016  [0.00 ; 0.04] 0.172 0.109
+sans seuil (aucun P fusionné, déguisés au centre)   1.000  [1.00 ; 1.00] 0.044 0.007 |   0.706  [0.72 ; 0.72] 0.038 0.000
 ```
-Le groupe central est bien la base en clair dans 176/200 mondes (OLMo) et 194/200 (Qwen). 0,72 = tout juste sauf la copie filigranée, isolée.
+Le groupe central est bien la base en clair dans 176/200 mondes (OLMo) et 194/200 (Qwen). 0,72 = tout juste sauf la copie filigranée, isolée. La variante « sans seuil » (`--variante sans_seuil`, proposée par `t2-critique`) fait aussi bien sur la structure du corrigé et ne dépend plus du seuil 0,8, fragile si le bruit de service réel est fort ; elle sépare en revanche deux copies en clair du même modèle.
 
 ### 3.6 Bout en bout (`analyse/e2e.py` : simulation → plan de 100 réponses → `t2_pipeline.py` → barème officiel)
 ```
@@ -96,12 +97,12 @@ centre + z < 3 (fermées seules)                   0.000  [0.00 ; 0.00]   0.165 
 endpoints à prompt système fusionnés, reste isolé 0.037  [0.04 ; 0.04]   0.273  [0.27 ; 0.27]
 ```
 **Lecture** : à 100 réponses échantillonnées, fp8, int8 et LoRA 0,3 sont dans le bruit (z < 2), les copies déguisées en sortent autant que les LoRA fortes (z 3 à 5), et le centre n'est retrouvé que dans 76/200 et 15/200 mondes. **Dans ce régime la méthode ne marche pas : MCC 0,02 à 0,27.** La détection du prompt système, elle, tient (79/80).
-Deux essais de plus, même conclusion. (1) Décodeur « écart au consensus » (`analyse/eval_S2.py` : chaque endpoint comparé à la mise en commun des autres, isolé si z ≥ seuil), 12 lots × 8 tirages : MCC ref 0,00 à 0,36 selon le plan et le seuil, sans réglage stable d'une famille à l'autre. (2) Monde v2 aligné sur le code public des organisateurs signalé par `t2-critique` (T 0,7 + top-p 0,9, leurs prompts système « Acme Corp », « You are a helpful assistant. » et une espace seule), 10 sondes × 10 tirages, lots de 10 questions dont des choix entre options équivalentes (`analyse/eval_S3.py`, OLMo) :
+Trois essais de plus, même conclusion. (1) Décodeur « écart au consensus » (`analyse/eval_S2.py` : chaque endpoint comparé à la mise en commun des autres, isolé si z ≥ seuil), 12 lots × 8 tirages : MCC ref 0,00 à 0,36 selon le plan et le seuil, sans réglage stable d'une famille à l'autre. (2) Monde v2 aligné sur le code public des organisateurs signalé par `t2-critique` (T 0,7 + top-p 0,9, leurs prompts système « Acme Corp », « You are a helpful assistant. » et une espace seule), 10 sondes × 10 tirages, lots de 10 questions dont des choix entre options équivalentes (`analyse/eval_S3.py`, OLMo) :
 ```
 z contre la base en clair (4 ab10 + 4 eq10 + 2 nb10, 100 réponses) : réplique -0.1  fp8 -1.4  T1,0 2.3  espace 2.3  « helpful » 2.5
                                        LoRA0.7 3.8  persona 4.5  Acme 4.8  filigrane 7.0     MCC ref : 0.00 à 0.13
 ```
-La réplique est bien à z ≈ 0 (test calibré), mais un prompt système de 5 mots déplace les distributions autant qu'une LoRA 0,7, y compris sur les choix entre options équivalentes (z 2,6 à 4,4).
+(3) Règle « typé → base » (prompt système extrait ou biais d'étiquettes → centre ; non typé de z < seuil → centre ; sinon seul), monde `worldS` : MCC ref 0,00 à 0,04 (OLMo) et 0,02 à 0,19 (Qwen) selon le seuil. La réplique est bien à z ≈ 0 (test calibré), mais un prompt système de 5 mots déplace les distributions autant qu'une LoRA 0,7, y compris sur les choix entre options équivalentes (z 2,6 à 4,4).
 
 ### 3.8 Mode dégradé : familles seules, dès la ronde 0 (`analyse/eval_family_small.py`, 40 tirages de 33 endpoints)
 ```

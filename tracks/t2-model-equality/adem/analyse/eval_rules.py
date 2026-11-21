@@ -109,6 +109,8 @@ def main():
             "règles complètes, sim mixte": dict(sim="mixte"),
             "règles complètes, marge 0,15": dict(margin=0.15),
             "règles complètes, S toujours au centre": dict(margin=9.0),
+            "sans seuil : P jamais fusionnés, S/T/filigrane au centre": dict(margin=9.0, tau_pp=2.0),
+            "sans seuil ni filigrane : S/T au centre": dict(margin=9.0, tau_pp=2.0, detect_w=False),
             "règles complètes, centre voté sur 1 statistique": dict(hub_votes="nn"),
             "règles complètes, sim mixte, centre 1 statistique": dict(hub_votes="nn", sim="mixte"),
             "règles complètes, centre = moyenne sur P et S": dict(hub_votes="PS"),
