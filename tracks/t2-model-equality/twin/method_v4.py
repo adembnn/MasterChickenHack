@@ -161,6 +161,7 @@ WORLDS = {  # même structure de labels que practice_answers.csv ; déguisements
                   "ref-09": dict(temperature=1.0)},
     # régime « tout échantillonne » (code des organisateurs à T=0,7 par défaut) : mêmes déguisements que practice
     "allT07": {n: dict(temperature=0.7) for n in ["ref-01", "ref-02", "ref-03", "ref-04", "ref-05", "ref-06", "ref-07", "ref-09"]},
+    "allT08": {n: dict(temperature=0.8) for n in ["ref-01", "ref-02", "ref-03", "ref-04", "ref-05", "ref-06", "ref-07", "ref-09"]},
     # pire cas : tout échantillonne ET les variantes de poids sont déguisées
     "allT07combined": {"ref-01": dict(temperature=0.7), "ref-03": dict(temperature=0.7), "ref-05": dict(temperature=0.7),
                        "ref-06": dict(temperature=0.7), "ref-02": dict(temperature=0.7, wm=True),
@@ -421,6 +422,45 @@ def context_candidates(extracted, max_paras=3):
     return {"none": None} | {f"para{k}": "\n\n".join(paras[:k]) for k in range(1, min(max_paras, len(paras)) + 1)}
 
 
+def llr_stats(ref, variants, tok, contexts, gens, temps, bs=8):
+    """Rapport de vraisemblance token par token : pour chaque prompt et chaque T de lecture, somme sur les tokens de
+    log p_variante,T(x) - log p_base,T(x), pour chaque variante locale de la MÊME base (fp8, int8, LoRA locales).
+    Un texte tiré de la base donne en moyenne -KL < 0 ; un texte tiré d'une variante proche de la locale, > 0."""
+    import torch
+    out = []
+    with torch.no_grad():
+        for i in range(0, len(contexts), bs):
+            rows, plens = [], []
+            for c, g in zip(contexts[i:i + bs], gens[i:i + bs]):
+                p = tok(c, add_special_tokens=False)["input_ids"]
+                rows.append(p + list(g))
+                plens.append(len(p))
+            L = max(len(r) for r in rows)
+            ids = torch.full((len(rows), L), tok.pad_token_id, dtype=torch.long)
+            att = torch.zeros((len(rows), L), dtype=torch.long)
+            for j, r in enumerate(rows):
+                ids[j, :len(r)] = torch.tensor(r)
+                att[j, :len(r)] = 1
+            ids, att = ids.to(ref.device), att.to(ref.device)
+            lg = {"base": ref(input_ids=ids, attention_mask=att).logits.float()}
+            for vn, (vm, setup) in variants.items():
+                setup()
+                lg[vn] = vm(input_ids=ids, attention_mask=att).logits.float()
+            for j, r in enumerate(rows):
+                n = len(r) - plens[j]
+                if n <= 0:
+                    out.append(None)
+                    continue
+                tgt = ids[j, plens[j]:len(r)][:, None]
+                rec = {"n": n}
+                for T in temps:
+                    lb = torch.log_softmax(lg["base"][j, plens[j] - 1:len(r) - 1] / T, -1).gather(-1, tgt).squeeze(-1)
+                    rec[str(T)] = {vn: round(float((torch.log_softmax(lg[vn][j, plens[j] - 1:len(r) - 1] / T, -1).gather(-1, tgt).squeeze(-1) - lb).sum()), 4)
+                                   for vn in variants}
+                out.append(rec)
+    return out
+
+
 def cmd_reread(a):
     """Relectures locales supplémentaires à partir des sorties déjà collectées (AUCUNE requête aux endpoints)."""
     import torch
@@ -470,8 +510,31 @@ def cmd_reread(a):
             for d, pv in decs.items():
                 samp_calib[f"{s}|{d}"] = sample_stats(ref, tok, chat(tok, bc), gs, penalty=pv)
     log("calibrations LoRA locales faites")
+    llr = {}
+    sampled_eps = [n for n, e in raw["endpoints"].items() if e["sampling"]]
+    if sampled_eps:
+        from exp1_divergence import fake_quant_
+        T_eps = sorted(sampled_summary(samp[n][f"none|raw"], TEMPS)["T_star"] for n in sampled_eps)
+        T_pool = T_eps[len(T_eps) // 2]
+        variants = {"fp8": (fake_quant_(load(dtype), "fp8_e4m3"), lambda: None),
+                    "int8": (fake_quant_(load(dtype), "int8"), lambda: None)}
+        for sv in (0.3, 0.7, 1.5):
+            variants[f"lora{sv}"] = (cal_lora, (lambda sv=sv: scale_lora(cal_lora, sv, store)))
+        lt = [t for t in TEMPS if 0.55 <= t <= 1.25]
+        for n in sampled_eps:
+            e = raw["endpoints"][n]
+            llr[n] = {c: llr_stats(ref, variants, tok, chat(tok, bc, sp), e["bc_ids"], lt)
+                      for c, sp in context_candidates(e["extracted"]).items()}
+        llr_floor = {f"seed{sd}": llr_stats(ref, variants, tok, chat(tok, bc), local_sample(ref, tok, bc, raw["config"]["max_new"], T_pool, sd), lt)
+                     for sd in (31, 32)}
+        llr_calib = {}
+        for vn, (vm, setup) in variants.items():
+            setup()
+            llr_calib[vn] = llr_stats(ref, variants, tok, chat(tok, bc), local_sample(vm, tok, bc, raw["config"]["max_new"], T_pool, 41), lt)
+        log(f"rapports de vraisemblance faits (T_pool={T_pool})")
+        llr = {"T_pool": T_pool, "temps": lt, "endpoints": llr, "floor": llr_floor, "calib": llr_calib}
     json.dump({"reads_ctx": reads_ctx, "samp": samp, "samp_floor": samp_floor, "samp_calib": samp_calib, "temps": TEMPS,
-               "decodings": decs, "floor_dec": floor_dec, "calib_dec": calib_dec},
+               "decodings": decs, "floor_dec": floor_dec, "calib_dec": calib_dec, "llr": llr},
               open(a.out, "w"))
     log("FIN ->", a.out)
 
@@ -521,6 +584,8 @@ def cmd_from_journal(a):
             r = json.loads(line)
             if r.get("type") == "answer" and r.get("response") is not None:
                 recs.append(r)
+    keep = set(a.endpoints.split(",")) if a.endpoints else None
+    recs = [r for r in recs if keep is None or r["endpoint"] in keep]
     by_ep = {}
     for r in recs:
         by_ep.setdefault(r["endpoint"], {})[(r["probe_id"], r["repeat"])] = r
@@ -551,6 +616,76 @@ def cmd_from_journal(a):
           + ", ".join(f"{e[-2:]}={'éch.' if v['sampling'] else 'glouton'}" for e, v in endpoints.items()))
     print("longueur moyenne des réponses (tokens " + a.model.split('/')[-1] + ") : "
           + ", ".join(f"{e[-2:]}={sum(v['lengths']) / max(len(v['lengths']), 1):.0f}" for e, v in endpoints.items()))
+    print("-> " + a.out)
+
+
+def cmd_assign(a):
+    """Famille de chaque endpoint = jumeau candidat qui explique le mieux ses réponses (NLL/token la plus basse à T=1,
+    logits bruts et generation_config du candidat, le meilleur des deux). Lecture locale seulement."""
+    import glob
+    import torch
+    from transformers import AutoTokenizer, AutoModelForCausalLM
+    recs = [json.loads(l) for path in sorted(glob.glob(a.journal)) if not path.endswith("_dryrun.jsonl")
+            for l in open(path, encoding="utf-8")]
+    recs = [r for r in recs if r.get("type") == "answer" and r.get("response") and r["kind"] in ("reading", "repeat", "identity")]
+    eps = sorted({r["endpoint"] for r in recs})
+    res = {}
+    for m in a.candidates.split(","):
+        tok = AutoTokenizer.from_pretrained(m)
+        model = AutoModelForCausalLM.from_pretrained(m, dtype=torch.bfloat16, device_map={"": 0}).eval()
+        rp = float(getattr(model.generation_config, "repetition_penalty", None) or 1.0)
+        res[m] = {}
+        for e in eps:
+            rows = [r for r in recs if r["endpoint"] == e][: a.max_answers]
+            tot = {1.0: [0.0, 0], rp: [0.0, 0]}
+            with torch.no_grad():
+                for r in rows:
+                    ctx = tok.apply_chat_template([{"role": "user", "content": r["prompt"]}], tokenize=False, add_generation_prompt=True)
+                    p = tok(ctx, add_special_tokens=False)["input_ids"]
+                    g = tok(r["response"], add_special_tokens=False)["input_ids"][:256]
+                    if not g:
+                        continue
+                    ids = torch.tensor([p + g], device=model.device)
+                    lg = model(input_ids=ids).logits[0, len(p) - 1:-1].float()
+                    for pen in tot:
+                        lp = torch.log_softmax(penalize(lg, p + g, len(p), pen), -1).gather(-1, ids[0, len(p):, None]).squeeze(-1)
+                        tot[pen][0] += float(-lp.sum())
+                        tot[pen][1] += len(g)
+            res[m][e] = min(v[0] / max(v[1], 1) for v in tot.values())
+        print(m, " ".join(f"{e[-2:]}={res[m][e]:.2f}" for e in eps), flush=True)
+        del model
+        torch.cuda.empty_cache()
+    fam = {e: min(res, key=lambda m: res[m][e]) for e in eps}
+    margin = {e: sorted(res[m][e] for m in res)[1] - res[fam[e]][e] if len(res) > 1 else 0.0 for e in eps}
+    json.dump({"nll": res, "family_twin": fam, "margin": margin}, open(a.out, "w"), indent=1)
+    for m in res:
+        mem = [e for e in eps if fam[e] == m]
+        if mem:
+            print(f"famille {m.split('/')[-1]} : {mem}")
+    print("-> " + a.out)
+
+
+def cmd_merge_ep(a):
+    """Assemble les décisions par famille en un CSV de soumission (famille Fi, modèles FiS, FiT1...)."""
+    import csv
+    asg = json.load(open(a.assign))
+    twins = sorted(set(asg["family_twin"].values()), key=lambda m: min(e for e, t in asg["family_twin"].items() if t == m))
+    out = {}
+    for i, m in enumerate(twins, 1):
+        fam = f"F{i}"
+        members = sorted(e for e, t in asg["family_twin"].items() if t == m)
+        sub = Path(a.dir) / f"sub_{m.split('/')[-1]}.csv"
+        labels = {}
+        if sub.exists():
+            for row in csv.DictReader(open(sub)):
+                labels[row["endpoint"]] = row["model"]
+        for e in members:
+            out[e] = (fam, fam + (labels.get(e) or ("X" + e[-2:])))  # repli : endpoint sans décision -> modèle propre
+        print(f"{fam} = {m.split('/')[-1]} : " + ", ".join(f"{e}:{out[e][1]}" for e in members))
+    with open(a.out, "w") as f:
+        f.write("endpoint,family,model\n")
+        for e in sorted(out):
+            f.write(f"{e},{out[e][0]},{out[e][1]}\n")
     print("-> " + a.out)
 
 
@@ -720,14 +855,46 @@ def cmd_decide(a):
     lora_rate_s1 = calib[min(calib, key=lambda s: abs(s - 1.0))]["mis_rate"]
     lora_p99_max = max(c["p99_margin"] for c in calib.values())
 
+    # --- rapport de vraisemblance (régime échantillonné) ---
+    L = rr.get("llr") or {}
+    def llr_rows(stats, T, vn):
+        return [x[T][vn] / x["n"] for x in (stats[:k] if k else stats) if x]
+    def llr_t(stats, T):
+        Tk = min(L["temps"], key=lambda t: abs(t - T))
+        flo = [x for f in L["floor"].values() for x in f]
+        return {vn: welch_t(llr_rows(stats, str(Tk), vn), llr_rows(flo, str(Tk), vn)) for vn in L["calib"]}
+    if L:
+        P(f"\nRapport de vraisemblance : T_pool={L['T_pool']} ; sensibilité locale (échantillons de chaque variante locale "
+          f"vs plancher, Welch t) : " + ", ".join(f"{vn}: " + "/".join(f"{t:.1f}" for t in llr_t(L["calib"][vn], L["T_pool"]).values())
+                                                for vn in L["calib"]) + f"   [colonnes : {', '.join(L['calib'])}]")
+
     P("\nLecture locale par endpoint :")
     labels, variants = {}, []
     for n in names:
         c, r = best[n]
         if E[n]["sampling"]:
             same = r["ece_at_T_star"] <= a.ece_mult * ece_ref
+            llr_txt = ""
+            if L and n in L["endpoints"]:
+                ctx0 = c.split("|")[0]
+                mine = L["endpoints"][n].get(ctx0) or L["endpoints"][n]["none"]
+                if a.pool_ref:  # référence = les AUTRES endpoints du pool (chacun à son T*), test bilatéral
+                    def rows_at(stats, T, vn):
+                        Tk = str(min(L["temps"], key=lambda t: abs(t - T)))
+                        return llr_rows(stats, Tk, vn)
+                    lt = {}
+                    for vn in L["calib"]:
+                        others = [x for m in sampled if m != n
+                                  for x in rows_at(L["endpoints"][m].get(best[m][0].split("|")[0]) or L["endpoints"][m]["none"], best[m][1]["T_star"], vn)]
+                        lt[vn] = welch_t(rows_at(mine, r["T_star"], vn), others)
+                    fired = [vn for vn, t in lt.items() if abs(t) >= a.t_crit]
+                else:
+                    lt = llr_t(mine, r["T_star"])
+                    fired = [vn for vn, t in lt.items() if t >= a.t_crit]
+                llr_txt = " LLR t=" + "/".join(f"{t:.1f}" for t in lt.values()) + (f" -> déclenche {fired}" if fired else "")
+                same = same and not fired
             txt = (f"échantillonne ; ctx={c} T*={r['T_star']} ece={r['ece_at_T_star']:.4f} gap={r['gap_at_T_star']:+.4f} "
-                   f"(≤ {a.ece_mult}×{ece_ref:.4f} ?) -> " + ("S" if same else "variante"))
+                   f"(≤ {a.ece_mult}×{ece_ref:.4f} ?){llr_txt} -> " + ("S" if same else "variante"))
         else:
             t = welch_t(rates_of(rr["reads_ctx"][n][c]), ref)
             at_floor = t < a.t_crit
@@ -807,7 +974,19 @@ def main():
     j.add_argument("--max_new", type=int, default=256)
     j.add_argument("--lora_steps", type=int, default=150)
     j.add_argument("--allow_dryrun", action="store_true")
+    j.add_argument("--endpoints", default=None, help="sous-ensemble, séparé par des virgules (une famille)")
     j.set_defaults(func=cmd_from_journal)
+    g = sub.add_parser("assign")
+    g.add_argument("--journal", required=True)
+    g.add_argument("--candidates", required=True, help="jumeaux candidats séparés par des virgules")
+    g.add_argument("--max_answers", type=int, default=30)
+    g.add_argument("--out", required=True)
+    g.set_defaults(func=cmd_assign)
+    me = sub.add_parser("merge_ep")
+    me.add_argument("--assign", required=True)
+    me.add_argument("--dir", required=True, help="dossier contenant sub_<jumeau>.csv par famille")
+    me.add_argument("--out", required=True)
+    me.set_defaults(func=cmd_merge_ep)
     x = sub.add_parser("crossread")
     x.add_argument("--raw", required=True)
     x.add_argument("--ref_model", required=True)
@@ -821,6 +1000,7 @@ def main():
     d.add_argument("--reread", default="reread_v4.json")
     d.add_argument("--cross", default=None, help="sortie de crossread (jumeau d'un autre modèle)")
     d.add_argument("--no_guard", action="store_true", help="désactive la garde jumeau (pour montrer l'échec silencieux)")
+    d.add_argument("--pool_ref", action="store_true", help="LLR : référence = autres endpoints du pool (bilatéral) au lieu du plancher local")
     d.add_argument("--near_tie", type=float, default=0.5, help="marge (nats) sous laquelle un écart est une quasi-égalité")
     d.add_argument("--t_crit", type=float, default=3.0, help="Welch t (par prompt) au-delà duquel on rejette « même modèle »")
     d.add_argument("--cap_ratio", type=float, default=0.5, help="marge p99 max d'un biais de décodage, relative à la LoRA locale")
