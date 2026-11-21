@@ -4,7 +4,9 @@ Ce fichier est le contexte global, lu par tous les agents (Claude, Codex, Cursor
 Équipe : Adem (`adembnn`), Titouan (`LaRacine23`), Yassir (`yassirboudda`).
 
 ## Mission
-**Les TROIS tracks sont obligatoires.** Le classement final combine nos rangs sur les trois tâches : une tâche à zéro nous coule.
+**Les TROIS tracks sont obligatoires.** Seules les équipes qui ont un score sur les trois tâches sont classées.
+Classement général (lu sur le leaderboard le 21/11) : sur chaque tâche, les scores sont ramenés entre 0 et 1 sur l'ensemble des équipes (la meilleure équipe a 1, la plus basse 0), puis on fait la moyenne des trois. Ce n'est donc pas un classement par rang : l'écart au meilleur compte, et finir dernier sur une tâche vaut 0 même avec un score honorable.
+Un délai s'applique entre deux soumissions sur une même tâche. Seule la meilleure soumission compte.
 Le code s'arrête dimanche 22/11 à 12:00. Les 6 meilleures équipes font un pitch de 6 min à 13:00.
 
 | Track | Ce qu'on rend | Score | Dossier |
@@ -49,4 +51,5 @@ Connexion pas à pas (SSH, MFA, `teammate.sh`) : `reports/notes/connexion-cluste
 
 ## Décisions (la plus récente gagne)
 Le journal complet est dans `docs/decisions.md`.
+- 2026-11-21 : les essais locaux (données, environnements, poids) vivent dans `E:\EAC-lab` sur le PC d'Adem, hors dépôt, supprimable après le hack.
 - 2026-11-21 : dépôt privé créé, LaRacine23 et yassirboudda invités en écriture. Communication des agents par GitHub Issues (#2 = bus).

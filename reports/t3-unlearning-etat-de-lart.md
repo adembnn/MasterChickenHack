@@ -1,129 +1,140 @@
-# T3 Unlearning : état de l'art et choix de méthode
+# T3 Unlearning : état de l'art, 2e passe (lecture des articles, pas des résumés)
 
-Date : 21 nov. 2026. Lu à la source : `Unlearning.txt`, `task_template.py`, `submission.py`, résumés arXiv de SCAR, Zero-Shot, ReGUn, rapport du concours NeurIPS 2023 (descriptions des méthodes gagnantes). SCRUB, SalUn, NPO : seul le résumé arXiv a été lu, le reste vient de ma mémoire (marqué « mémoire »). Aucune soumission, aucun appel payant.
+Date : 21 nov. 2026, 17 h. Décision débloquée : quelle méthode implémenter. Aucune soumission, aucun appel payant.
+Lu en détail : ReGUn (texte complet), Local Teacher Distillation (extraits longs + annexes), TREW, SCAR, MU-Mis, benchmark ViT 2602.20114, rapport NeurIPS 2023, 5 solutions Kaggle (1re, 3e, 5e, 9e, 10e).
+Non relu en entier : SCRUB, SalUn, NPO (mémoire), HAMU, WIN-U, DISCERN (résumé seulement).
+Limites : Semantic Scholar et OpenAlex ont répondu « 429 » (trop de requêtes) ; un seul graphe de citations obtenu (rapport NeurIPS 2023 : 18 citations depuis mars 2026, aucune ne propose une méthode pour notre métrique). Aucun papier SprintML/CISPA ne traite cette métrique (leurs travaux récents : LLM, contrastif). Le jeu SprintML/unlearning n'a pas de fiche (« No dataset card yet »), donc l'origine des 100 classes reste inconnue.
 
-## 0. Verdict en 4 lignes
-- Méthode recommandée : **distillation douce depuis le modèle original (orig) sur les images à oublier, avec des cibles « non-membre » (tempérées, par image), plus un ancrage KL vers orig sur des images proxy**, petit pas d'apprentissage, derniers blocs seulement. C'est le plan A (section 3).
-- Plan B qui améliore A : fabriquer un **pseudo-gold** (petits modèles qui n'ont jamais vu les images à oublier) et copier leur moyenne. Plus long, plus fidèle.
-- Difficulté : technique 6/10, temps 5/10 (6 à 10 h pour un bon plan A), calcul 2/10 (1 A100 suffit, 2 à 15 min par essai).
-- Risque n°1 : **ni labels, ni scoreur local**. Il faut un mini-scoreur maison et le leaderboard public (30 %) comme seul juge.
+## 1. Ce qu'on nous demande (5 lignes)
+1. Un ViT-B/16 (100 classes) a vu 3500 images ; on rend un `state_dict` float32 qui se comporte comme si elles n'avaient jamais été vues. Pas de labels, pas d'autres images.
+2. Le « gold » = moyenne de plusieurs modèles réentraînés sans ces images. Sur ces images il agit comme sur des images de test : parfois faux, avec une mauvaise classe voisine.
+3. Forget = score de loss (moyenne ET écart-type de la loss, relatif à orig) x score de prédiction (KL par image à T=2 vers la moyenne du gold), sur les images exactes et sur des copies modifiées cachées.
+4. Retain = (accuracy / accuracy orig) x 1/(1 + KL(orig||sub)) sur un jeu de contrôle caché. Porte : moins de 70 % sur la validation = 0.
+5. Score final = forget x retain. Public = 30 % des données, classement final = 70 %.
 
-## 1. Ce qu'on nous demande, en 5 lignes
-1. On reçoit un ViT-B/16 (timm, 100 classes) entraîné sur tout, et 3500 images « à oublier » sans labels. Aucune autre image.
-2. On rend un `state_dict` float32 de même architecture (strict=True, moins de 450 Mo), LoRA fusionné si utilisé.
-3. Forget = (score de loss) x (score de prédiction), sur les images exactes et sur des copies modifiées cachées. Gold = moyenne de plusieurs modèles réentraînés sans ces images.
-4. Retain = (accuracy / accuracy orig) x 1/(1 + KL(orig||sub)) sur un jeu de contrôle caché, KL à température 2.
-5. Porte : moins de 70 % sur un jeu de validation caché = score 0. Score final = forget x retain.
+## 2. Ce que la métrique impose (déductions, chiffres illustratifs)
+- **Le score de loss est le goulot, le score de prédiction monte vite.** Prédiction = 1 - KL(gold||sub)/KL(gold||orig). Orig est très sûr de lui là où le gold hésite : le dénominateur est grand, donc lisser les sorties rapproche déjà beaucoup. Loss = 1 - d/d_orig avec d = |écart de moyenne| + |écart d'écart-type| ; orig a une loss presque nulle et presque constante, donc d_orig vaut environ (moyenne gold + écart-type gold).
+- **Une cible tempérée seule plafonne le score de loss.** Si toutes les images deviennent « un peu incertaines », la loss est quasi constante : moyenne bonne, écart-type presque nul. Exemple (hypothèse : gold moyenne 0,7, écart-type 1,4) : d_orig ≈ 2,0, d_sub ≈ 1,3, score ≈ 0,35. Pour gagner l'écart-type il faut une **queue** : environ 10 à 25 % des images où le modèle se trompe franchement (loss 2 à 6), et les autres confiantes. Et pour le score de prédiction, il faut que ces images soient **les bonnes** (celles que le gold rate).
+- **KL(gold||sub) est une KL « avant »** : elle punit fort un sub qui met une probabilité minuscule là où le gold en met. Être un peu trop flou coûte moins cher qu'être trop sûr.
+- **Deux températures** : la loss est à T=1, la KL à T=2. Le gold du score de prédiction est une moyenne de modèles (plus lisse qu'un seul modèle) ; celui du score de loss est une moyenne de statistiques de modèles individuels. Un seul vecteur de logits doit satisfaire les deux : on entraîne les deux termes (section 3).
+- **Copies modifiées** : orig les a moins mémorisées, donc d_orig y est plus petit, donc chaque écart y pèse plus lourd en relatif. Le gold se trompe un peu plus dessus que sur les images exactes.
+- **Retain** : pour de petits décalages de logits, la KL varie comme 1/T². À T=2 elle vaut environ le quart de la KL à T=1 : un KL(orig||sub) de 0,05 coûte 5 % de retain. Le vrai risque est l'accuracy sur le contrôle (si ce jeu contient des images d'entraînement très sûres, baisser la confiance des images à oublier peut « fuir » vers elles : « localized collateral forgetting », Dolgova & Stich, NeurIPS 2026 : l'écart au gold croît avec la proximité du forget set).
 
-## 2. L'idée clé : copier le gold, pas casser le modèle
-Image simple : orig a appris par coeur les 3500 images, comme un élève qui a vu le corrigé. Le gold est un élève qui ne l'a jamais vu : il se trompe parfois, hésite souvent, et quand il se trompe il choisit une classe **voisine et plausible**, pas une classe au hasard. On doit fabriquer cet élève-là, pas un élève qui rate tout.
+## 3. Tableau de l'état de l'art (pertinent pour nous)
+Légende « retain » : la méthode exige-t-elle des données retain/held-out dans le domaine ? Lecture : E = entier, X = extraits, R = résumé.
+| Papier | Date | Lieu | Idée | Retain ? | Code | Lu |
+|---|---|---|---|---|---|---|
+| ReGUn, Reference-Guided Unlearning 2603.11210 | v2 29 sept. 2026 | arXiv (ETH) | Distiller l'oubli vers la **moyenne par lot** des sorties d'orig sur un held-out labellisé de mêmes classes ; + CE retain | oui | non trouvé | E |
+| Local Teacher Distillation 2605.31317 | 29 mai 2026 | NeurIPS 2026 (poster) | Petit professeur entraîné sur les **voisins retain** du forget set ; ses top-3 probabilités = cibles douces | oui (voisins) | non trouvé | X |
+| TREW 2506.20893 | v5 juil. 2026 | ICML 2026 | Cible = sortie d'orig sans la classe oubliée, inclinée vers les classes proches (classe, pas image) | oui (CE retain) | github.com/CrowdDynamicsLab/ICML_TREW | X |
+| MU-Mis 2402.15109 | v4 mars 2026 | ICLR 2026 | Retain-free : réduit la sensibilité d'entrée de la classe cible ; ViT : Adam, batch 32 | **non** | non trouvé | X |
+| SCAR 2404.12922 | 2024 | à vérifier | Retain-free : distillation JS vers orig sur 10 000 images OOD (ImageNet ou COCO) ; ViT-B/16 testé ; suppression de classes | **non** (OOD) | github.com/jbonato1/scar | X |
+| Benchmark ViT 2602.20114 | v2 2026 | arXiv | ViT/Swin/DINOv2 : sur ViT-B/16 (ImageNet val, 3000 à oublier) Fine-tune 0,843, NegGrad+ 0,842, SalUn 0,773 | oui | RUM : github.com/kairanzhao/RUM | X |
+| RUM (NeurIPS 2024) | 2024 | NeurIPS | Trier le forget set par mémorisation (faible/moyenne/forte), appliquer la méthode par groupe | oui | idem | R |
+| Rapport concours NeurIPS 2023 2406.09073 + Kaggle | 2024 | arXiv | Les meilleurs = « effacer puis réparer » ; scores bruts 0,07 à 0,10 | oui (9e : forget-free) | github.com/google-deepmind/unlearning_evaluation (scoreur) | X |
+| SalUn / SCRUB (ICLR 2024 / NeurIPS 2023) | 2023-24 | — | Masque de saillance + labels aléatoires / alternance maximiser-minimiser | oui | Unlearn-Saliency ; meghdadk/SCRUB | mémoire |
+| HAMU 2606.02119 | 1 juin 2026 | arXiv | Pondération selon la difficulté, multi-objectifs | oui (a priori) | github.com/aoi3142/HAMU | R |
+| WIN-U 2604.13438 ; DISCERN 2611.07892 | avr. ; 5 nov. 2026 | COLM (soumis) ; arXiv | Retain-free par Newton ; par embeddings synthétiques (suppression de **classes**) | non | non trouvé | R |
+| Courbure et mémorisation 2510.24256 | oct. 2025 | arXiv | Édition de poids de ViT/LLM en retirant les directions à faible courbure (mémorisation) | peu | non vérifié | R |
+Écartés pour notre métrique : « Do unlearning algorithms learn the right features? » (2611.06681, 4 nov. 2026, mesure les features, pas les sorties) ; « BatchNorm Illusion » (2609.08901, notre ViT n'a pas de BatchNorm) ; DAMP, Spotter (suppression de classes).
 
-Conséquences (déductions, à vérifier) :
-- Sur les images vues, orig a une loss quasi nulle et très concentrée (moyenne basse, **écart-type bas**). Le gold a sur ces images une loss de type « image de test » : moyenne plus haute, **écart-type bien plus grand** (la plupart faciles, quelques-unes très ratées).
-- Piège : une température unique pour toutes les images corrige la moyenne mais pas l'écart-type. Le score de loss compare moyenne ET écart-type. Il faut de l'hétérogénéité **par image** : faciles = restent confiantes, difficiles = incertaines ou fausses.
-- Le score de prédiction est relatif à orig : `1 - KL(gold||sub)/KL(gold||orig)`. Rapprocher la sortie d'une version plus douce du gold fait déjà monter ce score, même imparfaite.
-- Le gold est une **moyenne de plusieurs modèles** : sa distribution est plus lisse qu'un seul modèle. Notre cible doit aussi être une moyenne (plusieurs vues, plusieurs pseudo-modèles).
-- Labels vrais inconnus, mais orig a presque sûrement raison sur ses images d'entraînement : **la classe prédite par orig sert de pseudo-label** (à mesurer : environ 35 images par classe attendues).
+### Ce que les lectures apprennent (réponses aux questions du brief)
+- **Cible par image qui ressemble à un modèle réentraîné.** ReGUn prend la même cible pour tout le lot (histogramme de classes) : bon pour la moyenne, aveugle à « quelle mauvaise classe ». LTD entraîne un petit professeur sur des voisins et lit ses probabilités sur chaque image : c'est le mécanisme par image qui existe ; il bat la cible « voisins directs » (UA 53 % vs 67 à 83 %, cible gold 47 %), avec k=1000 voisins (similarité cosinus > 0,75), top-3 renormalisé (> 90 % de la masse), β=2 à 3, AdamW lr 1e-4, 10 à 20 époques. Mais testé seulement CIFAR-100/ResNet-56 et SVHN/ViT-Tiny (moins bon : écart moyen 2,6 à 9,8). TREW montre que la similarité **par classe** donne de meilleures cibles que la similarité **par image** (CMIA 82,1 vs 65,6) : β=10, cosinus des vecteurs de classe de la dernière couche, température inverse 5, PCA 32.
+- **Données proxy pour garder le modèle** : SCAR : 10 000 images ImageNet ou COCO suffisent pour une suppression de classe (AUS 0,93 à 0,94) ; en « self-forget » le plateau commence vers 6 000 images ; le bruit pur est mauvais ; ces résultats portent sur des classes, jamais sur des images isolées. MU-Mis (sans aucun retain) reste net en dessous de RUM sur les sous-ensembles aléatoires : l'oubli d'images isolées sans retain est la partie dure.
+- **Hyperparamètres chiffrés** : voir section 4 (aucun papier ne donne une recette ViT-B 224 complète ; les plus proches sont notés).
+- **Concours NeurIPS 2023** (métrique « ressembler au réentraîné », comme ici) : 1er (Fanchuan) : 1 époque de KL vers l'uniforme sur l'oubli, puis 8 époques (batch 256, cosinus : 0,084 puis 0,091 au classement public) alternant contraste forget/retain et CE retain ; 5e : élaguer 99 % des poids, réinitialiser, puis CE + MSE sur l'entropie vers celle d'orig (meilleur score d'oubli, pire utilité) ; 9e (forget-free) : réinitialiser 6 couches tirées au hasard (couche entière > poids isolés ; pas la tête), MSE de distillation vers orig (MSE > CE > L1), plusieurs cycles, lr 1e-3 cosinus ; 10e : SalUn + labels aléatoires + retain. Toutes utilisent du retain. Étonnant : « Random Label » sans réglage bat plusieurs gagnants.
 
-### Estimer ce que prédirait un modèle qui n'a jamais vu l'image, sans données retain
-1. **Cible tempérée** : `q = softmax(logits_orig / tau_f)`, `tau_f` entre 2 et 5, réglable par image. Base la plus simple.
-2. **Vues augmentées/dégradées** : la mémorisation baisse quand on recadre fort, floute, bruite, masque des patchs. Moyenne des sorties d'orig sur 8 à 16 vues = cible plus proche d'un non-membre. L'accord entre vues mesure aussi la difficulté de l'image.
-3. **Tête validée croisée (leave-one-out)** : features d'orig sur les 3500 images (pseudo-labels), tête linéaire / LDA / kNN entraînée sur 90 %, prédiction des 10 % restants, on tourne. Donne des prédictions « jamais vues » qui reflètent la proximité entre classes (donc *quelle* mauvaise classe). Limite : les features d'orig portent encore la mémorisation, donc à mélanger avec 1 et 2.
-4. **Pseudo-gold par modèles qui ne voient jamais ces images** (plan B). La mesure la plus honnête, au prix de plus de travail.
-5. **Calibrage sur du vrai non-membre, si on en trouve** : si les 100 classes viennent d'un jeu public, la loss d'orig sur des images de test publiques donne la moyenne et l'écart-type attendus du gold. Meilleur levier du sujet.
-6. **Le leaderboard comme capteur** : 1 ou 2 réglages globaux (`tau_f`, poids du mélange), jamais 50. Limite de soumissions : inconnue, à demander.
+## 4. Méthodes classées, de la meilleure à la plus simple
+Notation : orig = modèle fourni ; ŷ = classe prédite par orig (pseudo-label, fiable car orig a vu ces images) ; z = logits ; GPU-min = minutes sur 1 A100 (4 disponibles, essais en parallèle) ; h-p = heures-personne.
 
-### Les 100 classes correspondent-elles à un jeu public ?
-- Fiche HF `SprintML/unlearning` : « No dataset card yet ». Contient `model.pt` (343 Mo), `forget_images.npz` (526 Mo = 3500 x 150 528 octets, non compressé) et les 3 scripts. Le doc dit « custom ». Rien ne prouve un jeu public. Je n'ai pas téléchargé les 870 Mo.
-- Test de 10 min : afficher 40 images. Pixélisées (32x32 agrandi) : CIFAR-100 probable. Photos nettes variées : sous-ensemble 100 classes d'ImageNet. Comparer la liste des classes à l'histogramme des classes prédites par orig.
-- Si ça colle : on a de **vraies images non-membres labellisées** (test CIFAR-100 : 10 000 images). Orig mesuré dessus donne l'accuracy gold attendue, moyenne/écart-type de loss gold, et un vrai proxy retain. Question aux superviseurs : jeux publics autorisés ? (le texte dit seulement qu'aucune donnée d'entraînement supplémentaire n'est fournie).
-- Déduction : le gold est entraîné de zéro avec la même recette ; une porte à 70 % suggère une accuracy orig de 75 à 85 %. Pas une donnée.
+### Étape zéro commune (1 h, tout le monde en a besoin)
+1. Charger orig et les images, `predict()` du template (fp16, comme le serveur). Histogramme de confiance d'orig : si plus de 95 % des images ont p(ŷ) > 0,9, les pseudo-labels sont fiables.
+2. Afficher 40 images : pixelisées = CIFAR-100 agrandi, nettes = sous-ensemble ImageNet, autre = custom. Comparer le nombre d'images par classe prédite (attendu ≈ 35).
+3. Poser aux superviseurs : (a) jeux publics autorisés comme proxy ? (b) quel quota de soumissions ? (c) d'où viennent les 100 classes ?
+4. Test de 10 min si les classes semblent ImageNet : prendre les mêmes classes dans ImageNet (val), mesurer accuracy d'orig. Si ça colle, on dispose d'images **non vues et labellisées** (loss et accuracy réelles de non-membres = estimation directe du gold), et peut-être du vrai retain. Les nœuds de calcul Jülich n'ont peut-être pas Internet : télécharger depuis le nœud de connexion (à vérifier).
 
-## 3. Approches classées
+### Méthodes prouvées (littérature) ou adaptées de près
+**P1. Plan « ReGUn/LTD par image + ancre SCAR » (proxy OOD)** : rang 3 en espérance, rang 1 en sécurité.
+- Étapes : (1) cible q par image = orig tempéré (voir N1 pour mieux) ; (2) pertes : `L = KL(q || softmax(z))` sur l'oubli augmenté (T=1) + `KL(q2 || softmax(z/2))` (T=2) + λ·`KL(softmax(z_orig/2) || softmax(z/2))` sur 10 000 images proxy (ImageNet/COCO si disponibles, sinon mélanges de patchs des images à oublier).
+- Réglages de départ : AdamW lr 2e-5 (essayer 1e-5, 5e-5), batch 128 + 128, 6 à 10 époques, cosinus, échauffement 50 pas, wd 0 ; blocs 8 à 11 + norme finale + tête ; `ls1/ls2.gamma` gelés ; bf16.
+- Coût : 5 à 10 GPU-min par essai ; 5 à 7 h-p. Risque moyen : plafond de loss (section 2).
 
-### Plan A (rang 1) : distillation douce « non-membre » + ancrage, derniers blocs
-- Idée : init = orig ; sur les images à oublier (et leurs augmentations) la sortie doit coller à la cible `q` (cibles 1+2+3) ; sur des images proxy elle doit rester égale à celle d'orig.
-- Proxy retain, du plus au moins fiable :
-  1. Vrai jeu public non-membre si les classes correspondent.
-  2. 10 000 images ImageNet/COCO. SCAR : sous-ensemble ImageNet de 10 000 images, COCO équivalent ; **bruit gaussien pur : mauvais**, il faut des motifs spatiaux. https://arxiv.org/html/2404.12922v1
-  3. Images fabriquées à partir d'orig (DeepInversion / zero-shot : https://arxiv.org/abs/2201.05629). Plus long, qualité moyenne sur ViT.
-  4. Mélanges forts des images à oublier avec cible = orig. Risque de réapprendre la mémorisation : petite dose ou rien.
-- Pertes : `L = KL(q || p_sub)` sur l'oubli (T=2 comme le scoreur, plus un terme à T=1) `+ lambda * KL(p_orig || p_sub)` sur le proxy (T=2). Option : terme NPO doux (mémoire : `-(2/beta) log sigmoid(-beta log(p_sub/p_orig))`, https://arxiv.org/abs/2404.05868), beta 0,1 à 1.
-- À balayer : `tau_f` {1,5 ; 2 ; 3 ; 5}, mélange tempérée/vues/tête CV {0 ; 0,5 ; 1}, `lambda` {1 ; 5 ; 10}, lr {1e-6, 3e-6, 1e-5} AdamW, 3 à 15 époques, blocs entraînables {2, 4, 6 derniers, tous}.
-- Effort : 5 à 8 h (chargement, boucle, mini-scoreur, balayage). GPU : une époque (3500 + 10 000 proxy) = 20 s à 1 min ; essai complet 2 à 10 min ; 50 essais en moins de 4 h GPU sur 1 A100, ou répartis sur 4.
+**P2. Effacer puis réparer (gagnants NeurIPS 2023, 9e « forget-free »)** : rang 4.
+- Étapes : cycles de [réinitialiser 2 à 4 blocs choisis au hasard (poids ~ N(0 ; 0,02), `gamma` remis à 1e-4) ; 1 à 2 époques de distillation MSE des logits d'orig sur proxy + oubli augmenté]. 3 à 4 cycles, lr 1e-4 à 1e-3 cosinus (à baisser pour un ViT-B).
+- Valable seulement avec un proxy **dans le domaine** : avec du proxy OOD le modèle réparé perd de l'accuracy (risque de porte 70 %). 10 à 20 GPU-min ; 6 à 8 h-p.
 
-### Plan B (rang 2) : pseudo-gold par modèles « blancs » (perturber puis réparer)
-- Idée du concours NeurIPS 2023 (https://arxiv.org/abs/2406.09073) : les meilleures méthodes **réinitialisent ou bruitent une partie des poids puis réparent**. Amnesiacs : réinitialise la tête et la première couche, puis distille orig sur des données autres que l'oubli. Sun : bruit sur des couches tirées au hasard. Forget : réinitialise des blocs au hasard et redistille.
-- Adapté : K = 4 élèves (un par GPU) partent d'orig bruité, avec tête et 2 à 4 derniers blocs réinitialisés, puis **distillent orig sur le proxy uniquement**. Ils se comportent donc comme des modèles qui n'ont pas vu ces images. Leur **moyenne de softmax** sur les images à oublier (et augmentations) = pseudo p_gold, avec de vraies différences par image.
-- Puis modèle final = plan A avec `q` = pseudo p_gold (mélangé à la cible tempérée). On peut aussi soumettre la moyenne des poids des élèves si son accuracy est proche d'orig.
-- Limites : qualité = qualité du proxy (hors distribution : élève moins précis qu'orig, donc biais) et part de mémorisation qui survit au bruit. À mesurer.
-- Effort : +6 à 8 h après A. GPU : un élève = 50 000 images x 10 époques = 10 à 15 min sur 1 A100 ; K=4 en parallèle sur 1 noeud.
+**P3. Filet de sécurité « recalibrage doux »** : rang 5, le plus rapide.
+- Étapes : tête + norme finale seules ; cible `q = softmax(z_orig / τ)` avec τ=2 à 3 sur l'oubli augmenté ; ancre KL sur mélanges ; 2 époques, lr 1e-5. Retain ≈ 0,95 et plus ; forget attendu 0,15 à 0,35 (plafond de la section 2). 1 GPU-min ; 1 à 2 h-p ; risque faible. À soumettre en premier.
 
-### Rang 3 : SCRUB / SCAR avec pseudo-labels
-- SCRUB (https://arxiv.org/abs/2302.09880 ; mémoire pour les détails) : alterne une étape qui **éloigne** l'élève d'orig sur l'oubli (KL maximisé) et une étape qui le rapproche sur le retain, plus CE. SCAR (https://arxiv.org/abs/2404.12922) remplace le retain par un proxy hors distribution, distille avec une divergence JS ; lr 5e-4 à 1e-4, batch 1024, T 1 à 5, max 30 époques. Son terme d'oubli (classe voisine en Mahalanobis) est conçu pour supprimer une classe, pas des images isolées.
-- Pourquoi rang 3 : « s'éloigner d'orig » ne dit pas où aller. Le but est la position du gold. Utile en terme bonus ou baseline rapide.
-- Effort : 3 à 4 h pour un premier essai. GPU faible.
+### Nos idées (non prouvées dans la littérature)
+**N1. Cibles « quantiles » : fabriquer la distribution de loss du gold par construction** : rang 1 en espérance.
+1. Difficulté d(x) = moyenne des rangs de : (a) 1 - pureté des 10 plus proches voisins parmi les 3500 (cosinus, features d'un bloc intermédiaire, moins mémorisées que la sortie) ; (b) instabilité sous 8 vues fortes (recadrage 0,3 à 1, flou, bruit, couleur) = 1 - moyenne de p_orig(ŷ) ; (c) 1 - probabilité de ŷ hors-échantillon d'une régression logistique à 5 plis sur les features ; (d) entropie d'orig sur les classes ≠ ŷ.
+2. Probabilité de la bonne classe cible p_y(x) = sigmoïde(a - b·z(x)) où z est d standardisé ; (a, b) fixés pour que la moyenne et l'écart-type de -log p_y valent (μ_g, σ_g). Cela fixe **les deux moments par construction**.
+3. Mauvaise classe : w(x) = softmax d'orig (T=2 à 3) sur les classes ≠ ŷ, incliné par exp(β·s), s = cosinus des vecteurs de classe de la dernière couche (TREW : β jusqu'à 10), mélangé 50/50 avec la prédiction hors-échantillon de l'étape 1(c). Cible `q = p_y·e_ŷ + (1 - p_y)·w`.
+4. Cible T=2 : `q2 = 0,85·q + 0,15·w`, plus plate comme une moyenne de plusieurs modèles.
+5. Perte : P1 avec ces cibles ; option : perte de moments sur le lot de 256 vues, `(moyenne(L) - μ_g)² + (écart-type(L) - σ_g)²`, poids 1.
+6. Copies modifiées : même cible que l'image propre, p_y réduit de 15 % x sévérité de la vue ; augmentations à l'entraînement : recadrage 0,5 à 1, flip, couleur 0,2, flou, bruit, JPEG ; garder en réserve des types **non utilisés** à l'entraînement pour le contrôle.
+- Inconnues à régler : (μ_g, σ_g). Sans jeu public : hypothèse initiale accuracy non-membre A = 0,85 (loss moyenne ≈ 0,6, écart-type ≈ 1,2), puis 2 à 3 sondes sur le classement public (A = 0,75 / 0,85 / 0,92). Avec jeu public : mesure directe.
+- Coût : 6 à 10 GPU-min par essai ; 8 à 10 h-p (difficulté + cibles + validation). Risque moyen-fort : l'ordre de difficulté est une conjecture ; le simulateur N3 la teste.
 
-### Rang 4 : recalibrage seul (filet de sécurité, très rapide)
-- Ne toucher que la tête / un facteur de température appris + biais par classe, avec les cibles de la section 2. Les features ne changent pas : retain presque intact. Forget probablement modeste (écart-type mal reproduit). Effort 1 à 2 h. Bonne première soumission.
+**N2. Pseudo-gold : des élèves qui n'ont jamais vu les images** : rang 2, le plus difficile.
+- K=4 élèves (un par GPU) : orig, 3 à 4 derniers blocs réinitialisés, entraînés **uniquement** par distillation d'orig (KL T=2) sur le proxy. Ils n'ont aucun contact avec l'oubli ; la moyenne de leurs softmax sur les images à oublier et leurs vues = cible par image avec vraies différences de classes voisines. Puis P1 avec cette cible, ou moyenne des poids des élèves si l'accuracy reste proche d'orig.
+- Valable seulement avec un proxy dans le domaine ; sinon l'élève est moins précis qu'orig (biais). 15 à 25 GPU-min par élève ; 12 à 16 h-p.
 
-### À écarter
-- Montée de gradient naïve, étiquettes aléatoires seules (SalUn random labeling, https://arxiv.org/abs/2310.12508 ; mémoire : masque de saillance + étiquettes aléatoires, conçu avec retain). Le gold ne choisit pas au hasard et ne s'effondre pas ; le texte du défi le dit.
-- Méthodes dont l'importance des paramètres se calcule sur tout le train (SSD ; LFSSD https://arxiv.org/pdf/2402.19308 n'exige que le forget non étiqueté mais a encore besoin de l'importance sur le train). Zero-shot « gated knowledge transfer » : jugé instable (résumé web, à vérifier).
-- ReGUn (https://arxiv.org/html/2603.11210v1) : même intuition que nous (distiller les sorties sur l'oubli vers une distribution de référence non-membre, histogramme de classes apparié) mais exige un jeu tenu de côté labellisé et du retain, et n'est pas testé sur ViT. À reprendre **si** on trouve un proxy labellisé : sa cible par lot (moyenne d'orig sur des non-membres de mêmes classes) est un bon `q`.
+**N3. Simulateur avec vérité terrain (à lancer en parallèle, agent dédié)** : validation, pas un rendu.
+- ViT-Tiny sur CIFAR-100 (patch 4, 32 px, 100 époques) : « orig » sur 45 000 images dont 3 500 à oublier, 3 « golds » sans elles. Calcule la **vraie** métrique, mesure si la difficulté d(x) prédit la loss du gold (corrélation de rang), et quel (a, b) donne les bons moments. Environ 10 à 20 GPU-min par modèle sur 4 A100 ; 2 à 3 h-p. Limite : autre architecture et autre résolution ; ne valide que la méthode, pas les valeurs absolues.
 
-## 4. Protéger la porte des 70 % et le KL retain
-- Mesurer en continu sur un proxy : accord argmax et KL(orig||sub) T=2. Arrêt précoce si KL dépasse 0,05 à 0,1 (KL 0,1 coûte environ 9 % de retain).
-- Petit lr (1e-6 à 1e-5), peu d'époques, warmup court, pas de weight decay fort. Garder orig figé pour l'ancrage.
-- Limiter les poids touchés : derniers blocs + norme finale + tête ; geler patch_embed, pos_embed, cls_token, premiers blocs.
-- LoRA possible (rang 8 à 16 sur qkv, proj, fc1, fc2 des derniers blocs) avec fusion obligatoire `W += B @ A * alpha/r` dans les `nn.Linear` de timm (qkv = un seul Linear 768 -> 2304). Vérifier `strict=True` et sorties identiques avant/après fusion (1e-5).
-- Interpolation de poids : `theta = orig + alpha * (theta_unlearn - orig)`, alpha {0,3 ; 0,5 ; 0,7 ; 1}. Coût nul, bon réglage oubli/retain après coup.
-- Moyenne de poids de plusieurs graines : réduit la variance, rappelle la moyenne de plusieurs modèles du gold.
-- Porte : ne pas soumettre si l'accuracy proxy chute de plus de 3 à 5 points vs orig ; sans labels, garder un accord argmax avec orig supérieur à 95 % sur proxy.
-
-## 5. Pièges
-- **Pas de labels** : l'entraînement utilise des pseudo-labels d'orig ; le serveur utilise les vrais.
-- **fp16 autocast côté serveur** : évaluer localement exactement comme `predict()` du template. Logits trop grands = saturation ; garder la norme des logits proche d'orig. Entraîner en bf16 ou fp32 (fp16 sans scaler : non).
-- **strict=True** : ne rien ajouter ni renommer (pas de préfixe `module.` de DDP). `torch.save({k: v.cpu().float()})`. Pas de NaN. Taille environ 345 Mo (limite 450).
-- **LayerScale (init 1e-4)** : les `ls1.gamma` / `ls2.gamma` sont minuscules ; lr trop haut ou weight decay peut les dériver et casser le modèle. Les geler ou lr 10x plus petit. Si on réinitialise un bloc, remettre les gamma à 1e-4.
-- **Copies modifiées cachées** : transformations inconnues (flou, recadrage, bruit, couleur : hypothèse). Augmentations larges à l'entraînement, ne pas sur-ajuster aux pixels exacts, rester dans la normalisation [-1, 1] du serveur.
-- **Public 30 % / final 70 %** : peu d'images publiques, le balayage fin sur le public est du bruit. Soumettre le réglage le plus robuste, pas le plus haut.
-- **Multiplicatif** : retain 0,9 x forget 0,3 = 0,27 ; retain 0,6 x forget 0,6 = 0,36. Viser d'abord KL(orig||sub) < 0,05, puis monter le forget.
-- **Proxy hors distribution** : ImageNet sans les 100 classes peut baisser l'accuracy sur les vraies classes. Ajouter les augmentations des images à oublier avec cible **tempérée** (pas orig brut) comme retain faible.
-- Ne pas committer `model.pt` ni `forget_images.npz`.
-
-## 6. Mini-scoreur local (à faire en premier, 1 à 2 h)
-- Pseudo-labels = argmax d'orig. Sur l'oubli et ses augmentations : moyenne/écart-type de loss, KL(cible||sub), accord avec orig. Sur proxy : accord argmax (ou accuracy si labels) et KL(orig||sub) T=2, en fp16 autocast.
-- Contrôles : sub = orig doit donner forget 0 ; sub = bruit fort sur orig doit effondrer le retain.
-- Ce n'est pas le vrai scoreur : un bon score local n'est pas une validation (les cibles sont inventées par nous).
-
-## 7. Difficulté (sur 10)
-| Axe | Note | Pourquoi |
+### Hyperparamètres rencontrés (aucun n'est ViT-B 224 complet)
+| Source | Modèle | Valeurs |
 |---|---|---|
-| Technique | 6 | Idée simple (distiller vers une cible douce), mais pas de labels, pas de scoreur, cible gold à deviner, LayerScale, fusion LoRA. |
-| Temps | 5 | Plan A utile en 6 à 8 h, plan B 14 à 16 h au total. Tenable en 20 h avec 1 à 2 personnes. |
-| Calcul | 2 | 1 A100 suffit, 2 à 15 min par essai ; les 4 GPU servent au balayage et aux K élèves du plan B. |
-Tâches 1 et 2 non lues : pas de comparaison chiffrée. T3 est parmi les moins coûteuses en GPU ; son vrai coût est l'incertitude (pas de vérité terrain, leaderboard bruité).
+| Benchmark ViT, NegGrad+ | ViT-Small, Swin-T | lr 2e-5, β 0,97, 5 à 10 époques ; Fine-tune lr 1e-4 ; SalUn lr 5e-5 |
+| ReGUn | Swin-T 224 | 20 époques, lr 1e-5 à 1e-3, poids retain/oubli w de 0,1 à 0,9 (λ_r = w, λ_f = 1 - w) |
+| LTD | ResNet-56 / ViT-Tiny | AdamW lr 1e-4 (ViT-Tiny), β 2 à 3, 10 à 20 époques |
+| SCAR | divers, ViT-B/16 | lr 1e-4 à 1e-3, batch 1024, T de 1 à 5, 25 à 30 époques avec arrêt par seuil, λ de 1 à 5 |
+| MU-Mis | ViT | Adam, batch 32, arrêt quand la sensibilité revient à son niveau initial |
+| Concours 2023 | ResNet-18 | lr 1e-3 cosinus, batch 256, 5 à 8 époques |
+| **Notre point de départ** | ViT-B | AdamW lr 1e-5 à 5e-5, 6 à 10 époques, batch 128+128, blocs 8 à 11, bf16 |
 
-## 8. Plan de 20 h proposé
-1. 0 à 1 h : 40 images, classes prédites d'orig, test jeu public, questions aux superviseurs (jeux publics permis ? limite de soumissions ?), dépôt `SprintML/hackathon` pour l'environnement Jülich.
-2. 1 à 3 h : mini-scoreur + soumission de sécurité (rang 4).
-3. 3 à 9 h : plan A, balayage, 2 à 3 soumissions au maximum.
-4. 9 à 16 h : plan B si A plafonne ; moyenne de graines, interpolation alpha.
-5. 3 dernières heures : choix robuste, vérification strict=True / float32 / taille / fp16, soumission finale.
+## 5. Meilleur, plus difficile, plus technique, plus rapide
+- **Meilleur (espérance) : N1**, avec le proxy dans le domaine s'il existe (alors N2 et P1 deviennent possibles) ; sinon N1 + ancre OOD de P1.
+- **Plus difficile : N2** (pseudo-gold) : 12 à 16 h-p, utile seulement avec un proxy dans le domaine.
+- **Plus technique : N1** (difficulté, quantiles, deux températures, perte de moments).
+- **Filet le plus rapide : P3**, 1 à 2 h-p, retain ≈ 0,95+, forget faible mais non nul.
+- Plan sur 19 h : H0-1 étape zéro + P3 soumis ; H1-4 N1 minimal (cibles par quantiles, sans option) ; en parallèle N3 par un second agent ; H4-12 balayage (A, τ, β, lr, blocs) sur 4 A100, 3 à 4 sondes publiques au maximum ; H12-16 meilleure variante, moyenne de graines, interpolation `θ = orig + α(θ_unlearn - orig)` ; 3 dernières heures : vérifications finales.
 
-## 9. Questions (défaut si pas de réponse entre parenthèses)
-1. Jeux publics comme proxy retain ? a. demander aux superviseurs maintenant, oui si accord (défaut) / b. non, uniquement images à oublier + synthétiques.
-2. Qui porte T3 ? a. une personne, renfort sur le plan B (défaut) / b. équipe entière 3 h pour le mini-scoreur.
-3. Premier jet : a. rang 4 en 2 h pour sécuriser un score non nul (défaut) / b. directement plan A.
+## 6. Évaluation locale que l'on calcule nous-mêmes
+Sans labels ni gold, aucun score local n'est une preuve. Quatre niveaux :
+1. **Santé (obligatoire)** : en fp16 comme le serveur : `strict=True`, float32, pas de NaN, taille < 450 Mo ; sub = orig doit donner forget 0 ; sub bruité doit effondrer retain.
+2. **Fidélité aux cibles** : sur les images à oublier (propres + vues non vues à l'entraînement) : moyenne et écart-type de loss avec ŷ, comparés à (μ_g, σ_g) visés ; KL(q2 || sub) à T=2 ; part de ŷ non prédite.
+3. **Retain proxy** : sur proxy (idéal : images non vues du domaine ; sinon OOD) : accord argmax avec orig (> 97 %), KL(orig||sub) à T=2 (< 0,05), accuracy si labels.
+4. **Vérité par simulateur N3**, puis le classement public comme capteur (30 %, quota inconnu).
+Règle de prudence : ne pas soumettre si l'accord argmax proxy tombe sous 95 % (porte 70 %).
 
-## Sources
-- SCAR : https://arxiv.org/abs/2404.12922 (HTML : https://arxiv.org/html/2404.12922v1)
-- SCRUB : https://arxiv.org/abs/2302.09880
-- Zero-shot : https://arxiv.org/abs/2201.05629
-- SalUn : https://arxiv.org/abs/2310.12508
-- NPO : https://arxiv.org/abs/2404.05868
-- Concours NeurIPS 2023 (méthodes en annexe A.4) : https://arxiv.org/abs/2406.09073
-- ReGUn : https://arxiv.org/html/2603.11210v1
-- LFSSD : https://arxiv.org/pdf/2402.19308
-- Jeu de données HF : https://huggingface.co/datasets/SprintML/unlearning
+## 7. Pièges
+- **Étiquettes inconnues** : on s'entraîne avec ŷ ; le serveur mesure avec les vrais labels ; les rares erreurs d'orig sur ses images d'entraînement coûtent un peu.
+- **fp16 côté serveur** : logits trop grands = saturation ; évaluer avec `predict()` du template ; entraîner en bf16 ou fp32, jamais fp16 sans scaler.
+- **LayerScale 1e-4** : les `gamma` sont minuscules ; les geler (lr ou wd trop forts les cassent). Si un bloc est réinitialisé, remettre `gamma` à 1e-4.
+- **Nom des clés** : pas de préfixe `module.` ; LoRA fusionné avant sauvegarde.
+- **Écart-type** : ne régler que la moyenne donne un plafond d'environ 0,35 (section 2).
+- **Copies modifiées** : transformations inconnues ; ne pas coller aux pixels exacts ; d_orig y est plus petit donc plus de risque.
+- **Bruit du classement public** : 30 % des données seulement ; ne pas affiner un 4e chiffre significatif ; choisir le réglage robuste.
+- **Multiplicatif** : retain 0,9 x forget 0,3 = 0,27 ; retain 0,6 x forget 0,6 = 0,36. D'abord retain ≥ 0,9, puis monter le forget.
+- **Fuite vers le contrôle** : si le contrôle contient des images d'entraînement très sûres, une baisse de confiance trop large les touche ; mesurer l'accord argmax et KL sur proxy.
+- **Ne rien committer** : `model.pt`, `forget_images.npz`.
+
+## 8. Questions (défaut si pas de réponse)
+1. Jeux publics comme proxy ? a. demander aux superviseurs maintenant et attendre oui (défaut) / b. s'en passer, proxy OOD seulement.
+2. Qui porte T3 ? a. une personne + un agent pour le simulateur N3 (défaut) / b. deux personnes.
+3. Premier jet : a. P3 en 2 h puis N1 (défaut) / b. directement N1.
+
+## Sources principales
+- ReGUn : https://arxiv.org/html/2603.11210v2
+- Local Teacher Distillation : https://arxiv.org/abs/2605.31317
+- TREW : https://arxiv.org/abs/2506.20893 ; code https://github.com/CrowdDynamicsLab/ICML_TREW
+- MU-Mis : https://arxiv.org/abs/2402.15109
+- SCAR : https://arxiv.org/abs/2404.12922 ; code https://github.com/jbonato1/scar
+- Benchmark ViT : https://arxiv.org/abs/2602.20114 ; RUM : https://github.com/kairanzhao/RUM
+- Rapport concours NeurIPS 2023 : https://arxiv.org/abs/2406.09073 ; scoreur https://github.com/google-deepmind/unlearning_evaluation
+- Solutions Kaggle : https://www.kaggle.com/competitions/neurips-2023-machine-unlearning/writeups (1er fanchuan ; 5e Oleszko ; 9e « Forget set-free » ; 10e Tu)
+- SCRUB https://arxiv.org/abs/2302.09880 ; SalUn https://arxiv.org/abs/2310.12508 ; NPO https://arxiv.org/abs/2404.05868 ; HAMU https://github.com/aoi3142/HAMU
+- Jeu : https://huggingface.co/datasets/SprintML/unlearning (sans fiche)
