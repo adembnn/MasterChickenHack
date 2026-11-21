@@ -96,3 +96,13 @@ python method_v4.py decide --raw raw.json --reread reread.json --submission sub.
 ./run_real.sh '<journaux ref>' <tag>      # vrais ref : 5 jumeaux candidats, decide, score_practice.py
 ./run_ep.sh '<journaux ep>' <tag>         # vrais ep : règle pré-enregistrée, CSV + validate_t2.py
 ```
+
+## 10. Levier 5 : fp8 dans la famille qwen3b, cas ep-12 (`twin/lever5.py`, 0 requête)
+Jumeau Qwen2.5-3B : 8 nulls (base) contre 8 fp8 (4 e4m3 poids par tenseur + 4 W8A8 par tenseur), tirage par la
+`generation_config` du modèle, sur les 24 prompts des vrais ep.
+- fp8 d'un 3B **détectable à 24 réponses** : AUC 1,00, puissance 100 % à z ≥ 3, 0 faux positif ; « tous les tokens » ≥ « top
+  20 % de KL » > pondération par la KL.
+- Une fp8 simulée allume **les deux** lecteurs (z de 4,9 à 8,4 chacun) ; nulls ≤ 1,9 / 2,1, somme ≤ 4,0. Règle proposée :
+  z_e4m3 + z_W8A8 ≥ 5 (jumeau optimiste : lecteur aligné ; vrai fp8 ref-02 = 3,4 / 2,8).
+- Vrais ep qwen3b : ep-12 = +3,1 / +0,4 (somme 3,5, profil non fp8, dans la zone des nulls) ; tous les autres ≤ 1,3 / 1,5.
+  Avec la règle : ep-22 (11,1), ep-15 (6,9) passent, ep-05 au seuil (5,0), ep-12 non.
