@@ -249,10 +249,19 @@ def local_generate(model, tok, prompts, max_new, bs):
 # ---------------------------------------------------------------------------
 
 
+def set_model(name):
+    """Change le modèle du jumeau (les helpers de exp1_divergence lisent la globale MODEL à l'appel)."""
+    import exp1_divergence
+    import watermark_robust
+    exp1_divergence.MODEL = watermark_robust.MODEL = name
+    return name
+
+
 def cmd_collect(a):
     import torch
     from transformers import AutoTokenizer
-    from exp1_divergence import MODEL, build_prompts, load, train_lora, scale_lora
+    from exp1_divergence import build_prompts, load, train_lora, scale_lora
+    MODEL = set_model(a.model)
 
     t0 = time.time()
     log = lambda *x: print(f"[{time.time()-t0:.0f}s]", *x, flush=True)
@@ -270,9 +279,11 @@ def cmd_collect(a):
     # ---- requêtes aux endpoints (seul canal d'accès) ----
     raw_eps = {}
     for name, ep in eps.items():
-        _, d1 = ep.query([bank[0]["prompt"]])
-        _, d2 = ep.query([bank[0]["prompt"]])
-        sampling = d1 != d2
+        rep = bc_prompts[:a.n_repeat]
+        d1, _ = ep.query(rep)
+        d2, _ = ep.query(rep)
+        repeat_diff = sum(x != y for x, y in zip(d1, d2)) / len(rep)
+        sampling = repeat_diff > 0.5
         _, ext = ep.query([EXTRACT_PROBE])
         if a.skip_a:
             a_answers = [["∅"] * 20]
@@ -283,7 +294,7 @@ def cmd_collect(a):
             txt = ep.query([b["prompt"] for b in bank])[1]
             a_answers = [[extract_answer(t, b["kind"]) for t, b in zip(txt, bank)]]
         bc_ids, bc_txt = ep.query(bc_prompts)
-        raw_eps[name] = {"sampling": sampling, "extracted": ext[0], "a_answers": a_answers,
+        raw_eps[name] = {"sampling": sampling, "repeat_diff": repeat_diff, "extracted": ext[0], "a_answers": a_answers,
                          "bc_ids": bc_ids, "bc_txt_head": [t[:120] for t in bc_txt[:5]]}
         log(f"{name}: sampling={sampling} calls={ep.calls} extrait={ext[0][:80]!r}")
 
@@ -396,10 +407,11 @@ def cmd_reread(a):
     """Relectures locales supplémentaires à partir des sorties déjà collectées (AUCUNE requête aux endpoints)."""
     import torch
     from transformers import AutoTokenizer
-    from exp1_divergence import MODEL, build_prompts, load, train_lora, scale_lora
+    from exp1_divergence import build_prompts, load, train_lora, scale_lora
     t0 = time.time()
     log = lambda *x: print(f"[{time.time()-t0:.0f}s]", *x, flush=True)
     raw = json.load(open(a.raw))
+    MODEL = set_model(raw["config"].get("model", "allenai/OLMo-2-0425-1B-Instruct"))
     tok = AutoTokenizer.from_pretrained(MODEL)
     tok.padding_side = "left"
     if tok.pad_token is None:
@@ -497,17 +509,46 @@ def cmd_decide(a):
             row.append("    -" if x == y else f"{agree[(x, y)]:5.2f}")
         P(x, " ".join(row))
 
-    # --- plancher et calibration locaux ---
-    floor = max(summarize(raw["floor"][f], k)["mis_rate"] for f in raw["floor"])
+    # --- références mesurées sur place (aucune constante propre à un modèle) ---
+    #  R1 : plancher local = notre copie de S relit ses propres générations (2 tailles de lot) ;
+    #  R2 : ancre du pool = l'endpoint glouton dont la lecture est la plus basse (sous son meilleur contexte),
+    #       c'est-à-dire le bruit « même modèle » réellement observé dans le pool ; on prend la plus haute des deux.
+    rates_of = lambda stats: [st["mis"] / st["n"] for st in (stats[:k] if k else stats) if st["n"] > 0]
+    local_ref = [x for f in raw["floor"] for x in rates_of(raw["floor"][f])]
     calib = {float(s): summarize(v, k, a.near_tie) for s, v in raw["calib"].items()}
-    P(f"\nPlancher glouton local (hors argmax) : {floor:.4f}")
-    P("Calibration LoRA locale (graine 456), hors argmax : " + ", ".join(f"s={s}: {c['mis_rate']:.3f}" for s, c in sorted(calib.items())))
     temps = rr["temps"]
     sfloor = {f: sampled_summary(v, temps, k) for f, v in rr["samp_floor"].items()}
     scal = {s: sampled_summary(v, temps, k) for s, v in rr["samp_calib"].items()}
     ece_floor = max(v["ece_at_T_star"] for v in sfloor.values())
-    P("Plancher échantillonné local (base T=1) : " + ", ".join(f"{f}: T*={v['T_star']} ece={v['ece_at_T_star']:.4f}" for f, v in sfloor.items()))
-    P("Calibration échantillonnée (LoRA locale, T=1) : " + ", ".join(f"s={s}: T*={v['T_star']} ece={v['ece_at_T_star']:.4f}" for s, v in scal.items()))
+
+    best = {}
+    for n in names:
+        if E[n]["sampling"]:
+            cands = {c: sampled_summary(v, temps, k) for c, v in rr["samp"][n].items()}
+            c = min(cands, key=lambda c: cands[c]["ece_at_T_star"])
+        else:
+            cands = {c: summarize(v, k, a.near_tie) for c, v in rr["reads_ctx"][n].items()}
+            c = min(cands, key=lambda c: cands[c]["mis_rate"])
+        best[n] = (c, cands[c])
+    greedy = [n for n in names if not E[n]["sampling"]]
+    anchor = min(greedy, key=lambda n: best[n][1]["mis_rate"])
+    anchor_ref = rates_of(rr["reads_ctx"][anchor][best[anchor][0]])
+    mean = lambda xs: sum(xs) / len(xs)
+    ref = anchor_ref if mean(anchor_ref) > mean(local_ref) else local_ref
+    P(f"\nRéférence locale (copie relit ses propres sorties) : {mean(local_ref):.4f} ; "
+      f"ancre du pool {anchor} ({best[anchor][0]}) : {mean(anchor_ref):.4f} -> référence = "
+      f"{'ancre du pool' if ref is anchor_ref else 'locale'} {mean(ref):.4f}")
+    P("Bruit serveur observé (même requête 2 fois, part des réponses différentes) : "
+      + ", ".join(f"{n[-2:]}={E[n].get('repeat_diff', 0):.2f}" for n in names))
+    P("Calibration LoRA locale : " + ", ".join(f"s={s}: {c['mis_rate']:.3f}/p99 {c['p99_margin']:.1f}" for s, c in sorted(calib.items())))
+    P("Plancher échantillonné local : " + ", ".join(f"{f}: ece={v['ece_at_T_star']:.4f}" for f, v in sfloor.items())
+      + " | LoRA locale échantillonnée : " + ", ".join(f"s={s}: ece={v['ece_at_T_star']:.4f}" for s, v in scal.items()))
+
+    def welch_t(xs, ys):
+        mx, my = mean(xs), mean(ys)
+        vx = sum((x - mx) ** 2 for x in xs) / (len(xs) - 1)
+        vy = sum((y - my) ** 2 for y in ys) / (len(ys) - 1)
+        return (mx - my) / max((vx / len(xs) + vy / len(ys)) ** 0.5, 1e-12)
 
     def est_s(rate):
         pts = sorted(calib.items())
@@ -518,28 +559,29 @@ def cmd_decide(a):
                 return s0 + (s1 - s0) * (rate - c0["mis_rate"]) / max(c1["mis_rate"] - c0["mis_rate"], 1e-9)
         return pts[-1][0]
 
-    # --- lecture de chaque endpoint, meilleur contexte candidat ---
+    # biais de décodage (filigrane) : plus d'écarts que la LoRA locale à s=1, mais marges bornées bien en dessous
+    # de celles qu'une vraie modification des poids produit localement (relatif à la famille, mesuré sur place)
+    lora_rate_s1 = calib[min(calib, key=lambda s: abs(s - 1.0))]["mis_rate"]
+    lora_p99_max = max(c["p99_margin"] for c in calib.values())
+
     P("\nLecture locale par endpoint :")
-    labels, verdict, variants = {}, {}, []
+    labels, variants = {}, []
     for n in names:
+        c, r = best[n]
         if E[n]["sampling"]:
-            cands = {c: sampled_summary(v, temps, k) for c, v in rr["samp"][n].items()}
-            c = min(cands, key=lambda c: cands[c]["ece_at_T_star"])
-            r = cands[c]
             same = r["ece_at_T_star"] <= a.ece_mult * ece_floor
-            verdict[n] = (f"échantillonne ; ctx={c} T*={r['T_star']} ece={r['ece_at_T_star']:.4f} "
-                          f"(seuil {a.ece_mult}×{ece_floor:.4f}) -> " + ("S" if same else "variante"))
+            txt = (f"échantillonne ; ctx={c} T*={r['T_star']} ece={r['ece_at_T_star']:.4f} "
+                   f"(≤ {a.ece_mult}×{ece_floor:.4f} ?) -> " + ("S" if same else "variante"))
         else:
-            cands = {c: summarize(v, k, a.near_tie) for c, v in rr["reads_ctx"][n].items()}
-            c = min(cands, key=lambda c: cands[c]["mis_rate"])
-            r = cands[c]
-            at_floor = r["mis_rate"] <= a.floor_mult * floor + a.floor_abs
-            capped = r["mis_rate"] >= a.wm_rate and r["p99_margin"] <= a.wm_cap
+            t = welch_t(rates_of(rr["reads_ctx"][n][c]), ref)
+            at_floor = t < a.t_crit
+            capped = r["mis_rate"] >= lora_rate_s1 and r["p99_margin"] <= a.cap_ratio * lora_p99_max
             same = at_floor or capped
-            why = "au plancher" if at_floor else ("biais de décodage plafonné (filigrane)" if capped else "")
-            verdict[n] = (f"glouton ; ctx={c:6s} hors-argmax={r['mis_rate']:.4f} dur={r['hard_rate']:.4f} "
-                          f"p99_marge={r['p99_margin']:.2f} -> " + (f"S ({why})" if same else "variante"))
-        P(f"  {n}: {verdict[n]}")
+            why = f"t={t:.1f} < {a.t_crit}" if at_floor else (
+                f"biais plafonné (p99 {r['p99_margin']:.1f} ≤ {a.cap_ratio}×{lora_p99_max:.1f})" if capped else f"t={t:.1f}")
+            txt = (f"glouton ; ctx={c:6s} hors-argmax={r['mis_rate']:.4f} dur={r['hard_rate']:.4f} "
+                   f"p99={r['p99_margin']:.2f} -> " + (f"S ({why})" if same else f"variante ({why})"))
+        P(f"  {n}: {txt}")
         if same:
             labels[n] = "S"
         else:
@@ -591,6 +633,8 @@ def main():
     c.add_argument("--seed", type=int, default=0)
     c.add_argument("--out", default="raw_v4.json")
     c.add_argument("--world", default="practice", choices=list(WORLDS))
+    c.add_argument("--model", default="allenai/OLMo-2-0425-1B-Instruct")
+    c.add_argument("--n_repeat", type=int, default=5, help="prompts rejoués 2 fois : échantillonnage + bruit serveur")
     c.add_argument("--skip_a", action="store_true", help="ne pas interroger la couche A (diagnostic seulement)")
     c.set_defaults(func=cmd_collect)
     r = sub.add_parser("reread")
@@ -604,10 +648,8 @@ def main():
     d.add_argument("--k_bc", type=int, default=None, help="n'utiliser que les k premiers prompts B/C (budget)")
     d.add_argument("--reread", default="reread_v4.json")
     d.add_argument("--near_tie", type=float, default=0.5, help="marge (nats) sous laquelle un écart est une quasi-égalité")
-    d.add_argument("--floor_mult", type=float, default=2.0)
-    d.add_argument("--floor_abs", type=float, default=0.002)
-    d.add_argument("--wm_rate", type=float, default=0.2, help="taux hors argmax au-delà duquel on teste le plafond")
-    d.add_argument("--wm_cap", type=float, default=8.0, help="plafond de marge (nats) d'un biais de décodage additif")
+    d.add_argument("--t_crit", type=float, default=3.0, help="Welch t (par prompt) au-delà duquel on rejette « même modèle »")
+    d.add_argument("--cap_ratio", type=float, default=0.5, help="marge p99 max d'un biais de décodage, relative à la LoRA locale")
     d.add_argument("--ece_mult", type=float, default=2.0)
     d.add_argument("--quant_hard", type=float, default=0.01)
     d.add_argument("--same_variant", type=float, default=0.5)
