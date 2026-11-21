@@ -1,0 +1,278 @@
+<title>Plan de bataille EAC</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout : carnet de labo. Une bande de couleur par track sert de repère, du comparatif jusqu'aux fiches. */
+:root{
+  --bg:#f3f4f1; --surface:#ffffff; --ink:#15191c; --muted:#5b6469; --rule:#d5d9d4;
+  --t1:#0f6e6a; --t2:#a8481a; --t3:#3c4fa8; --warn:#b3261e; --ok:#2f6b2f;
+  --t1-soft:#dcefed; --t2-soft:#f6e3d8; --t3-soft:#e1e5f6;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121516; --surface:#1a1e20; --ink:#e7ebe8; --muted:#9aa3a6; --rule:#2e3437;
+  --t1:#4cc3bb; --t2:#f08a55; --t3:#8c9cf0; --warn:#ff8a80; --ok:#8fd18f;
+  --t1-soft:#173230; --t2-soft:#3a2418; --t3-soft:#20263f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121516; --surface:#1a1e20; --ink:#e7ebe8; --muted:#9aa3a6; --rule:#2e3437;
+  --t1:#4cc3bb; --t2:#f08a55; --t3:#8c9cf0; --warn:#ff8a80; --ok:#8fd18f;
+  --t1-soft:#173230; --t2-soft:#3a2418; --t3-soft:#20263f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.12}
+h1{font-size:clamp(2.1rem,5vw,3.4rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.75rem;font-weight:700}
+h3{font-size:1.15rem;font-weight:700}
+p{margin:0;max-width:68ch}
+.eyebrow{font:600 .74rem/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-size:.88em}
+a{color:inherit;text-underline-offset:3px}
+a:focus-visible{outline:2px solid var(--t3);outline-offset:2px}
+header{display:flex;flex-direction:column;gap:14px;border-bottom:2px solid var(--ink);padding-bottom:24px}
+.lede{font-size:1.12rem;color:var(--muted)}
+.facts{display:flex;flex-wrap:wrap;gap:8px 24px;font-family:var(--f-mono);font-size:.82rem;color:var(--muted)}
+.facts b{color:var(--ink);font-weight:600}
+section{display:flex;flex-direction:column;gap:18px}
+.scroll{overflow-x:auto;border-top:1px solid var(--rule)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:.93rem}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--rule)}
+th{font:600 .72rem/1.2 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font:600 .74rem/1 var(--f-mono);padding:5px 8px;border-radius:3px;color:var(--surface);white-space:nowrap}
+.tag.t1{background:var(--t1)}.tag.t2{background:var(--t2)}.tag.t3{background:var(--t3)}
+.gauge{display:flex;align-items:center;gap:8px}
+.gauge i{display:block;height:8px;width:90px;background:var(--rule);position:relative}
+.gauge i::after{content:"";position:absolute;inset:0 auto 0 0;width:calc(var(--v)*10%);background:var(--ink)}
+.verdicts{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.verdicts div{background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.verdicts b{font-family:var(--f-display);font-size:1.05rem}
+.track{border-left:6px solid var(--c);padding-left:20px;display:flex;flex-direction:column;gap:20px}
+.track.t1{--c:var(--t1);--s:var(--t1-soft)}.track.t2{--c:var(--t2);--s:var(--t2-soft)}.track.t3{--c:var(--t3);--s:var(--t3-soft)}
+.track h2 span{color:var(--c)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+.cols>div{display:flex;flex-direction:column;gap:8px;min-width:0}
+.image{background:var(--s);padding:14px 16px;font-size:1rem}
+ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.proof{font:600 .68rem/1 var(--f-mono);letter-spacing:.06em;padding:3px 6px;border:1px solid currentColor;border-radius:2px;white-space:nowrap}
+.proof.p{color:var(--ok)}.proof.i{color:var(--muted)}
+.state{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.state div{background:var(--surface);border:1px solid var(--rule);padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.state .block{border-color:var(--warn)}
+.state .block .eyebrow{color:var(--warn)}
+.q ol{gap:14px}
+.q li p{margin-top:4px;color:var(--muted)}
+footer{font-size:.85rem;color:var(--muted);border-top:1px solid var(--rule);padding-top:16px;display:flex;flex-direction:column;gap:6px}
+@media (prefers-reduced-motion:no-preference){.gauge i::after{transition:width .6s ease}}
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">European AI Championship · Paris · 21–22 nov. 2026 · équipe MasterChickenHack</span>
+  <h1>Trois tracks, un seul classement</h1>
+  <p class="lede">Le jury classe chaque équipe sur les trois tâches et combine les rangs. Une tâche à zéro nous coule, donc on les fait toutes. Cette page résume ce qu'on nous demande, ce qui se fait de mieux dans la recherche récente et l'ordre dans lequel attaquer.</p>
+  <div class="facts">
+    <span>Fin du code <b>dim. 12:00</b></span>
+    <span>Pitch top 6 <b>13:00</b></span>
+    <span>Calcul <b>1 nœud = 4×A100 40 Go</b> par job (JURECA)</span>
+    <span>Classement final <b>70 % caché</b> · public 30 %</span>
+  </div>
+</header>
+
+<section>
+  <span class="eyebrow">Comparatif</span>
+  <h2>Laquelle est la plus dure, la plus longue, la plus technique</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Track</th><th>On rend</th><th>Technicité</th><th>Temps</th><th>Calcul GPU</th><th>Risque principal</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag t1">T1 Filigrane</span></td><td>1020 masques 128×128 (.pt)</td>
+        <td><span class="gauge" style="--v:7"><i></i><span class="mono">7/10</span></span></td>
+        <td><span class="gauge" style="--v:8"><i></i><span class="mono">14–20 h-p</span></span></td>
+        <td><span class="gauge" style="--v:5"><i></i><span class="mono">5–10 h</span></span></td>
+        <td>Hypothèse du « rectangle » fausse : on retombe sur le réseau entraîné, le chemin long</td></tr>
+      <tr><td><span class="tag t2">T2 Modèles</span></td><td>CSV de 33 lignes</td>
+        <td><span class="gauge" style="--v:7"><i></i><span class="mono">7/10</span></span></td>
+        <td><span class="gauge" style="--v:5"><i></i><span class="mono">5–10 h-p</span></span></td>
+        <td><span class="gauge" style="--v:2"><i></i><span class="mono">~0 h</span></span></td>
+        <td>Budget irréversible : 100 réponses par endpoint, une erreur de protocole et c'est perdu</td></tr>
+      <tr><td><span class="tag t3">T3 Oubli</span></td><td>poids du ViT (state dict, 345 Mo)</td>
+        <td><span class="gauge" style="--v:8"><i></i><span class="mono">8/10</span></span></td>
+        <td><span class="gauge" style="--v:6"><i></i><span class="mono">8–12 h-p</span></span></td>
+        <td><span class="gauge" style="--v:3"><i></i><span class="mono">1–3 h</span></span></td>
+        <td>On vise une cible qu'on ne voit pas (le modèle réentraîné) et la note tombe à 0 sous 70 % de précision</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="verdicts">
+    <div><span class="eyebrow">La plus chronophage</span><b>T1</b><p>Trois filigranes qui se comportent différemment, et la meilleure version demande des données synthétiques plus un petit réseau entraîné par méthode.</p></div>
+    <div><span class="eyebrow">La plus technique</span><b>T3</b><p>Il faut fabriquer, image par image, ce qu'un modèle jamais entraîné dessus aurait répondu, sans étiquettes ni données de rétention.</p></div>
+    <div><span class="eyebrow">La plus risquée</span><b>T2</b><p>Peu de code, mais chaque requête est définitive. Les papiers disent que la quantification 8 bits est quasi invisible en texte seul.</p></div>
+    <div><span class="eyebrow">La plus rapide à sécuriser</span><b>T3 puis T1</b><p>T3 : un recalibrage doux de la tête en 1–2 h donne un score non nul. T1 : les bases « tout 0 / tout 1 / boîte » en 1 h.</p></div>
+  </div>
+  <p class="mono" style="color:var(--muted)">h-p = heures-personne. Toutes ces durées et notes sont des estimations tirées des rapports, aucune n'est mesurée.</p>
+</section>
+
+<section class="track t1">
+  <span class="eyebrow">Track 1 · Watermark Localization · score mIoU</span>
+  <h2><span>T1</span> Retrouver où le filigrane survit</h2>
+  <div class="image">Imagine un tampon invisible apposé sur un morceau de photo. Ensuite, quelqu'un a retouché l'image : agrandi le cadre, effacé un objet, ajouté un autre, ou découpé l'objet tamponné pour le coller ailleurs. On doit colorier les zones où le tampon est encore là.</div>
+  <div class="cols">
+    <div><h3>Ce qu'on nous demande, techniquement</h3>
+      <ul>
+        <li>1020 images test 512×512. Pour chacune on connaît la méthode (PixelSeal 256 bits, TrustMark 100 bits, StegaStamp 100 bits) et le <b>message caché</b>.</li>
+        <li>Sortie : masque binaire 128×128 (une case = 4×4 pixels, 1 si au moins la moitié est filigranée).</li>
+        <li>Score par image : moyenne de l'IoU (recouvrement) de la zone propre et de la zone filigranée. Une classe vide des deux côtés vaut 1.</li>
+        <li>510 images d'entraînement avec masques. Le kit fournit les trois décodeurs avec leurs cartes internes.</li>
+      </ul></div>
+    <div><h3>Pourquoi c'est dur</h3>
+      <ul>
+        <li>Ces trois filigranes sont faits pour lire un message dans toute l'image, pas pour dire où il est.</li>
+        <li><b>Aucun papier</b> ne localise PixelSeal, TrustMark ou StegaStamp tels quels. Meta (talk de Pierre Fernandez) répond « utilisez WAM », un autre filigrane.</li>
+        <li>Les retouches génératives peuvent faire tomber le décodage au hasard, même loin de la zone touchée (banc d'essai 2609.16832, sept. 2026).</li>
+      </ul></div>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>Méthode</th><th>Preuve</th><th>Idée</th><th>Effort</th><th>Risque</th></tr></thead>
+    <tbody>
+      <tr><td><b>Exp. 0</b> · test du cadre</td><td><span class="proof i">IDÉE</span></td><td>Décoder l'image entière, puis seulement le rectangle vrai, sur 20 images par méthode. Si le rectangle l'emporte, le filigrane est calé dessus et la méthode A devient la bonne.</td><td class="num">10–30 min</td><td>nul</td></tr>
+      <tr><td><b>A</b> · boîte exacte + trous</td><td><span class="proof i">IDÉE</span></td><td>Chercher le rectangle où le décodeur retrouve notre message connu (1 chance sur 10¹⁰ par hasard), puis retirer les trous avec la carte 8×8 du décodeur.</td><td class="num">6–8 h-p · 1–2 h GPU</td><td>moyen</td></tr>
+      <tr><td><b>C</b> · petit réseau de lecture</td><td><span class="proof p">PAPIER partiel</span></td><td>U-Net léger par méthode, nourri de l'image et des cartes du décodeur, entraîné sur 20 000 collages synthétiques puis sur le vrai train (recette de WAM, MaskMark, ReliaGuard).</td><td class="num">12–16 h-p · 5–8 h GPU</td><td>moyen-haut</td></tr>
+      <tr><td><b>F</b> · détecteur TrustMark</td><td><span class="proof p">CODE Adobe</span></td><td><span class="mono">TrustMark(loadBBoxDetector=True).localize()</span> rend une boîte. Le kit ne le charge pas. À mesurer sur les 170 images TrustMark.</td><td class="num">1 h</td><td>moyen</td></tr>
+      <tr><td><b>B</b> · corrélation avec l'embedder</td><td><span class="proof i">IDÉE</span></td><td>On possède les embedders : comparer localement l'image au motif que l'embedder poserait pour notre message, contre des messages au hasard.</td><td class="num">4–6 h-p</td><td>haut</td></tr>
+      <tr><td><b>G</b> · bases sûres</td><td><span class="proof i">IDÉE</span></td><td>Tout 0, tout 1, rectangle médian du train, seuil sur la marge globale. Valide la chaîne de soumission.</td><td class="num">0,5–2 h</td><td>nul</td></tr>
+    </tbody></table></div>
+  <div class="cols">
+    <div><h3>Verdicts</h3><ul>
+      <li><b>Meilleure :</b> A pour la forme principale, puis C pour les trous et les bords, si l'exp. 0 confirme le rectangle.</li>
+      <li><b>Plus technique :</b> transformer l'extracteur PixelSeal en segmenteur (option <span class="mono">pixelwise</span> déjà dans le dépôt videoseal), 10–14 h par méthode.</li>
+      <li><b>Base sûre :</b> G, puis E et F avant le dîner.</li></ul></div>
+    <div><h3>Pièges</h3><ul>
+      <li>Rogner puis agrandir change l'échelle du motif : travailler à la résolution native (256 / 245 / 400 px).</li>
+      <li>Données synthétiques : il faut des images propres, à télécharger sur le nœud de login (COCO val).</li>
+      <li>Fichier ≤ 20 Mo : tenseur bool 1020×128×128 ≈ 17 Mo.</li></ul></div>
+  </div>
+</section>
+
+<section class="track t2">
+  <span class="eyebrow">Track 2 · Model Equality · 0,1·MCC famille + 0,9·MCC modèle</span>
+  <h2><span>T2</span> Démasquer les modèles déguisés</h2>
+  <div class="image">33 cuisiniers derrière des guichets. On a le droit de goûter 100 bouchées chez chacun. Certains suivent la même recette avec un autre tablier (filigrane), un chef qui souffle des consignes (prompt système) ou une cuisson plus vive (décodage) : c'est le même cuisinier. D'autres ont une recette à peine retouchée (quantification, LoRA) : c'est un autre.</div>
+  <div class="cols">
+    <div><h3>Ce qu'on nous demande, techniquement</h3>
+      <ul>
+        <li>Pour chaque endpoint <span class="mono">ep-01…33</span> : sa famille (même modèle de base) et son modèle exact (même checkpoint + même quantification + même LoRA).</li>
+        <li>Budget : 100 réponses par endpoint pour tout le hackathon, 256 tokens max, pas de température ni de message système.</li>
+        <li>9 endpoints <span class="mono">ref-*</span> avec la réponse connue pour s'entraîner (5 identiques déguisés, puis fp8, LoRA 0,3, 0,7, 1,5).</li>
+        <li>La famille ne vaut que 10 % : 90 % du score se joue sur les variantes à l'intérieur d'une famille.</li>
+      </ul></div>
+    <div><h3>Pourquoi c'est dur</h3>
+      <ul>
+        <li>17 papiers 2025–2026 lus : <b>aucun</b> ne traite 33 endpoints sans modèle de référence, avec déguisements, en 100 réponses.</li>
+        <li>4 bits : détectable. 8 bits et fp8 : quasi invisibles en texte seul (MET, RUT, AgentProv).</li>
+        <li>Le prompt système est le pire piège : MET le prend pour un autre modèle dans 67 % des cas. AgentProv, écrit par les organisateurs, descend à 7 % en lisant les appels d'outils.</li>
+      </ul></div>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>Méthode</th><th>Preuve</th><th>Idée</th><th>Effort</th><th>Risque</th></tr></thead>
+    <tbody>
+      <tr><td><b>Le levier</b> · questions par lots</td><td><span class="proof i">IDÉE</span></td><td>Le budget compte des réponses, pas des tokens : 20 mini-questions numérotées par prompt donnent environ 1500–2000 observations par endpoint au lieu de 250. KBF (lots de 10) et FLIPS (500 symboles) font déjà pareil.</td><td class="num">—</td><td>format à tester sur ref</td></tr>
+      <tr><td><b>M1</b> · empreinte par lots + poids appris sur ref</td><td><span class="proof p">BRIQUES publiées</span></td><td>120 questions fermées (choix à égalité B3IT, nombres rares KBF, tirages IRIS, arithmétique). Chi-deux par question, combinaison de Cauchy, permutation, puis clustering cohérent (A=B et B=C ⇒ A=C).</td><td class="num">8–10 h-p</td><td>moyen</td></tr>
+      <tr><td><b>Base rapide</b></td><td><span class="proof i">IDÉE</span></td><td>Lots sans poids appris + taux d'accord exact par paire + famille par embeddings, seuil réglé sur les ref.</td><td class="num">4–5 h-p</td><td>faible</td></tr>
+      <tr><td><b>M3 + M4</b> · modèle local + simulateur</td><td><span class="proof p">RUT / API-TAIL</span></td><td>Charger la famille identifiée (OLMo cité) sur les A100, mesurer la surprise des réponses, simuler bf16 / int8 / nf4 / LoRA pour choisir les questions qui séparent le mieux.</td><td class="num">10–14 h-p</td><td>élevé</td></tr>
+      <tr><td><b>M2</b> · MET classique</td><td><span class="proof p">PAPIER</span></td><td>Textes longs, distance de Hamming. Seulement en second avis : trop sensible au prompt système.</td><td class="num">3 h-p</td><td>élevé seul</td></tr>
+    </tbody></table></div>
+  <div class="cols">
+    <div><h3>Plan du budget (par endpoint)</h3><ul>
+      <li><b>60</b> requêtes : 6 lots de 20 questions × 10 ordres, dont un test de déterminisme (glouton ou échantillonné).</li>
+      <li><b>16</b> requêtes : 8 prompts ouverts × 2, pour la famille et le style LoRA.</li>
+      <li><b>24</b> requêtes de réserve, dépensées seulement sur les paires ambiguës après analyse.</li>
+      <li>Gratuit, à vérifier sur ref : le champ <span class="mono">usage.prompt_tokens</span> révélerait la longueur du prompt système caché et le tokenizer (empreinte de famille).</li></ul></div>
+    <div><h3>Critère avant de toucher un ep-*</h3><ul>
+      <li>Bootstrap de 200 tirages au vrai budget sur les ref, notés par <span class="mono">score_practice.py</span>.</li>
+      <li>Les 5 identiques restent groupés ≥ 90 % des tirages ; LoRA 0,7 et 1,5 séparés ≥ 80 %.</li>
+      <li>On accepte de confondre fp8 avec la base : séparer sans preuve crée de fausses paires.</li>
+      <li>Plan posté sur l'issue #4 avant toute requête sur <span class="mono">ep-*</span>.</li></ul></div>
+  </div>
+</section>
+
+<section class="track t3">
+  <span class="eyebrow">Track 3 · Unlearning · oubli × rétention, porte à 70 %</span>
+  <h2><span>T3</span> Faire oublier 3500 images à un ViT</h2>
+  <div class="image">Un élève a révisé 3500 fiches en plus du programme. Il doit répondre à ces fiches comme s'il ne les avait jamais vues : hésiter là où un élève normal hésite, se tromper vers la même mauvaise réponse, et rester aussi bon partout ailleurs.</div>
+  <div class="cols">
+    <div><h3>Ce qu'on nous demande, techniquement</h3>
+      <ul>
+        <li>Modèle : <span class="mono">vit_base_patch16_224</span>, 100 classes. 3500 images à oublier, <b>sans étiquettes</b>, et aucune autre donnée.</li>
+        <li>Oubli = score de loss (moyenne <b>et</b> écart-type, comparés au « gold » réentraîné) × score de prédiction (KL par image à T=2), sur les images et sur des copies retouchées cachées.</li>
+        <li>Rétention = précision relative × 1/(1+KL vers l'original) sur un jeu caché. Sous 70 % de précision : 0.</li>
+        <li>Rendu : state dict float32, même architecture, ≤ 450 Mo.</li>
+      </ul></div>
+    <div><h3>Pourquoi c'est dur</h3>
+      <ul>
+        <li>Toutes les méthodes gagnantes du concours NeurIPS 2023 (même type de métrique) utilisent des données de rétention. On n'en a pas.</li>
+        <li>Adoucir les sorties corrige la moyenne de la loss, pas son écart-type : plafond vers 0,35. Il faut une <b>queue</b> de 10–25 % d'images franchement ratées, et ce doivent être les bonnes.</li>
+        <li>On ne connaît ni la moyenne ni l'écart-type de loss du gold.</li>
+      </ul></div>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>Méthode</th><th>Preuve</th><th>Idée</th><th>Effort</th><th>Risque</th></tr></thead>
+    <tbody>
+      <tr><td><b>Étape zéro</b></td><td>—</td><td>Regarder 40 images : si les 100 classes viennent d'ImageNet ou de CIFAR-100, on récupère de vraies images non vues pour mesurer le gold et protéger la rétention.</td><td class="num">1 h</td><td>nul</td></tr>
+      <tr><td><b>P3</b> · recalibrage doux</td><td><span class="proof p">adapté</span></td><td>Tête + norme finale seules, cible = sorties de l'original adoucies (τ 2–3). Rétention ≈ 0,95, oubli 0,15–0,35.</td><td class="num">1–2 h-p · 1 GPU-min</td><td>faible</td></tr>
+      <tr><td><b>N1</b> · cibles par quantiles</td><td><span class="proof i">IDÉE</span></td><td>Estimer la difficulté de chaque image (voisins, instabilité sous augmentations, tête validée croisée), fixer la probabilité de la bonne classe pour que moyenne <b>et</b> écart-type de la loss collent au gold, mauvaise classe tirée vers les classes proches (TREW).</td><td class="num">8–10 h-p · 6–10 GPU-min/essai</td><td>moyen-fort</td></tr>
+      <tr><td><b>P1</b> · distillation + ancre</td><td><span class="proof p">ReGUn · LTD · SCAR</span></td><td>KL vers une cible par image (T=1 et T=2) sur l'oubli augmenté, plus une ancre KL vers l'original sur 10 000 images proxy. AdamW 1e-5 à 5e-5, blocs 8–11 + tête.</td><td class="num">5–7 h-p</td><td>moyen</td></tr>
+      <tr><td><b>N2</b> · pseudo-gold</td><td><span class="proof i">IDÉE</span></td><td>4 élèves (un par A100) qui n'ont jamais vu les images, réparés par distillation : leur moyenne donne la cible. Seulement avec des données du même domaine.</td><td class="num">12–16 h-p</td><td>élevé</td></tr>
+      <tr><td><b>N3</b> · simulateur</td><td><span class="proof i">IDÉE</span></td><td>ViT-Tiny sur CIFAR-100 avec 3 vrais golds : la seule façon de calculer la vraie métrique en local et de valider N1.</td><td class="num">2–3 h-p</td><td>faible</td></tr>
+    </tbody></table></div>
+  <div class="cols">
+    <div><h3>Verdicts</h3><ul>
+      <li><b>Meilleure et plus technique :</b> N1, avec données du domaine si elles existent.</li>
+      <li><b>Plus dure :</b> N2.</li>
+      <li><b>Base sûre :</b> P3 soumis dans les deux premières heures.</li></ul></div>
+    <div><h3>Pièges</h3><ul>
+      <li>LayerScale (gamma à 1e-4) : geler, sinon le modèle casse.</li>
+      <li>Le serveur évalue en fp16 : tester avec <span class="mono">predict()</span> du gabarit.</li>
+      <li>Score multiplicatif : d'abord rétention ≥ 0,9, puis monter l'oubli.</li></ul></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Où on en est · sam. 21 nov. ~17 h</span>
+  <h2>État de l'équipe</h2>
+  <div class="state">
+    <div><span class="eyebrow">Fait</span><b>Dépôt et coordination</b><p>Dépôt <span class="mono">adembnn/EAC</span>, contexte partagé, bus des agents (issue #2), une issue par track, boucle de suivi toutes les 3 min.</p></div>
+    <div><span class="eyebrow">Fait</span><b>Cluster côté chef</b><p>Titouan (<span class="mono">destors1</span>) a monté le dossier commun avec les 3 jeux de données et les environnements.</p></div>
+    <div class="block"><span class="eyebrow">Bloquant</span><b>Clé API des tâches</b><p>Introuvable dans les mails d'Adem et de Titouan. Elle part au premier membre inscrit sur le formulaire d'équipe. Sans elle, aucune soumission.</p></div>
+    <div class="block"><span class="eyebrow">Bloquant</span><b>Accès GPU d'Adem</b><p>Accords d'usage JURECA et JUDAC non signés sur JuDoor. Clé SSH prête.</p></div>
+    <div><span class="eyebrow">En attente</span><b>Yassir</b><p>Invitation GitHub renvoyée. Lien direct : github.com/adembnn/EAC/invitations</p></div>
+  </div>
+</section>
+
+<section class="q">
+  <span class="eyebrow">À discuter</span>
+  <h2>Ce qu'on tranche ensemble</h2>
+  <ol>
+    <li><b>Ordre d'attaque.</b>
+      <p>a. Les trois en parallèle dès maintenant, une personne + ses agents par track (ma recommandation : le classement est combiné et les tâches ne partagent aucun fichier) · b. T3 et T1 d'abord, T2 quand la clé arrive · c. Tout le monde sur une tâche à la fois.</p></li>
+    <li><b>Premières soumissions.</b>
+      <p>a. Bases sûres sur les trois avant 20 h pour valider la chaîne (recommandé) · b. Directement les méthodes ambitieuses.</p></li>
+    <li><b>Données publiques comme proxy (T1 images propres, T3 rétention).</b>
+      <p>a. Demander aux superviseurs sur Discord maintenant (recommandé) · b. S'en passer.</p></li>
+    <li><b>Simulateurs (T2 M4, T3 N3).</b>
+      <p>a. Un agent dédié par simulateur sur les A100 pendant que les humains codent (recommandé) · b. Seulement si le temps le permet.</p></li>
+  </ol>
+</section>
+
+<footer>
+  <span>Sources : <a href="https://github.com/adembnn/EAC/tree/main/reports">rapports complets dans reports/ du dépôt</a> · consignes officielles dans reports/sources/.</span>
+  <span>Papiers clés : PixelSeal 2512.16874 · WAM 2411.07231 · ReliaGuard 2611.16368 · banc 2609.16832 · MET 2410.20247 · AgentProv 2609.00052 · B3IT 2602.11083 · KBF 2605.29524 · ReGUn 2603.11210 · TREW 2506.20893 · SCAR 2404.12922 · concours NeurIPS 2023 2406.09073.</span>
+  <span>Estimations non mesurées : aucune donnée n'a encore tourné. Les chiffres « lus » viennent des papiers.</span>
+</footer>
+
+</div>
