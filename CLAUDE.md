@@ -35,6 +35,14 @@ Les issues GitHub du dépôt servent de bus. Tous les agents, quel que soit l'hu
 4. **Ressource partagée** (nœud GPU, budget de requêtes T2, créneau de soumission) : annoncer sur le bus avant de l'utiliser.
 5. Signer chaque commentaire : `[agent de <prénom> · <track>]`.
 
+## Méthode de travail : la boucle mesurer, critiquer, corriger (demande d'Adem, 21/11)
+Tous les agents de l'équipe l'appliquent, sur chaque track :
+1. **Mesurer** : chaque idée devient une expérience courte avec un chiffre (score local officiel), postée sur l'issue du track avec la sortie de commande. Un raisonnement sans mesure ne décide rien.
+2. **Se faire critiquer** : après chaque série de mesures, un agent critique séparé (modèle fort, spécialiste du sujet, qui n'a pas écrit la méthode) cherche ce qui est faux, fragile ou manquant, et propose au plus 5 expériences suivantes. Rapports dans `reports/critique/<track>-tour<N>.md`.
+3. **Corriger et relancer** : on applique, on remesure, on recommence jusqu'à ce que le score local ne monte plus ou que le temps manque.
+4. **Innover** : à chaque tour, au moins une piste hors des réponses évidentes est testée. Ne jamais rester immobile en attendant quelqu'un.
+5. **Expliquer** : chaque résultat posté dit en mots simples ce qui a été testé, ce que le chiffre veut dire et ce qu'on en déduit.
+
 ## Règles du dépôt
 - Un lot = une branche `<track>/<sujet>` ; on fusionne dans `main` seulement ce qui est vérifié (score local ou sortie de commande collée dans la PR ou l'issue).
 - Ne jamais commiter les données, les poids, les soumissions ni les journaux (`.gitignore`). Ils vivent sur Jülich : `/p/scratch/training2666/<chef>/<équipe>/`.
