@@ -633,10 +633,21 @@ def cmd_assign(a):
             for l in open(path, encoding="utf-8")]
     recs = [r for r in recs if r.get("type") == "answer" and r.get("response") and r["kind"] in ("reading", "repeat", "identity")]
     eps = sorted({r["endpoint"] for r in recs})
-    res = {}
+    cache_path = Path(a.out).with_suffix(".partial.json")
+    res = json.load(open(cache_path)) if cache_path.exists() else {}
+    skipped = {}
     for m in a.candidates.split(","):
+        if m in res and all(e in res[m] for e in eps):
+            print(m, "(déjà calculé)", flush=True)
+            continue
         tok = AutoTokenizer.from_pretrained(m)
-        model = AutoModelForCausalLM.from_pretrained(m, dtype=torch.bfloat16, device_map={"": 0}).eval()
+        try:
+            model = AutoModelForCausalLM.from_pretrained(m, dtype=torch.bfloat16, device_map={"": 0}).eval()
+        except torch.OutOfMemoryError as exc:  # GPU partagée saturée : candidat non évalué, signalé
+            skipped[m] = "OOM au chargement"
+            print(f"{m} NON ÉVALUÉ (mémoire GPU insuffisante)", flush=True)
+            torch.cuda.empty_cache()
+            continue
         rp = float(getattr(model.generation_config, "repetition_penalty", None) or 1.0)
         res[m] = {}
         for e in eps:
@@ -659,9 +670,10 @@ def cmd_assign(a):
         print(m, " ".join(f"{e[-2:]}={res[m][e]:.2f}" for e in eps), flush=True)
         del model
         torch.cuda.empty_cache()
+        json.dump(res, open(cache_path, "w"))
     fam = {e: min(res, key=lambda m: res[m][e]) for e in eps}
     margin = {e: sorted(res[m][e] for m in res)[1] - res[fam[e]][e] if len(res) > 1 else 0.0 for e in eps}
-    json.dump({"nll": res, "family_twin": fam, "margin": margin}, open(a.out, "w"), indent=1)
+    json.dump({"nll": res, "family_twin": fam, "margin": margin, "skipped": skipped}, open(a.out, "w"), indent=1)
     for m in res:
         mem = [e for e in eps if fam[e] == m]
         if mem:
