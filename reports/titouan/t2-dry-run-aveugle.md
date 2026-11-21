@@ -53,3 +53,17 @@ Détail par type de paire (lecteurs locaux, budget 100) : copies déguisées 435
 ## 5. Fichiers
 `tracks/t2-model-equality/dryrun/` : `dryrun_blind_test.py` (plan caché, serveur, v3), `blind_v4.py` (v4 adaptée, multi-famille), `twin_detectors.py` (4 détecteurs, jumeau SmolLM2-360M), `bench3.py` (banc 3 familles), `analyze_small_budget.py` (variante « réponse normalisée », calibrée sur dev).
 Dépendances hors `main` : `clustering.py` (branche t2/clustering-algo), `method_v4.py` (t2/method-v4), `~/casser-fp8/` sur h200c (lecteurs fp8 et LoRA distillée).
+
+## 6. Mises à jour (soir du 21/11) : calage sur les scores réels, levier 4, lecteurs int8
+
+### 6.1 Calage analytique sur les deux scores publics réels
+Si les familles sont justes, une règle « un gros cluster par famille, sauf les guichets isolés » a un score qui ne dépend que de la structure. Balayage de toutes les compositions, avec simulation du score public (30 % des paires, 400 tirages) : 1882 = 0,40 et 1803 = 0,10 ne sont compatibles qu'avec **4 à 5 variantes de poids par famille** (fp8 + 3-4 parmi int8 / LoRA 0,3 / 0,7 / 1,5) et 6 à 7 copies. Chaque variante supplémentaire bien isolée rapporte ~+0,15 à +0,18 ; chaque copie isolée à tort coûte ~0,21 à 0,25. D'où la règle : n'isoler que sur preuve forte.
+
+### 6.2 Levier 4 : reconnaître les déguisements (vraies réponses du bloc 0)
+- Prompts cachés extraits : ep-02, ep-16, ep-20, ep-29 ; persona : ep-23 ; T* élevé (mesures de l'équipe) : ep-30, 31, 33.
+- **« Claude » chez un Qwen = prompt système non par défaut.** Test sur les modèles de base, 64 tirages à T=0,7 : avec le prompt par défaut, 0/64 « Claude » (1,5B et 3B) ; avec n'importe quel autre prompt, 53-56/64 (1,5B) et 21-56/64 (3B). ep-02, ep-08 et ep-20 sont donc des copies déguisées. Règle adoptée comme garde-fou.
+- « 1866 » (ep-13, ep-27) : la base Llama-1B l'écrit dans 12 % des recopies de date, int8 dans 64 %, fp8 dans 3 % → rapport de vraisemblance ≈ 5 ; pas confirmé par le lecteur int8 (6.3).
+- Filigrane KGW : non identifié (LeftHash, 6 clés, γ 0,25/0,5, CPU/CUDA : ref-06 ne ressort pas).
+
+### 6.3 Lecteurs int8 (int8 par canal + W8A8), même méthode que fp8
+Sur jumeaux, la concordance des deux lecteurs ne détecte aucun int8 (0/3) et laisse passer une LoRA 1,5. Le lecteur int8 seul détecte l'int8 en clair (z_eff 0,61-0,72) mais pas l'int8 déguisé. Sur les vrais ep Llama-1B et Qwen-1.5B, aucun guichet ≥ 0,51. Qwen-3B non mesuré (OOM). Scripts : `int8_readers.py`, `calage.py`, `levier4/`.
