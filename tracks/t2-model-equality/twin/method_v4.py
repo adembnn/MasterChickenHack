@@ -445,6 +445,36 @@ def cmd_reread(a):
     log("FIN ->", a.out)
 
 
+def cmd_crossread(a):
+    """Jumeau faux : relit les sorties des endpoints d'un monde (modèle X) avec une copie locale d'un AUTRE modèle Y.
+    Les textes sont décodés avec le tokenizer de X puis re-tokenisés avec celui de Y. Aucune requête aux endpoints."""
+    import torch
+    from transformers import AutoTokenizer
+    from exp1_divergence import build_prompts, load
+    raw = json.load(open(a.raw))
+    tok_x = AutoTokenizer.from_pretrained(raw["config"]["model"])
+    set_model(a.ref_model)
+    tok = AutoTokenizer.from_pretrained(a.ref_model)
+    tok.padding_side = "left"
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    ref = load(getattr(torch, raw["config"]["dtype"]))
+    bc = raw["bc_prompts"]
+    reads = {}
+    for n, e in raw["endpoints"].items():
+        if e["sampling"]:
+            continue
+        gens = [tok(tok_x.decode(ids, skip_special_tokens=True), add_special_tokens=False)["input_ids"] + [tok.eos_token_id]
+                for ids in e["bc_ids"]]
+        reads[n] = {c: read_stats(ref, tok, chat(tok, bc, s), gens) for c, s in context_candidates(e["extracted"]).items()}
+    floor = {}
+    for bs in [16, 7]:
+        floor[f"bs{bs}"] = read_stats(ref, tok, chat(tok, bc), local_generate(ref, tok, bc, raw["config"]["max_new"], bs))
+    json.dump({"world_model": raw["config"]["model"], "ref_model": a.ref_model, "reads_ctx": reads, "floor": floor},
+              open(a.out, "w"))
+    print("FIN ->", a.out, flush=True)
+
+
 # ---------------------------------------------------------------------------
 # decide (CPU)
 # ---------------------------------------------------------------------------
@@ -491,6 +521,11 @@ def identical_frac(ids1, ids2):
 def cmd_decide(a):
     raw = json.load(open(a.raw))
     rr = json.load(open(a.reread))
+    if a.cross:  # relecture par un AUTRE modèle (jumeau faux) : on remplace lectures gloutonnes et plancher
+        cx = json.load(open(a.cross))
+        rr = dict(rr, reads_ctx=cx["reads_ctx"])
+        raw = dict(raw, floor=cx["floor"])
+        print(f"[jumeau testé : {cx['ref_model']} ; vrai modèle du monde : {cx['world_model']}]")
     E = raw["endpoints"]
     names = sorted(E)
     k = a.k_bc
@@ -534,6 +569,7 @@ def cmd_decide(a):
     anchor = min(greedy, key=lambda n: best[n][1]["mis_rate"])
     anchor_ref = rates_of(rr["reads_ctx"][anchor][best[anchor][0]])
     mean = lambda xs: sum(xs) / len(xs)
+    hard_of = lambda stats: [sum(m > a.near_tie for m in st["margins"]) / st["n"] for st in (stats[:k] if k else stats) if st["n"] > 0]
     ref = anchor_ref if mean(anchor_ref) > mean(local_ref) else local_ref
     P(f"\nRéférence locale (copie relit ses propres sorties) : {mean(local_ref):.4f} ; "
       f"ancre du pool {anchor} ({best[anchor][0]}) : {mean(anchor_ref):.4f} -> référence = "
@@ -549,6 +585,17 @@ def cmd_decide(a):
         vx = sum((x - mx) ** 2 for x in xs) / (len(xs) - 1)
         vy = sum((y - my) ** 2 for y in ys) / (len(ys) - 1)
         return (mx - my) / max((vx / len(xs) + vy / len(ys)) ** 0.5, 1e-12)
+
+    # garde « jumeau » : le bruit de service ne fait basculer que des quasi-égalités ; si même l'endpoint le plus
+    # proche (l'ancre) a des écarts DURS significativement au-dessus du plancher local, la copie locale n'est pas
+    # le bon modèle et toute la lecture est invalide.
+    twin_t = welch_t(hard_of(rr["reads_ctx"][anchor][best[anchor][0]]), [x for f in raw["floor"] for x in hard_of(raw["floor"][f])])
+    P(f"Garde jumeau : écarts durs de l'ancre {best[anchor][1]['hard_rate']:.4f} vs plancher local, Welch t={twin_t:.1f}")
+    if twin_t >= a.t_crit and not a.no_guard:
+        P("=> AUCUN JUMEAU NE COLLE : la copie locale n'est pas le modèle de ce pool. Pas de soumission écrite.")
+        if a.log:
+            Path(a.log).write_text("\n".join(lines))
+        return
 
     def est_s(rate):
         pts = sorted(calib.items())
@@ -641,12 +688,19 @@ def main():
     r.add_argument("--raw", default="raw_v4.json")
     r.add_argument("--out", default="reread_v4.json")
     r.set_defaults(func=cmd_reread)
+    x = sub.add_parser("crossread")
+    x.add_argument("--raw", required=True)
+    x.add_argument("--ref_model", required=True)
+    x.add_argument("--out", required=True)
+    x.set_defaults(func=cmd_crossread)
     d = sub.add_parser("decide")
     d.add_argument("--raw", default="raw_v4.json")
     d.add_argument("--submission", default="submission_v4.csv")
     d.add_argument("--score_dir", default=str(HERE.parents[2] / "reports/sources/t2"))
     d.add_argument("--k_bc", type=int, default=None, help="n'utiliser que les k premiers prompts B/C (budget)")
     d.add_argument("--reread", default="reread_v4.json")
+    d.add_argument("--cross", default=None, help="sortie de crossread (jumeau d'un autre modèle)")
+    d.add_argument("--no_guard", action="store_true", help="désactive la garde jumeau (pour montrer l'échec silencieux)")
     d.add_argument("--near_tie", type=float, default=0.5, help="marge (nats) sous laquelle un écart est une quasi-égalité")
     d.add_argument("--t_crit", type=float, default=3.0, help="Welch t (par prompt) au-delà duquel on rejette « même modèle »")
     d.add_argument("--cap_ratio", type=float, default=0.5, help="marge p99 max d'un biais de décodage, relative à la LoRA locale")
