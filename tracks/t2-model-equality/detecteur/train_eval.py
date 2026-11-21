@@ -19,10 +19,13 @@ def world_files(stem, jdir):
     return stem + ".npz", os.path.join(jdir, name + ".jsonl")
 
 
+DROP = []
+
+
 def build(world, k, names=None):
     F = [P.guichet_features(g, k) for g in world]
     A = [P.guichet_aux(g, k) for g in world]
-    names = names or sorted(F[0])
+    names = names or [n for n in sorted(F[0]) if not any(n.startswith(d) for d in DROP)]
     return F, A, names
 
 
@@ -103,11 +106,13 @@ def main():
     ap.add_argument("--ref_jsonl", default="")
     ap.add_argument("--jdir", default="worlds")
     ap.add_argument("--k", type=int, default=25)
-    ap.add_argument("--thr", type=float, default=0.5)
+    ap.add_argument("--thr", default="0.5", help="seuil, ou 'auto' = choisi sur les jumeaux de validation seulement")
     ap.add_argument("--out", default="out")
     ap.add_argument("--answers", default="practice_answers.csv")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--drop", default="", help="préfixes de caractéristiques retirées, séparés par des virgules")
     a = ap.parse_args()
+    DROP.extend([d for d in a.drop.split(",") if d])
     os.makedirs(a.out, exist_ok=True)
     rnd = random.Random(0)
     names = None
@@ -122,11 +127,23 @@ def main():
     wpos = (len(ytr) - ytr.sum()) / max(ytr.sum(), 1)
     model = lgb.train({"objective": "binary", "learning_rate": 0.05, "num_leaves": 31, "min_data_in_leaf": 40,
                        "feature_fraction": 0.7, "bagging_fraction": 0.8, "bagging_freq": 1, "lambda_l2": 1.0,
-                       "scale_pos_weight": wpos, "verbose": -1, "seed": 1},
+                       "scale_pos_weight": wpos, "verbose": -1, "seed": 1, "num_threads": 6},
                       lgb.Dataset(Xtr, ytr, feature_name=pn), num_boost_round=400)
     res = {"k": a.k, "n_train_pairs": int(len(ytr)), "n_pos": int(ytr.sum())}
     errs = Counter()
     vm = []
+    vworlds = []
+    for st in a.val:
+        w = P.load_world(*world_files(st, a.jdir))
+        F, A, _ = build(w, a.k, names)
+        vworlds.append((w, F, A))
+    if a.thr == "auto":
+        sweep = {}
+        for t in (0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6):
+            sweep[t] = float(np.mean([score_sets(w, F, A, names, model, random.Random(1), n_sets=100, thr=t) for w, F, A in vworlds]))
+        res["thr_sweep_val"] = {str(t): round(v, 3) for t, v in sweep.items()}
+        a.thr = max(sweep, key=sweep.get)
+    a.thr = float(a.thr); res["thr"] = a.thr
     for st in a.val:
         w = P.load_world(*world_files(st, a.jdir))
         F, A, _ = build(w, a.k, names)

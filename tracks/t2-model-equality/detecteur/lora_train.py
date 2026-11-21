@@ -104,6 +104,8 @@ def main():
     ap.add_argument("--only", default="")
     ap.add_argument("--bs", type=int, default=4)
     ap.add_argument("--accum", type=int, default=4)
+    ap.add_argument("--ckpt", type=int, default=0)
+    ap.add_argument("--steps_scale", type=float, default=1.0)
     a = ap.parse_args()
     mid = FAMILIES[a.family]
     tok = AutoTokenizer.from_pretrained(mid)
@@ -116,10 +118,12 @@ def main():
         if os.path.exists(os.path.join(od, "adapter_config.json")):
             print("déjà", od); continue
         t0 = time.time()
+        steps = int(steps * a.steps_scale); lr = lr / max(a.steps_scale, 0.25) ** 0.5
         data = corpus(corp, steps * a.bs * a.accum // 2 + 64, seed=k)
         enc = [encode(tok, p, t) for p, t in data]
         model = AutoModelForCausalLM.from_pretrained(mid, dtype=torch.bfloat16).cuda()
-        model.gradient_checkpointing_enable(); model.enable_input_require_grads()   # GPU partagée : mémoire minimale
+        if a.ckpt:
+            model.gradient_checkpointing_enable(); model.enable_input_require_grads()   # GPU partagée : mémoire minimale
         model = get_peft_model(model, LoraConfig(r=r, lora_alpha=alpha, target_modules=targets, lora_dropout=0.0))
         opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=lr)
         model.train()
