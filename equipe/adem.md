@@ -16,9 +16,9 @@ Fiche personnelle : seul Adem (ou son agent) l'édite. Les autres agents la lise
 |---|---|---|---|---|
 | T1 | **0,7384** (soumission 1540), 1er | Eugenia 0,73, Fable 4.2 0,72 | `submission_candidat_5.pt` (h200, h200b, `E:\EAC-lab\sauvegarde-t1\`) | presque rien tant qu'on est 1er (score ramené à 1) |
 | T2 | **aucun envoi** | Fable 4.2 0,75 ; quatre équipes à 0,70 | — | **le plus gros levier** : sans T2 l'équipe n'est pas classée ; 0,70 ≈ +0,3 au général |
-| T3 | **0,1487** (soumission 1548, 21 h 02) | 0,27 | `PG_T85_f20_l814c.pt` (`h200:~/eac/t3/t3-methodes/candidates/`) : 20 % d'images basculées, loss de bascule 8 à 14 | 0,27 ≈ +0,15 |
+| T3 | **0,1962** (soumission 1624, 21 h 31) | 0,27 | `PG_T85_f30_l814c.pt` (`h200:~/eac/t3/t3-methodes/candidates/`) : 30 % d'images basculées, loss de bascule 8 à 14. Autres points : 20 % loss 8-14 = 0,1487 ; 20 % loss 12-18 = 0,1707 | 0,27 ≈ +0,07 |
 
-À 21 h 10 : deux entraînements lancés par l'orchestrateur sur `h200e` (`~/eac/t3/t3-methodes/logs/PG_T85_f30_l814c.log` et `…f40_l814c.log`, mêmes réglages à 30 % et 40 % d'images) ; le fichier candidat s'écrit ensuite par `code/dash.py --save` (voir `code/finish.sh`). Session neuve `t3-redistill` (id `local_b4394f32-4858-48d7-8fc2-2374103c08d1`) lancée sur la piste 3 ci-dessous. Ids des autres sessions : liste « linked » de l'application.
+À 21 h 50 : grille (part × loss) et variantes `PGr_` (rotations) sur `h200`, variantes rétention `PGl6_` (`--lam 6`), `PGs3k_` (3000 pas) et parts 50-60 % sur `h200c` (`~/eac/t3/t3-methodes`, lancées par `vague3c.sh`), candidats écrits par `code/finish.sh`. Avant, à 21 h 10 : deux entraînements lancés par l'orchestrateur sur `h200e` (`~/eac/t3/t3-methodes/logs/PG_T85_f30_l814c.log` et `…f40_l814c.log`, mêmes réglages à 30 % et 40 % d'images) ; le fichier candidat s'écrit ensuite par `code/dash.py --save` (voir `code/finish.sh`). Session neuve `t3-redistill` (id `local_b4394f32-4858-48d7-8fc2-2374103c08d1`) lancée sur la piste 3 ci-dessous. Ids des autres sessions : liste « linked » de l'application.
 
 ### Ce qui est établi (mesuré, vérifié par une session séparée)
 
@@ -44,11 +44,11 @@ Fiche personnelle : seul Adem (ou son agent) l'édite. Les autres agents la lise
 | t3-methodes | candidats T3 (erreurs confiantes, sélecteurs, 30 à 40 %) | h200, h200e |
 | t3-poids | sélecteurs seulement : sonde hors échantillon, classe adversariale | h200c |
 | t3-nonmembres | réservoir d'images générées jamais vues, étiquetées par `orig` | h200b, h200c |
-| t3-simulateur | monde A (golds entraînés de zéro) : quel sélecteur prédit le mieux les erreurs du gold | h200e |
+| t1-residus | carte locale de « re-tamponnage » (seule mission) | h200b |
 | t3-verificateur | prédiction chiffrée et verdict de porte avant chaque envoi T3 | — |
 | t2-critique | appliquer la règle à 0,70 aux vraies réponses de Titouan dès qu'elles existent | — |
 
-Arrêtées : t1-residus (filtre adapté mort, boîtes reprises par t1-assemblage), t3-sondes (son calage est fait par le vérificateur, ses sondes ne décident plus rien), t2-methode (méthode non validée sur le réel, rendue sur la PR #27), et les variantes NEG / NPO de t3-poids.
+Arrêtées : t3-simulateur (mission rendue à 21 h 35), t3-sondes (son calage est fait par le vérificateur, ses sondes ne décident plus rien), t2-methode (méthode non validée sur le réel, rendue sur la PR #27), et les variantes NEG / NPO de t3-poids.
 
 ### Règles en vigueur (voir `CLAUDE.md`)
 
