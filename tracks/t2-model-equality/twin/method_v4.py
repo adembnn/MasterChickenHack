@@ -604,12 +604,16 @@ def cmd_from_journal(a):
         endpoints[e] = {"sampling": repeat_diff > 0.5, "repeat_diff": repeat_diff, "extracted": ext, "identity": ident,
                         "a_answers": [["∅"] * 20], "bc_ids": bc_ids,
                         "lengths": [len(x) for x in bc_ids], "finish": [d[(pid, 0)].get("finish_reason") for pid, _ in common]}
+    slots = sorted({(r["slot"], r["probe_id"], r["repeat"], r["prompt"]) for r in recs})
+    rd_common = [(pid, rep, pr) for _, pid, rep, pr in slots if all((pid, rep) in by_ep[e] for e in by_ep)]
+    for e, d in sorted(by_ep.items()):
+        endpoints[e]["rd_ids"] = [tok(d[(pid, rep)]["response"], add_special_tokens=False)["input_ids"] for pid, rep, _ in rd_common]
     truth = {}
     if a.answers and Path(a.answers).exists():
         for row in csv.DictReader(open(a.answers)):
             truth[row["endpoint"]] = (row["family"], row["model"], row.get("kind", ""))
     out = {"config": {"model": a.model, "dtype": a.dtype, "max_new": a.max_new, "lora_steps": a.lora_steps, "source": a.journal},
-           "bc_prompts": [pr for _, pr in common], "endpoints": endpoints, "floor": {}, "calib": {},
+           "bc_prompts": [pr for _, pr in common], "rd_prompts": [pr for _, _, pr in rd_common], "endpoints": endpoints, "floor": {}, "calib": {},
            "ground_truth_for_audit_only": {e: truth.get(e, ("?", "?", "?")) for e in endpoints}}
     json.dump(out, open(a.out, "w"), ensure_ascii=False)
     print(f"{len(endpoints)} guichets, {len(common)} prompts de lecture communs, régime : "
@@ -686,6 +690,52 @@ def cmd_merge_ep(a):
         f.write("endpoint,family,model\n")
         for e in sorted(out):
             f.write(f"{e},{out[e][0]},{out[e][1]}\n")
+    print("-> " + a.out)
+
+
+def cmd_readers(a):
+    """Lecteurs de la session « casser fp8 » (branche t2/casser-fp8) : pour chaque réponse,
+    s = somme log p_lecteur(token) - somme log p_base(token), contexte = message utilisateur seul.
+    Lecteurs : fp8 e4m3 par tenseur, W8A8 par tenseur (type vLLM), et une LoRA estimée optionnelle."""
+    import torch
+    sys.path.insert(0, str(HERE / "fp8"))
+    import fp8_llr as F
+    from fp8_bank import make
+    raw = json.load(open(a.raw))
+    F.MODEL = raw["config"]["model"]
+    tok = F.AutoTokenizer.from_pretrained(F.MODEL)
+    tok.padding_side = "left"
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    E = raw["endpoints"]
+    key = "rd_ids" if "rd_prompts" in raw else "bc_ids"
+    P = raw.get("rd_prompts") or raw["bc_prompts"]
+    print(f"lecteurs sur {len(P)} réponses communes par endpoint ({key})", flush=True)
+
+    def read(model):
+        return {e: [sum(t) for t in F.token_logprobs(model, tok, P, [list(g) or [tok.eos_token_id] for g in d[key]], 8)]
+                for e, d in E.items()}
+    base = read(F.load(torch.bfloat16))
+    S = {}
+    for r in a.schemes.split(","):
+        m = make(r)
+        lp = read(m)
+        S[r] = {e: [x - y for x, y in zip(lp[e], base[e])] for e in E}
+        del m
+        torch.cuda.empty_cache()
+        print("lu par", r, flush=True)
+    if a.lora:
+        from peft import PeftModel
+        m = PeftModel.from_pretrained(F.load(torch.bfloat16), a.lora).eval()
+        if a.lora_scale != 1.0:
+            for mod in m.modules():
+                if hasattr(mod, "scaling") and isinstance(mod.scaling, dict):
+                    for kk in mod.scaling:
+                        mod.scaling[kk] *= a.lora_scale
+        lp = read(m)
+        S["lora_est"] = {e: [x - y for x, y in zip(lp[e], base[e])] for e in E}
+        print("lu par la LoRA estimée", flush=True)
+    json.dump({"model": F.MODEL, "schemes": list(S), "S": S}, open(a.out, "w"))
     print("-> " + a.out)
 
 
@@ -914,6 +964,32 @@ def cmd_decide(a):
         else:
             variants.append((n, r))
 
+    if a.readers:  # règle pré-enregistrée « lecteurs » : remplace la décision S / variante ci-dessus
+        Rd = json.load(open(a.readers))
+        T_of = {n: (best[n][1].get("T_star", 0.0) if E[n]["sampling"] else 0.0) for n in names}
+        refset = [n for n in names if T_of[n] < 1.0]
+        P(f"\nLecteurs ({', '.join(Rd['schemes'])}) ; référence = endpoints de T* < 1,0 : {refset}")
+        labels, variants = {}, []
+        for n in names:
+            zs = {}
+            for sch in Rd["schemes"]:
+                others = [m for m in refset if m != n]
+                if len(others) < 2:
+                    continue
+                d = [Rd["S"][sch][n][i] - mean([Rd["S"][sch][m][i] for m in others]) for i in range(len(Rd["S"][sch][n]))]
+                d = d[:k] if k else d
+                mu = mean(d)
+                sd = (sum((x - mu) ** 2 for x in d) / (len(d) - 1)) ** 0.5
+                zs[sch] = mu / (sd / len(d) ** 0.5) if sd > 0 else 0.0
+            fired = [sch for sch, z in zs.items() if z >= a.t_crit]
+            dump[n]["readers_z"] = {sch: round(z, 3) for sch, z in zs.items()}
+            P(f"  {n}: T*={T_of[n]} z=" + " ".join(f"{sch}:{z:+.1f}" for sch, z in zs.items())
+              + (f" -> variante ({fired})" if fired else " -> S"))
+            if fired:
+                variants.append((n, best[n][1]))
+            else:
+                labels[n] = "S"
+
     # lien complet : une variante ne rejoint un groupe que si elle est « même modèle » avec TOUS ses membres
     groups = []
     for n, r in variants:
@@ -995,6 +1071,13 @@ def main():
     me.add_argument("--dir", required=True, help="dossier contenant sub_<jumeau>.csv par famille")
     me.add_argument("--out", required=True)
     me.set_defaults(func=cmd_merge_ep)
+    rd = sub.add_parser("readers")
+    rd.add_argument("--raw", required=True)
+    rd.add_argument("--schemes", default="e4m3_tensor,w8a8_tensor")
+    rd.add_argument("--lora", default=None, help="adaptateur PEFT de la LoRA estimée (optionnel)")
+    rd.add_argument("--lora_scale", type=float, default=1.0)
+    rd.add_argument("--out", required=True)
+    rd.set_defaults(func=cmd_readers)
     x = sub.add_parser("crossread")
     x.add_argument("--raw", required=True)
     x.add_argument("--ref_model", required=True)
@@ -1008,6 +1091,7 @@ def main():
     d.add_argument("--reread", default="reread_v4.json")
     d.add_argument("--cross", default=None, help="sortie de crossread (jumeau d'un autre modèle)")
     d.add_argument("--no_guard", action="store_true", help="désactive la garde jumeau (pour montrer l'échec silencieux)")
+    d.add_argument("--readers", default=None, help="sortie de la sous-commande readers : règle « lecteurs » (z ≥ t_crit)")
     d.add_argument("--dump", default=None, help="JSON des statistiques par endpoint (rapport de validation)")
     d.add_argument("--pool_ref", action="store_true", help="LLR : référence = autres endpoints du pool (bilatéral) au lieu du plancher local")
     d.add_argument("--near_tie", type=float, default=0.5, help="marge (nats) sous laquelle un écart est une quasi-égalité")
