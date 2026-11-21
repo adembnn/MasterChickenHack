@@ -185,6 +185,10 @@ def main():
     thr = json.loads(Path(a.calib_out).read_text()) if Path(a.calib_out).exists() else {}
     te = maps("test")
     names = [it["image_name"] for it, _ in te]
+    if a.save_maps:
+        Path(a.save_maps).mkdir(parents=True, exist_ok=True)
+        for it, acc in te:
+            np.save(Path(a.save_maps) / f"{it['image_name']}.npy", acc.astype(np.float16))
     masks = []
     for it, acc in te:
         t = a.thr if a.thr is not None else thr.get(it["method"], {}).get("thr", 0.5)
