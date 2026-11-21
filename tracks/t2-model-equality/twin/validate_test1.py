@@ -46,6 +46,7 @@ def main():
     ap.add_argument("--ref_dir", required=True)
     ap.add_argument("--ref_assign", required=True)
     ap.add_argument("--ref_twin", default="SmolLM2-360M-Instruct")
+    ap.add_argument("--ref_dump", default=None, help="dump decide des ref (défaut : <ref_dir>/dump_<ref_twin>.json)")
     ap.add_argument("--public_score", type=float, default=None)
     ap.add_argument("--out", default="validation_test1.md")
     a = ap.parse_args()
@@ -58,7 +59,7 @@ def main():
     twin_full = {m.split("/")[-1]: m for m in asg["nll"]}
     dumps = {p.stem.replace("dump_", ""): json.load(open(p)) for p in Path(a.ep_dir).glob("dump_*.json")}
     ep_dump = {e: d for fam in dumps.values() for e, d in fam.items()}
-    ref_dump = json.load(open(Path(a.ref_dir) / f"dump_{a.ref_twin}.json"))
+    ref_dump = json.load(open(a.ref_dump or (Path(a.ref_dir) / f"dump_{a.ref_twin}.json")))
     W(f"# T2 · Validation du test réel n°1 (bloc 0, {len(eps)} ep, {sum(len(v) for v in ans.values())} réponses)\n")
 
     # (1) échantillonnage
@@ -142,6 +143,17 @@ def main():
             if rv and ev:
                 W(f"- {c} : ref médiane {st.median(rv):+.1f} (|t|≥3 : {sum(abs(x) >= 3 for x in rv)}/{len(rv)}) ; "
                   f"ep médiane {st.median(ev):+.1f} (|t|≥3 : {sum(abs(x) >= 3 for x in ev)}/{len(ev)})")
+    W("")
+
+    rcols = next((list(d["readers_z"]) for d in ref_dump.values() if "readers_z" in d), [])
+    if rcols:
+        W("\n**Lecteurs de la règle principale** (z apparié vs endpoints de T* < 1,0 de la même famille) :")
+        W("| endpoint | " + " | ".join(rcols) + " | décision |")
+        W("|---|" + "---|" * (len(rcols) + 1))
+        for src in (ref_dump, ep_dump):
+            for e, d in sorted(src.items()):
+                if "readers_z" in d:
+                    W(f"| {e} | " + " | ".join(f"{d['readers_z'].get(c, float('nan')):+.1f}" for c in rcols) + f" | {d['label']} |")
     W("")
 
     # (7) ressemblance ep / ref
