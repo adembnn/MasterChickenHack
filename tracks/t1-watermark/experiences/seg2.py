@@ -21,6 +21,7 @@ ap.add_argument("--method", required=True); ap.add_argument("--n", type=int, def
 ap.add_argument("--epochs", type=int, default=12); ap.add_argument("--bs", type=int, default=24)
 ap.add_argument("--lr", type=float, default=3e-4); ap.add_argument("--tag", default="v2")
 ap.add_argument("--arch", default="dec"); ap.add_argument("--real", type=int, default=6)
+ap.add_argument("--predict", action="store_true")
 ap.add_argument("--coco", default=str(HERE.parent / "shared_data" / "coco" / "val2017"))
 a = ap.parse_args()
 torch.set_num_threads(8); dev = "cuda"; method = a.method; rng = random.Random(0); nprng = np.random.default_rng(0)
@@ -159,6 +160,19 @@ def evaluate(th=0.0, tta=True):
     sc, res, full = np.array(sc), np.array(res), np.array(full); net.train(); freeze_bn(net) if a.arch != 'unet' else None
     return {"tous": round(float(sc.mean()), 4), "reserve": round(float(sc[res].mean()), 4), "pleins": round(float(sc[full].mean()), 4), "partiels": round(float(sc[~full].mean()), 4)}
 
+if a.predict:
+    net.load_state_dict(torch.load(OUT / "best.pt", map_location=dev)); net.eval()
+    print(method, "PREDICT train", json.dumps(evaluate()), flush=True); net.eval()
+    for split in ("train", "test"):
+        dsx = LocalisationDataset(HERE / "release", split, methods=[method]); names, lgs = [], []
+        with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):
+            for it in dsx:
+                xb = torch.from_numpy(it["image"])[None].to(dev); bb = torch.from_numpy(it["message"])[None].to(dev)
+                lg = (forward(xb, bb).float() + forward(xb.flip(2), bb).float().flip(2)) / 2
+                names.append(it["image_name"]); lgs.append(lg[0].cpu().numpy().astype(np.float16))
+        np.savez_compressed(OUT / f"pred_{split}_{method}.npz", names=np.array(names), logits=np.stack(lgs))
+        print(method, "PREDICT", split, len(names), "frac>0", round(float((np.stack(lgs) > 0).mean()), 3), flush=True)
+    sys.exit(0)
 opt = torch.optim.AdamW(params, weight_decay=1e-4)
 real_train = [i for i in real_idx if i % 5 != 0]
 RX = np.stack([real[i]['image'] for i in real_train]); RY = np.stack([real[i]['mask128'] for i in real_train]); RB = np.stack([real[i]['message'] for i in real_train])

@@ -11,6 +11,7 @@ Pour 1020 images de test 512×512, on rend un masque 128×128 qui dit quelles zo
 ## État
 | Date | Méthode | Score local | Score public | Qui |
 |---|---|---|---|---|
+| 21/11 17:25 | seg v2 : PixelSeal tronc décodeur + pyramide (réserve 0,57), TrustMark U-Net (0,56), StegaStamp U-Net (0,75), vraies images hors réserve mêlées aux lots, TTA symétrie, seuil 0 | réserve 0,627 | **0,635** (soumission 1103) | agent d'Adem |
 
 ## Prochain lot
 À définir par le responsable.
