@@ -1,0 +1,255 @@
+{
+ "k": 25,
+ "n_train_pairs": 4560,
+ "n_pos": 808,
+ "val_smol360_val_s101": {
+  "auc": 0.9356,
+  "mcc_practice_like": 0.601
+ },
+ "val_mcc_mean": 0.601,
+ "val_errors_top": [
+  [
+   "base:persona / base:system (dit diff\u00e9rent)",
+   170
+  ],
+  [
+   "base:persona / base:watermark (dit diff\u00e9rent)",
+   142
+  ],
+  [
+   "base:system / base:watermark (dit diff\u00e9rent)",
+   139
+  ],
+  [
+   "base:persona / base:plain (dit diff\u00e9rent)",
+   132
+  ],
+  [
+   "base:persona / base:temp1.0 (dit diff\u00e9rent)",
+   132
+  ],
+  [
+   "base:plain / base:system (dit diff\u00e9rent)",
+   128
+  ],
+  [
+   "base:system / base:temp1.0 (dit diff\u00e9rent)",
+   128
+  ],
+  [
+   "base:plain / base:watermark (dit diff\u00e9rent)",
+   25
+  ],
+  [
+   "base:temp1.0 / base:watermark (dit diff\u00e9rent)",
+   25
+  ],
+  [
+   "base:plain / lora@0.3:plain (dit pareil)",
+   20
+  ],
+  [
+   "base:temp1.0 / lora@0.3:plain (dit pareil)",
+   20
+  ],
+  [
+   "base:watermark / lora@0.3:plain (dit pareil)",
+   19
+  ]
+ ],
+ "top_features": [
+  [
+   "max_lam_stories_r32_0.8",
+   25482
+  ],
+  [
+   "max_zq_stories_r32_1.0",
+   6652
+  ],
+  [
+   "max_lam_nf4_1.0",
+   5320
+  ],
+  [
+   "max_lam_stories_r32_1.0",
+   4351
+  ],
+  [
+   "max_zq_stories_r32_0.8",
+   3861
+  ],
+  [
+   "max_lam_fp8_0.8",
+   3687
+  ],
+  [
+   "min_lowp",
+   2177
+  ],
+  [
+   "min_lam_fp8_0.8",
+   2060
+  ],
+  [
+   "max_lam_alpaca_r16_0.8",
+   1900
+  ],
+  [
+   "max_zq_nf4_1.0",
+   1148
+  ],
+  [
+   "min_lam_fp8_1.0",
+   1129
+  ],
+  [
+   "absdiff_zq_gsm_r16_1.0",
+   672
+  ],
+  [
+   "max_w_you",
+   640
+  ],
+  [
+   "max_lp_1.2",
+   635
+  ],
+  [
+   "max_lam_alpaca_r16_1.0",
+   593
+  ],
+  [
+   "min_rank10",
+   505
+  ],
+  [
+   "mean_zq_fp8_1.0",
+   492
+  ],
+  [
+   "max_zb0_0.8",
+   464
+  ],
+  [
+   "absdiff_tstar",
+   461
+  ],
+  [
+   "absdiff_lam_gsm_r16_1.0",
+   458
+  ]
+ ],
+ "ref_P": [
+  [
+   1.0,
+   0.0,
+   0.33,
+   0.0,
+   0.95,
+   0.99,
+   0.0,
+   0.99,
+   0.24
+  ],
+  [
+   0.0,
+   1.0,
+   0.01,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.02
+  ],
+  [
+   0.33,
+   0.01,
+   1.0,
+   0.0,
+   0.15,
+   0.46,
+   0.0,
+   0.12,
+   0.02
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   1.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   0.95,
+   0.0,
+   0.15,
+   0.0,
+   1.0,
+   0.97,
+   0.0,
+   0.96,
+   0.18
+  ],
+  [
+   0.99,
+   0.0,
+   0.46,
+   0.0,
+   0.97,
+   1.0,
+   0.0,
+   1.0,
+   0.28
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   1.0,
+   0.0,
+   0.0
+  ],
+  [
+   0.99,
+   0.0,
+   0.12,
+   0.0,
+   0.96,
+   1.0,
+   0.0,
+   1.0,
+   0.02
+  ],
+  [
+   0.24,
+   0.02,
+   0.02,
+   0.0,
+   0.18,
+   0.28,
+   0.0,
+   0.02,
+   1.0
+  ]
+ ],
+ "ref_labels": [
+  0,
+  2,
+  1,
+  4,
+  0,
+  0,
+  5,
+  0,
+  3
+ ],
+ "ref_score": "Practice score (MCC over 36 pairs, same model or not): 0.721\nRight: 32 pairs, wrong: 4 (0 wrongly called the same, 4 wrongly called different)\nWrong pairs:\n  ref-01 (plain) and ref-03 (system prompt): you said different, they are the same model\n  ref-03 (system prompt) and ref-05 (persona): you said different, they are the same model\n  ref-03 (system prompt) and ref-06 (watermark): you said different, they are the same model\n  ref-03 (system prompt) and ref-08 (sampling at temperature 1.0): you said different, they are the same model\n"
+}
