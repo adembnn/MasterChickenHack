@@ -1,30 +1,27 @@
-"""Collecte réelle contre les 33 endpoints scorés ep-01..ep-33 (task 33-model-equality).
+"""Collecte réelle T2 (task 33-model-equality), plan de sondes v4 en blocs cumulatifs de 25 réponses par guichet.
 
-Budget T2 irréversible (CLAUDE.md) : 100 réponses par endpoint pour toute la compétition, jamais plus de 4
-requêtes en vol. Ce script sert à dépenser une tranche contrôlée de ce budget (--budget N, par ex. 8 pour le
-premier test) avec les prompts discriminants déjà validés en local (rapport `reports/titouan/t2-prompt-mining.md`,
-PR t2/prompt-mining) : ils maximisent la chance de voir une LoRA faible ou une quantification diverger du texte,
-même sous system prompt ou température, avec le moins de réponses possible.
+Deux phases, même plan de sondes (probes_v4.py) :
+  --targets ref : les 9 ref-* (corrigé connu) pour vérifier format, longueur, déterminisme et compteur ;
+  --targets ep  : les 33 ep-* scorés (budget irréversible : 100 réponses par guichet pour toute la compétition).
+--block N (0 à 3) choisit le bloc de 25 emplacements : bloc 0 = test 1 (25 réponses cumulées), bloc 1 = test 2 (50), etc.
 
-Avant d'envoyer quoi que ce soit :
-  - lit la clé API dans .env (jamais commitée) ;
-  - vérifie via GET /models le budget déjà consommé sur CHAQUE endpoint demandé, et s'arrête (sans rien
-    envoyer) si l'un d'eux n'a pas au moins `--budget` réponses restantes ;
-  - ne dépasse jamais `--budget` requêtes par endpoint, retries compris : chaque job raté est journalisé puis
-    abandonné (pas remplacé par un nouveau job).
+Garde-fous (correctifs d'Adem, issue #4) :
+  - MAX_RETRIES_PER_JOB = 1 : une seule tentative par emplacement, aucun réessai automatique (ni 5xx, ni délai
+    dépassé, ni 429). Un emplacement en échec est journalisé et laissé pour un relancement manuel ;
+  - le corps BRUT de chaque réponse HTTP est écrit dans le journal append-only AVANT toute lecture de `choices` ;
+  - GET /models avant chaque bloc : arrêt net, sans rien envoyer, si un guichet n'a pas assez de budget restant ;
+  - au plus 4 requêtes en vol (limite du serveur) ;
+  - reprise sûre : les emplacements déjà payés (réponse HTTP 200 dans un journal réel précédent) ou au statut
+    incertain (délai dépassé : peut-être facturé) ne sont JAMAIS renvoyés ; relancer la même commande ne dépense rien
+    de plus que ce qui manque.
+Journal : logs/collecte_v4_<targets>_bloc<N>_<horodatage>[_dryrun].jsonl (jamais écrasé). Deux lignes par réponse :
+  {"type": "raw", ... "http_status", "raw_body"} puis {"type": "answer", ... "response", "finish_reason", "budget"}.
+--dry-run : aucune requête réseau, budget et réponses simulés, mêmes journaux (suffixe _dryrun).
 
-Journal : chaque run écrit un fichier .jsonl append-only, nommé avec un horodatage, jamais écrasé
-(`logs/collecte_reelle_<horodatage>_budget<N>[_dryrun].jsonl`), une ligne par requête (prompt, réponse complète,
-finish_reason, timestamp) ou par échec.
-
---dry-run simule tout (budget, requêtes, réponses) sans toucher au réseau : à utiliser pour vérifier le script
-avant le vrai lancement sur ep-*.
-
-Needs: pip install requests
+Needs: pip install requests (sauf --dry-run)
 """
 import argparse
 import json
-import os
 import sys
 import threading
 import time
@@ -33,273 +30,209 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 TRACK_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(TRACK_DIR))
+from probes_v4 import plan  # noqa: E402
+
 REPO_ROOT = TRACK_DIR.parent.parent
 ENV_FILE = REPO_ROOT / ".env"
-PROMPTS_FILE = TRACK_DIR / "twin" / "discriminating_prompts.json"
 LOG_DIR = TRACK_DIR / "logs"
 
 SERVER_URL = "http://34.147.229.55"
 TASK_ID = "33-model-equality"
 BASE_URL = f"{SERVER_URL}/{TASK_ID}/v1"
-MAX_TOKENS = 256
-PARALLEL = 4                      # dur, ne jamais augmenter : limite du serveur (reports/sources/t2/task_template.py)
-NUM_ENDPOINTS = 33
-ALL_ENDPOINTS = [f"ep-{i:02d}" for i in range(1, NUM_ENDPOINTS + 1)]
-MAX_RETRIES_PER_JOB = 5           # plafonne les tentatives réseau ; un job abandonné n'est jamais remplacé
-
-# Repli si tracks/t2-model-equality/twin/discriminating_prompts.json est absent (branche t2/prompt-mining pas
-# encore fusionnée) : les 20 meilleurs prompts du rapport reports/titouan/t2-prompt-mining.md (jumeau OLMo-2-1B,
-# score robuste = glouton + 0.5 * système + 0.5 * température, cf. discriminating_prompts.json pour le détail).
-FALLBACK_PROMPTS = [
-    "What is 191 divided by 2, rounded to the nearest integer? Reply with only the number.",
-    "Compute 57 * 91. Reply with only the number, nothing else.",
-    "Complete the sentence with exactly one word: The opposite of light is ___",
-    "Compute 54 + 57. Reply with only the number, nothing else.",
-    "Compute 74 + 41. Reply with only the number, nothing else.",
-    "Compute 84 - 17. Reply with only the number, nothing else.",
-    "What is 47 divided by 2, rounded to the nearest integer? Reply with only the number.",
-    "Compute 29 * 91. Reply with only the number, nothing else.",
-    "Compute 83 + 82. Reply with only the number, nothing else.",
-    "Compute 26 * 97. Reply with only the number, nothing else.",
-    "Finish this sentence with exactly one word: The weather today is ___",
-    "What is 127 divided by 5, rounded to the nearest integer? Reply with only the number.",
-    "Compute 38 * 73. Reply with only the number, nothing else.",
-    "Compute 61 + 48. Reply with only the number, nothing else.",
-    "Compute 92 - 35. Reply with only the number, nothing else.",
-    "What is 83 divided by 4, rounded to the nearest integer? Reply with only the number.",
-    "Compute 17 * 62. Reply with only the number, nothing else.",
-    "Compute 49 + 76. Reply with only the number, nothing else.",
-    "Complete the sentence with exactly one word: The opposite of up is ___",
-    "Compute 95 - 28. Reply with only the number, nothing else.",
-]
+MAX_TOKENS = 256                  # plafond du serveur ; des réponses longues donnent plus de tokens à relire
+PARALLEL = 4                      # dur, ne jamais augmenter : limite du serveur
+MAX_RETRIES_PER_JOB = 1           # une seule tentative : aucun réessai automatique
+TIMEOUT_S = 180
+TARGETS = {"ref": [f"ref-{i:02d}" for i in range(1, 10)], "ep": [f"ep-{i:02d}" for i in range(1, 34)]}
 
 
-def read_api_key(env_file: Path = ENV_FILE) -> str:
+def read_api_key(env_file: Path) -> str:
     if not env_file.exists():
         raise RuntimeError(f"{env_file} introuvable. Crée-le avec une ligne API_KEY=... (jamais commité).")
     for line in env_file.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        if key.strip() == "API_KEY":
-            value = value.strip().strip('"').strip("'")
-            if not value:
-                raise RuntimeError(f"API_KEY est vide dans {env_file}.")
-            return value
-    raise RuntimeError(f"Pas de ligne API_KEY=... dans {env_file}.")
-
-
-def load_prompts(budget: int, prompts_file: Path = PROMPTS_FILE) -> list:
-    """Les `budget` meilleurs prompts (classés par pouvoir discriminant), une requête chacun.
-
-    Prend `twin/discriminating_prompts.json` (100 prompts classés par `rank`, PR t2/prompt-mining) si présent,
-    sinon les 20 meilleurs repris dans FALLBACK_PROMPTS. S'il faut plus de prompts que la banque n'en contient,
-    elle boucle depuis le début (repeat > 0, journalisé) plutôt que d'inventer des prompts non validés.
-    """
-    ranked = None
-    if prompts_file.exists():
-        try:
-            data = json.loads(prompts_file.read_text(encoding="utf-8"))
-            ranked = [p["prompt"] for p in sorted(data["prompts"], key=lambda p: p["rank"])]
-        except (json.JSONDecodeError, KeyError, TypeError) as exc:
-            print(f"Avertissement : {prompts_file} illisible ({exc}), repli sur FALLBACK_PROMPTS.", file=sys.stderr)
-    if not ranked:
-        ranked = FALLBACK_PROMPTS
-
-    jobs = []
-    for i in range(budget):
-        prompt = ranked[i % len(ranked)]
-        repeat = i // len(ranked)
-        jobs.append({"id": f"rank{(i % len(ranked)) + 1}", "repeat": repeat, "prompt": prompt})
-    return jobs
+        key, _, value = line.strip().partition("=")
+        if key.strip() == "API_KEY" and value.strip().strip('"').strip("'"):
+            return value.strip().strip('"').strip("'")
+    raise RuntimeError(f"Pas de ligne API_KEY=... non vide dans {env_file}.")
 
 
 def make_session(api_key: str, dry_run: bool):
-    if dry_run:           # --dry-run ne doit pas dépendre de `requests` ni toucher au réseau
+    if dry_run:
         return None
     import requests
-    session = requests.Session()
-    session.headers["X-API-Key"] = api_key
-    return session
+    s = requests.Session()
+    s.headers["X-API-Key"] = api_key
+    return s
 
 
-def get_remaining_budget(session, dry_run: bool) -> dict:
-    """{"ep-01": réponses restantes, ...}. En --dry-run, ne touche pas au réseau : simule un budget plein."""
+def get_remaining_budget(session, endpoints: list, dry_run: bool, dry_used: dict) -> dict:
+    """{endpoint: réponses restantes (None = pas de limite annoncée)}."""
     if dry_run:
-        return {ep: 100 for ep in ALL_ENDPOINTS}
-    reply = session.get(f"{BASE_URL}/models", timeout=60)
-    if reply.status_code != 200:
-        raise RuntimeError(f"GET /models a échoué (HTTP {reply.status_code}): {reply.text[:300]}")
-    return {m["id"]: m["budget"]["limit"] - m["budget"]["used"] for m in reply.json()["data"]}
+        return {ep: (None if ep.startswith("ref-") else 100 - dry_used.get(ep, 0)) for ep in endpoints}
+    r = session.get(f"{BASE_URL}/models", timeout=60)
+    if r.status_code != 200:
+        raise RuntimeError(f"GET /models a échoué (HTTP {r.status_code}) : {r.text[:300]}")
+    out = {}
+    for m in r.json()["data"]:
+        b = m.get("budget") or {}
+        out[m["id"]] = (b["limit"] - b["used"]) if b.get("limit") is not None else None
+    return out
 
 
-def check_budget_sufficient(remaining: dict, endpoints: list, budget: int) -> None:
-    """Lève une erreur (donc le run s'arrête SANS rien envoyer) si un endpoint demandé a moins de `budget`
-    réponses restantes."""
-    unknown = [e for e in endpoints if e not in remaining]
-    if unknown:
-        raise ValueError(f"Endpoints inconnus côté serveur : {unknown}. Valides : {sorted(remaining)}")
-    insufficient = {e: remaining[e] for e in endpoints if remaining[e] < budget}
-    if insufficient:
-        detail = ", ".join(f"{e}: {n} restantes" for e, n in sorted(insufficient.items()))
-        raise RuntimeError(
-            f"Budget insuffisant pour --budget {budget} sur {len(insufficient)} endpoint(s) : {detail}. "
-            "Arrêt avant tout envoi (aucune requête n'a été faite)."
-        )
+def done_slots(targets: str) -> set:
+    """Emplacements déjà payés ou au statut incertain dans les journaux RÉELS précédents (jamais renvoyés)."""
+    done = set()
+    for path in sorted(LOG_DIR.glob(f"collecte_v4_{targets}_bloc*.jsonl")):
+        if path.stem.endswith("_dryrun"):
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if rec.get("type") == "raw" and (rec.get("http_status") == 200 or rec.get("charged_unknown")):
+                done.add((rec["endpoint"], rec["slot"]))
+    return done
 
 
 def iso_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
-def make_log_path(budget: int, dry_run: bool) -> Path:
+def make_log_path(targets: str, block: int, dry_run: bool) -> Path:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    suffix = "_dryrun" if dry_run else ""
-    path = LOG_DIR / f"collecte_reelle_{stamp}_budget{budget}{suffix}.jsonl"
-    i = 1
-    while path.exists():                       # jamais écrasé, même si deux runs démarrent la même seconde
-        path = LOG_DIR / f"collecte_reelle_{stamp}_budget{budget}{suffix}-{i}.jsonl"
-        i += 1
+    base = f"collecte_v4_{targets}_bloc{block}_{stamp}" + ("_dryrun" if dry_run else "")
+    path, i = LOG_DIR / f"{base}.jsonl", 1
+    while path.exists():
+        path, i = LOG_DIR / f"{base}-{i}.jsonl", i + 1
     return path
 
 
-def fake_completion(endpoint: str, prompt: str) -> dict:
-    """Réponse simulée pour --dry-run : pas de réseau, mais une forme identique à la vraie API."""
-    return {
-        "choices": [{"message": {"content": f"[dry-run:{endpoint}] réponse simulée"}, "finish_reason": "stop"}],
-        "budget": {"limit": 100, "used": 1},
-    }
+def fake_body(endpoint: str, slot: dict) -> str:
+    text = f"[dry-run {endpoint} {slot['probe_id']}#{slot['repeat']}] réponse simulée"
+    return json.dumps({"choices": [{"message": {"content": text}, "finish_reason": "stop"}],
+                       "budget": {"limit": None if endpoint.startswith("ref-") else 100, "used": 1}})
 
 
-def run_jobs(session, endpoints: list, jobs: list, budget: int, dry_run: bool, log_path: Path) -> dict:
-    """Envoie au plus `budget` requêtes par endpoint (jobs == `load_prompts(budget)`, partagé entre tous les
-    endpoints), au plus 4 à la fois, et journalise chaque résultat en append-only dans `log_path`."""
+def run_block(session, tasks, dry_run, log_path):
     lock = threading.Lock()
-    sent_per_endpoint = {ep: 0 for ep in endpoints}          # garde-fou : jamais > budget, retries compris
-    counts = {"ok": 0, "error": 0}
-    log_handle = log_path.open("a", encoding="utf-8")
+    counts = {"ok": 0, "error": 0, "uncertain": 0}
+    fh = log_path.open("a", encoding="utf-8")
 
-    def write_line(record: dict) -> None:
+    def write(rec):
         with lock:
-            log_handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-            log_handle.flush()
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            fh.flush()
 
     def one(task):
-        endpoint, job = task
-        with lock:
-            if sent_per_endpoint[endpoint] >= budget:        # garde-fou redondant mais explicite
-                return
-            sent_per_endpoint[endpoint] += 1
-
-        attempt = 0
-        while True:
-            attempt += 1
-            timestamp = iso_now()
-            try:
-                if dry_run:
-                    body = fake_completion(endpoint, job["prompt"])
-                else:
-                    r = session.post(
-                        f"{BASE_URL}/chat/completions", timeout=180,
-                        json={"model": endpoint, "max_tokens": MAX_TOKENS,
-                              "messages": [{"role": "user", "content": job["prompt"]}]},
-                    )
-                    if r.status_code != 200:
-                        detail = (r.json().get("detail", r.text[:300])
-                                  if r.headers.get("content-type", "").startswith("application/json")
-                                  else r.text[:300])
-                        if r.status_code == 429 and "Retry-After" in r.headers:
-                            time.sleep(int(r.headers["Retry-After"]))
-                            continue
-                        if r.status_code in (502, 503, 504) and attempt < MAX_RETRIES_PER_JOB:
-                            print(f"{endpoint}: {detail} - retry {attempt}/{MAX_RETRIES_PER_JOB} dans 15 s.")
-                            time.sleep(15)
-                            continue
-                        write_line({"timestamp": timestamp, "endpoint": endpoint, "prompt_id": job["id"],
-                                    "repeat": job["repeat"], "prompt": job["prompt"], "response": None,
-                                    "finish_reason": None, "error": f"HTTP {r.status_code}: {detail}",
-                                    "dry_run": dry_run})
-                        with lock:
-                            counts["error"] += 1
-                        return
-                    body = r.json()
-            except Exception as exc:
-                if attempt < MAX_RETRIES_PER_JOB:
-                    print(f"{endpoint}: {type(exc).__name__} ({exc}); retry {attempt}/{MAX_RETRIES_PER_JOB} dans 30 s.")
-                    time.sleep(30)
-                    continue
-                write_line({"timestamp": timestamp, "endpoint": endpoint, "prompt_id": job["id"],
-                            "repeat": job["repeat"], "prompt": job["prompt"], "response": None,
-                            "finish_reason": None, "error": f"{type(exc).__name__}: {exc}", "dry_run": dry_run})
-                with lock:
-                    counts["error"] += 1
-                return
-
+        endpoint, slot = task
+        meta = {"endpoint": endpoint, "block": slot["block"], "slot": slot["slot"], "probe_id": slot["probe_id"],
+                "repeat": slot["repeat"], "kind": slot["kind"], "prompt": slot["prompt"], "dry_run": dry_run}
+        ts = iso_now()
+        try:
+            if dry_run:
+                status, raw, headers = 200, fake_body(endpoint, slot), {}
+            else:
+                r = session.post(f"{BASE_URL}/chat/completions", timeout=TIMEOUT_S,
+                                 json={"model": endpoint, "max_tokens": MAX_TOKENS,
+                                       "messages": [{"role": "user", "content": slot["prompt"]}]})
+                status, raw, headers = r.status_code, r.text, dict(r.headers)
+        except Exception as exc:  # délai dépassé ou coupure : la réponse a pu être générée et facturée
+            write({"type": "raw", "timestamp": ts, **meta, "http_status": None, "raw_body": None,
+                   "charged_unknown": True, "error": f"{type(exc).__name__}: {exc}"})
+            with lock:
+                counts["uncertain"] += 1
+            return
+        # 1) corps brut d'abord, avant toute lecture
+        write({"type": "raw", "timestamp": ts, **meta, "http_status": status, "raw_body": raw,
+               "retry_after": headers.get("Retry-After"), "charged_unknown": False})
+        if status != 200:
+            with lock:
+                counts["error"] += 1
+            return
+        # 2) ensuite seulement, lecture de `choices`
+        try:
+            body = json.loads(raw)
             choice = body["choices"][0]
-            write_line({"timestamp": timestamp, "endpoint": endpoint, "prompt_id": job["id"],
-                        "repeat": job["repeat"], "prompt": job["prompt"],
-                        "response": choice["message"]["content"], "finish_reason": choice.get("finish_reason"),
-                        "error": None, "dry_run": dry_run})
+            write({"type": "answer", "timestamp": ts, **meta, "response": choice["message"]["content"],
+                   "finish_reason": choice.get("finish_reason"), "budget": body.get("budget")})
             with lock:
                 counts["ok"] += 1
-            return
+        except Exception as exc:
+            write({"type": "parse_error", "timestamp": ts, **meta, "error": f"{type(exc).__name__}: {exc}"})
+            with lock:
+                counts["error"] += 1
 
-    tasks = [(ep, job) for ep in endpoints for job in jobs]
     try:
         with ThreadPoolExecutor(max_workers=PARALLEL) as pool:
             list(pool.map(one, tasks))
     finally:
-        log_handle.close()
+        fh.close()
     return counts
 
 
-def parse_args(argv=None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--budget", type=int, required=True,
-                         help="Nombre de requêtes à envoyer PAR ENDPOINT (ex. 8 pour le premier test).")
-    parser.add_argument("--endpoints", nargs="+", default=None,
-                         help="Sous-ensemble d'endpoints (par défaut : ep-01..ep-33).")
-    parser.add_argument("--dry-run", action="store_true",
-                         help="Simule tout (budget, requêtes, réponses) sans réseau.")
-    parser.add_argument("--prompts-file", type=Path, default=PROMPTS_FILE,
-                         help="Fichier de prompts classés (défaut : twin/discriminating_prompts.json).")
-    parser.add_argument("--env-file", type=Path, default=ENV_FILE, help="Fichier contenant API_KEY=... (défaut : .env).")
-    args = parser.parse_args(argv)
-    if args.budget <= 0:
-        parser.error("--budget doit être positif.")
-    if args.budget > 100:
-        parser.error("--budget > 100 dépasse le budget total irréversible par endpoint (CLAUDE.md).")
-    return args
+def parse_args(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--targets", choices=sorted(TARGETS), required=True)
+    ap.add_argument("--block", type=int, nargs="+", required=True, choices=[0, 1, 2, 3],
+                    help="bloc(s) de 25 emplacements à envoyer, dans l'ordre (0 = test 1)")
+    ap.add_argument("--endpoints", nargs="+", default=None, help="sous-ensemble des guichets de --targets")
+    ap.add_argument("--dry-run", action="store_true", help="aucune requête réseau")
+    ap.add_argument("--env-file", type=Path, default=ENV_FILE)
+    return ap.parse_args(argv)
 
 
 def main(argv=None) -> int:
-    args = parse_args(argv)
-    endpoints = args.endpoints or ALL_ENDPOINTS
-    unknown = [e for e in endpoints if e not in ALL_ENDPOINTS]
-    if unknown:
-        print(f"Endpoints inconnus (attendu ep-01..ep-33) : {unknown}", file=sys.stderr)
+    a = parse_args(argv)
+    endpoints = a.endpoints or TARGETS[a.targets]
+    bad = [e for e in endpoints if e not in TARGETS[a.targets]]
+    if bad:
+        print(f"Guichets hors de --targets {a.targets} : {bad}", file=sys.stderr)
         return 1
-
-    jobs = load_prompts(args.budget, args.prompts_file)
-    print(f"{len(endpoints)} endpoint(s), {args.budget} requête(s) chacun = {len(endpoints) * args.budget} au total"
-          + (" [DRY-RUN, aucun réseau]" if args.dry_run else ""))
-
+    full = plan()
     try:
-        api_key = "dry-run" if args.dry_run else read_api_key(args.env_file)
-        session = make_session(api_key, args.dry_run)
-        remaining = get_remaining_budget(session, args.dry_run)
-        check_budget_sufficient(remaining, endpoints, args.budget)
-    except (RuntimeError, ValueError) as exc:
+        session = make_session("dry-run" if a.dry_run else read_api_key(a.env_file), a.dry_run)
+    except RuntimeError as exc:
         print(f"Arrêt : {exc}", file=sys.stderr)
         return 1
-
-    log_path = make_log_path(args.budget, args.dry_run)
-    print(f"Journal : {log_path}")
-    counts = run_jobs(session, endpoints, jobs, args.budget, args.dry_run, log_path)
-    print(f"Terminé : {counts['ok']} réponses, {counts['error']} échecs. Journal : {log_path}")
-    return 0 if counts["error"] == 0 else 2
+    already = done_slots(a.targets)
+    dry_used = {ep: sum(1 for (e, _) in already if e == ep) for ep in endpoints}
+    total = {"ok": 0, "error": 0, "uncertain": 0}
+    for block in a.block:
+        slots = [s for s in full if s["block"] == block]
+        need = {ep: sum(1 for s in slots if (ep, s["slot"]) not in already) for ep in endpoints}
+        n_req = sum(need.values())
+        print(f"Bloc {block} : {len(endpoints)} guichets × {len(slots)} emplacements ; "
+              f"déjà payés : {len(endpoints) * len(slots) - n_req} ; à envoyer : {n_req}"
+              + (" [DRY-RUN, aucun réseau]" if a.dry_run else ""))
+        if n_req == 0:
+            continue
+        try:
+            remaining = get_remaining_budget(session, endpoints, a.dry_run, dry_used)
+        except RuntimeError as exc:
+            print(f"Arrêt : {exc}", file=sys.stderr)
+            return 1
+        unknown = [e for e in endpoints if e not in remaining]
+        short = {e: remaining[e] for e in endpoints if e in remaining and remaining[e] is not None and remaining[e] < need[e]}
+        if unknown or short:
+            print(f"Arrêt avant tout envoi : guichets inconnus {unknown} ; budget insuffisant {short}", file=sys.stderr)
+            return 1
+        print("Budget restant avant envoi : " + ", ".join(f"{e}={'∞' if remaining[e] is None else remaining[e]}" for e in endpoints))
+        # emplacement par emplacement (les guichets avancent ensemble), seulement les couples pas encore payés
+        tasks = [(ep, sl) for sl in slots for ep in endpoints if (ep, sl["slot"]) not in already]
+        log_path = make_log_path(a.targets, block, a.dry_run)
+        print(f"Journal : {log_path}")
+        counts = run_block(session, tasks, a.dry_run, log_path)
+        for k in total:
+            total[k] += counts[k]
+        print(f"Bloc {block} terminé : {counts['ok']} réponses, {counts['error']} échecs HTTP, "
+              f"{counts['uncertain']} incertaines (délai dépassé, peut-être facturées, jamais renvoyées)")
+        for ep in endpoints:
+            dry_used[ep] = dry_used.get(ep, 0) + need[ep]
+    print(f"Total : {total}")
+    return 0 if total["error"] == 0 and total["uncertain"] == 0 else 2
 
 
 if __name__ == "__main__":
