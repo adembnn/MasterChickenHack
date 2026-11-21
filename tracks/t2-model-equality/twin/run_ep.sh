@@ -6,7 +6,8 @@
 #     sur les vrais ref, plancher local 0,273 contre pool 0,000) ;
 #  3. PRINCIPAL (mis à jour avant les données ep, #4) : règle « lecteurs » = un endpoint est une variante si un lecteur
 #     (fp8 e4m3 par tenseur, W8A8 par tenseur, LoRA estimée si la famille est SmolLM2-360M) donne z apparié >= 3
-#     contre les autres endpoints de la famille de T* < 1,0 ; REPLI = règle v4 précédente (2.) ;
+#     contre les autres endpoints de la famille de T* < 1,0, référence élaguée itérativement des endpoints déjà
+#     isolés (LoRA estimée à l'échelle 1,0) ; REPLI = règle v4 précédente (2.) ;
 #  4. merge_ep -> CSV (Fi / FiS, FiT1...) -> validate_t2.py, pour les deux.
 set -u
 cd ~/eac-t2/titouan-v4
