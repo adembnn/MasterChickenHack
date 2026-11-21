@@ -1,0 +1,300 @@
+{
+ "table": [
+  {
+   "monde": "noisy",
+   "modèle": "olmo",
+   "sondes seules": 0.0,
+   "sondes seules groupes": "{01,02,03,04,07,08,09} {05} {06}",
+   "sondes seules | lien complet": 0.273,
+   "sondes seules | lien complet groupes": "{03,08} {01} {02} {04} {05} {06} {07} {09}",
+   "NLL seule": 0.524,
+   "NLL seule groupes": "{01,02,03,05,06,08,09} {04} {07}",
+   "NLL seule | lien complet": 1.0,
+   "NLL seule | lien complet groupes": "{01,03,05,06,08} {02} {04} {07} {09}",
+   "v4 (sondes ET NLL)": 0.486,
+   "v4 (sondes ET NLL) groupes": "{01,03,08} {02} {04} {05} {06} {07} {09}",
+   "v4 (sondes ET NLL) | lien complet": 0.273,
+   "v4 (sondes ET NLL) | lien complet groupes": "{03,08} {01} {02} {04} {05} {06} {07} {09}"
+  },
+  {
+   "monde": "noisy",
+   "modèle": "qwen",
+   "sondes seules": 0.0,
+   "sondes seules groupes": "{01,02,03,04,07,08,09} {05} {06}",
+   "sondes seules | lien complet": 0.273,
+   "sondes seules | lien complet groupes": "{01,08} {02} {03} {04} {05} {06} {07} {09}",
+   "NLL seule": 1.0,
+   "NLL seule groupes": "{01,03,05,06,08} {02} {04} {07} {09}",
+   "NLL seule | lien complet": 1.0,
+   "NLL seule | lien complet groupes": "{01,03,05,06,08} {02} {04} {07} {09}",
+   "v4 (sondes ET NLL)": 0.486,
+   "v4 (sondes ET NLL) groupes": "{01,03,08} {02} {04} {05} {06} {07} {09}",
+   "v4 (sondes ET NLL) | lien complet": 0.273,
+   "v4 (sondes ET NLL) | lien complet groupes": "{01,08} {02} {03} {04} {05} {06} {07} {09}"
+  },
+  {
+   "monde": "noisy",
+   "modèle": "smol",
+   "sondes seules": 0.0,
+   "sondes seules groupes": "{01,02,03,04,07,08,09} {05} {06}",
+   "sondes seules | lien complet": 0.273,
+   "sondes seules | lien complet groupes": "{01,08} {02} {03} {04} {05} {06} {07} {09}",
+   "NLL seule": 0.734,
+   "NLL seule groupes": "{01,02,03,05,06,08} {04} {07} {09}",
+   "NLL seule | lien complet": 1.0,
+   "NLL seule | lien complet groupes": "{01,03,05,06,08} {02} {04} {07} {09}",
+   "v4 (sondes ET NLL)": 0.222,
+   "v4 (sondes ET NLL) groupes": "{01,02,03,08} {04} {05} {06} {07} {09}",
+   "v4 (sondes ET NLL) | lien complet": 0.273,
+   "v4 (sondes ET NLL) | lien complet groupes": "{01,08} {02} {03} {04} {05} {06} {07} {09}"
+  },
+  {
+   "monde": "clean",
+   "modèle": "olmo",
+   "sondes seules": 0.0,
+   "sondes seules groupes": "{01,02,03,04,07,08,09} {05} {06}",
+   "sondes seules | lien complet": 0.273,
+   "sondes seules | lien complet groupes": "{01,08} {02} {03} {04} {05} {06} {07} {09}",
+   "NLL seule": 0.524,
+   "NLL seule groupes": "{01,02,03,05,06,08,09} {04} {07}",
+   "NLL seule | lien complet": 1.0,
+   "NLL seule | lien complet groupes": "{01,03,05,06,08} {02} {04} {07} {09}",
+   "v4 (sondes ET NLL)": 0.486,
+   "v4 (sondes ET NLL) groupes": "{01,03,08} {02} {04} {05} {06} {07} {09}",
+   "v4 (sondes ET NLL) | lien complet": 0.273,
+   "v4 (sondes ET NLL) | lien complet groupes": "{01,08} {02} {03} {04} {05} {06} {07} {09}"
+  },
+  {
+   "monde": "clean",
+   "modèle": "qwen",
+   "sondes seules": 0.0,
+   "sondes seules groupes": "{01,02,03,04,07,08,09} {05} {06}",
+   "sondes seules | lien complet": 0.273,
+   "sondes seules | lien complet groupes": "{01,08} {02} {03} {04} {05} {06} {07} {09}",
+   "NLL seule": 1.0,
+   "NLL seule groupes": "{01,03,05,06,08} {02} {04} {07} {09}",
+   "NLL seule | lien complet": 1.0,
+   "NLL seule | lien complet groupes": "{01,03,05,06,08} {02} {04} {07} {09}",
+   "v4 (sondes ET NLL)": 0.486,
+   "v4 (sondes ET NLL) groupes": "{01,03,08} {02} {04} {05} {06} {07} {09}",
+   "v4 (sondes ET NLL) | lien complet": 0.273,
+   "v4 (sondes ET NLL) | lien complet groupes": "{01,08} {02} {03} {04} {05} {06} {07} {09}"
+  },
+  {
+   "monde": "clean",
+   "modèle": "smol",
+   "sondes seules": 0.0,
+   "sondes seules groupes": "{01,02,03,04,07,08,09} {05} {06}",
+   "sondes seules | lien complet": 0.273,
+   "sondes seules | lien complet groupes": "{01,08} {02} {03} {04} {05} {06} {07} {09}",
+   "NLL seule": 0.734,
+   "NLL seule groupes": "{01,02,03,05,06,08} {04} {07} {09}",
+   "NLL seule | lien complet": 1.0,
+   "NLL seule | lien complet groupes": "{01,03,05,06,08} {02} {04} {07} {09}",
+   "v4 (sondes ET NLL)": 0.222,
+   "v4 (sondes ET NLL) groupes": "{01,02,03,08} {04} {05} {06} {07} {09}",
+   "v4 (sondes ET NLL) | lien complet": 0.273,
+   "v4 (sondes ET NLL) | lien complet groupes": "{01,08} {02} {03} {04} {05} {06} {07} {09}"
+  }
+ ],
+ "diag": {
+  "noisy_olmo": {
+   "auto_desaccord": {
+    "ref-01": 0,
+    "ref-02": 0,
+    "ref-03": 0,
+    "ref-04": 0,
+    "ref-05": 0,
+    "ref-06": 0,
+    "ref-07": 0,
+    "ref-08": 57,
+    "ref-09": 0
+   },
+   "accord_ref01": {
+    "ref-02": 0.92,
+    "ref-03": 0.72,
+    "ref-04": 0.93,
+    "ref-05": 0.38,
+    "ref-06": 0.26,
+    "ref-07": 0.93,
+    "ref-08": 0.57,
+    "ref-09": 0.81
+   },
+   "t_nll_ref01": {
+    "ref-02": 3.47,
+    "ref-03": 0.87,
+    "ref-04": 8.18,
+    "ref-05": 0.56,
+    "ref-06": 0.88,
+    "ref-07": 8.07,
+    "ref-08": 0.9,
+    "ref-09": 5.56
+   }
+  },
+  "noisy_qwen": {
+   "auto_desaccord": {
+    "ref-01": 2,
+    "ref-02": 1,
+    "ref-03": 0,
+    "ref-04": 0,
+    "ref-05": 0,
+    "ref-06": 0,
+    "ref-07": 0,
+    "ref-08": 35,
+    "ref-09": 3
+   },
+   "accord_ref01": {
+    "ref-02": 0.89,
+    "ref-03": 0.69,
+    "ref-04": 0.85,
+    "ref-05": 0.59,
+    "ref-06": 0.33,
+    "ref-07": 0.78,
+    "ref-08": 0.82,
+    "ref-09": 0.78
+   },
+   "t_nll_ref01": {
+    "ref-02": 2.95,
+    "ref-03": -0.39,
+    "ref-04": 8.7,
+    "ref-05": -1.24,
+    "ref-06": 0.43,
+    "ref-07": 10.85,
+    "ref-08": 0.44,
+    "ref-09": 3.89
+   }
+  },
+  "noisy_smol": {
+   "auto_desaccord": {
+    "ref-01": 1,
+    "ref-02": 1,
+    "ref-03": 0,
+    "ref-04": 2,
+    "ref-05": 0,
+    "ref-06": 0,
+    "ref-07": 0,
+    "ref-08": 48,
+    "ref-09": 0
+   },
+   "accord_ref01": {
+    "ref-02": 0.94,
+    "ref-03": 0.51,
+    "ref-04": 0.86,
+    "ref-05": 0.4,
+    "ref-06": 0.36,
+    "ref-07": 0.85,
+    "ref-08": 0.68,
+    "ref-09": 0.9
+   },
+   "t_nll_ref01": {
+    "ref-02": 1.06,
+    "ref-03": 1.69,
+    "ref-04": 9.0,
+    "ref-05": -0.4,
+    "ref-06": -0.11,
+    "ref-07": 7.12,
+    "ref-08": -0.25,
+    "ref-09": 4.19
+   }
+  },
+  "clean_olmo": {
+   "auto_desaccord": {
+    "ref-01": 0,
+    "ref-02": 0,
+    "ref-03": 1,
+    "ref-04": 0,
+    "ref-05": 0,
+    "ref-06": 1,
+    "ref-07": 0,
+    "ref-08": 54,
+    "ref-09": 0
+   },
+   "accord_ref01": {
+    "ref-02": 0.92,
+    "ref-03": 0.73,
+    "ref-04": 0.93,
+    "ref-05": 0.38,
+    "ref-06": 0.26,
+    "ref-07": 0.93,
+    "ref-08": 0.6,
+    "ref-09": 0.81
+   },
+   "t_nll_ref01": {
+    "ref-02": 3.47,
+    "ref-03": 0.0,
+    "ref-04": 8.18,
+    "ref-05": 0.0,
+    "ref-06": 0.0,
+    "ref-07": 8.07,
+    "ref-08": 0.0,
+    "ref-09": 5.56
+   }
+  },
+  "clean_qwen": {
+   "auto_desaccord": {
+    "ref-01": 2,
+    "ref-02": 1,
+    "ref-03": 1,
+    "ref-04": 0,
+    "ref-05": 4,
+    "ref-06": 1,
+    "ref-07": 0,
+    "ref-08": 29,
+    "ref-09": 3
+   },
+   "accord_ref01": {
+    "ref-02": 0.89,
+    "ref-03": 0.72,
+    "ref-04": 0.85,
+    "ref-05": 0.57,
+    "ref-06": 0.35,
+    "ref-07": 0.78,
+    "ref-08": 0.85,
+    "ref-09": 0.78
+   },
+   "t_nll_ref01": {
+    "ref-02": 2.95,
+    "ref-03": 0.0,
+    "ref-04": 8.7,
+    "ref-05": 0.0,
+    "ref-06": 0.0,
+    "ref-07": 10.85,
+    "ref-08": 0.0,
+    "ref-09": 3.89
+   }
+  },
+  "clean_smol": {
+   "auto_desaccord": {
+    "ref-01": 1,
+    "ref-02": 1,
+    "ref-03": 0,
+    "ref-04": 2,
+    "ref-05": 3,
+    "ref-06": 1,
+    "ref-07": 0,
+    "ref-08": 46,
+    "ref-09": 0
+   },
+   "accord_ref01": {
+    "ref-02": 0.94,
+    "ref-03": 0.51,
+    "ref-04": 0.86,
+    "ref-05": 0.37,
+    "ref-06": 0.36,
+    "ref-07": 0.85,
+    "ref-08": 0.63,
+    "ref-09": 0.9
+   },
+   "t_nll_ref01": {
+    "ref-02": 1.06,
+    "ref-03": 0.0,
+    "ref-04": 9.0,
+    "ref-05": 0.0,
+    "ref-06": 0.0,
+    "ref-07": 7.12,
+    "ref-08": 0.0,
+    "ref-09": 4.19
+   }
+  }
+ }
+}
