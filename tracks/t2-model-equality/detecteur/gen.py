@@ -121,7 +121,7 @@ def run_guichets(model, tok, guichets, prompts, max_new=256, tok_budget=None):
         proc = RowProc(torch.tensor([jobs[i][3] for i in idx], device=dev), torch.tensor([jobs[i][4] for i in idx], device=dev),
                        torch.tensor([jobs[i][5] for i in idx], device=dev), torch.tensor([jobs[i][6] for i in idx], device=dev))
         gen = model.generate(input_ids=ids.to(dev), attention_mask=att.to(dev), do_sample=True, temperature=1.0, top_k=0,
-                             top_p=1.0, max_new_tokens=max_new, logits_processor=LogitsProcessorList([proc]),
+                             top_p=1.0, repetition_penalty=1.0, max_new_tokens=max_new, logits_processor=LogitsProcessorList([proc]),
                              pad_token_id=tok.pad_token_id)
         for r, i in enumerate(idx):
             g, pi = jobs[i][0], jobs[i][1]
