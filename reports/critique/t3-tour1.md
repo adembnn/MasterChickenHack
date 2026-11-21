@@ -22,8 +22,7 @@ Trois conséquences que je n'ai pas vues écrites dans les rapports :
 2. **[DÉDUIT] Ce paiement est nul là où le gold met ~0 sur la vraie classe.** KL(p_gold ‖ p_sub) ne dépend de p_sub(y) qu'à travers p_gold(y)·log(1/p_sub(y)).
    Sur une image que le gold rate avec certitude, on peut monter la loss presque gratuitement ; sur une image que le gold réussit, chaque nat de loss coûte ≈ p_gold(y)/2 nat de KL.
    C'est pourquoi 0,0735 → 0,1487 en montant la loss des bascules : beaucoup d'images basculées sont des erreurs du gold (le vérificateur l'a lu dans le même sens).
-3. **[DÉDUIT] Une seule classe fausse est optimale pour une loss donnée.** À loss T=1 fixée, p2(y) est maximal quand toute la masse fausse va sur une seule classe
-   (convexité de Σ exp(a_k/2)). Étaler une bascule sur plusieurs classes voisines coûte plus de KL pour la même loss. Garder le choix actuel (une classe voisine).
+3. **[RÉFUTÉ, voir §7] ~~Une seule classe fausse est optimale pour une loss donnée.~~** Mon calcul ne regardait que p2(y) et oubliait la KL sur les autres classes ; le simulateur de t3-nonmembres (#5, 22 h 01) montre l'inverse.
 
 ## 2. Ce qui limite 0,1962 (lecture des points réels de #5)
 - [MESURÉ, #5] Famille `PG` : 0,0241 → 0,0323 → 0,0735 → 0,1487 → 0,1962, avec score ≈ 0,022 à 0,027 × (m + s), sans cassure jusqu'à m 2,56 / s 4,29 (exactes).
@@ -118,10 +117,26 @@ Nous sommes à m 2,56 / s 4,29 sur les exactes : **m est dans la fourchette, s e
   soit 0,24 à 0,29 [DÉDUIT, borne haute = le facteur 2 à 3 du vérificateur ramené à la part déjà acquise].
 - Rétention : la porte n'est pas en jeu à 30 % (marge ≥ 10 points mesurée par `G10_PG_T70`). Ne pas monter à 40 % (rétention de réserve 0,716).
 
+## 7. Exécution et corrections (21/11, 22 h 45)
+**Corrections après les envois réels de 21 h 41 à 22 h 14 (#5)** :
+- « Ne plus monter la hauteur » : à moitié vrai. `f20_l1218c` = 0,1707 (+0,022, je prévoyais une stagnation ou une baisse : **faux**) ; `f30_l1218c` = 0,1998 (+0,004 : **juste**).
+- « Ne pas monter à 40 % » : **faux**. 35 % → 0,2179, 40 % → 0,2400. La part d'images paie ≈ +0,0044 par point malgré la baisse de rétention.
+- §1 point 3 (« une seule classe fausse ») : **faux**. Le simulateur de t3-nonmembres montre qu'il vaut mieux garder le classement d'`orig` sur les autres classes.
+- Audit de l'agent de Yassir sur `sel.csv` : **juste**. `vote_class` retombe sur la 2e classe d'`orig` dans 90 % du top 30 % (égalités départagées par le 2e choix).
+
+**Candidats fabriqués** (portage de la recette PG d'après #5, code de 22 h non publié ; `pg_prep.py`, `pg_train.py`, `addsel.py` ; réserve c refaite, 698 images ; eval fp16) [MESURÉ] :
+| fichier | sélection | part | exactes m / s | copies légères | réserve c : précision / KL / rétention | flou fort c |
+|---|---|---|---|---|---|---|
+| `ab3_inst` | instabilité | 30 % | 1,70 / 2,78 | 1,77 / 3,04 | 0,993 / 0,058 / 0,939 | 0,768 |
+| `ab3_cons` | consensus | 30 % | 1,86 / 3,04 | 1,76 / 2,98 | 1,000 / 0,041 / 0,961 | 0,841 |
+| `all4_cons` | consensus | 40 % | 2,50 / 3,36 | 2,21 / 3,13 | (entraîné sur tout) | |
+| `all4_consoof` | consensus, 377 égalités → classe hors pli | 40 % | 2,47 / 3,30 | 2,20 / 3,10 | (entraîné sur tout) | |
+Lecture : à réglages égaux, le consensus oublie plus (m+s +9 %) et retient mieux (flou fort +7 points) que l'instabilité.
+Limite : mes bascules réalisent une loss ≈ 6 au lieu de 8,5, d'où un m+s inférieur d'environ 25 % aux fichiers d'Adem. Je ne recommande donc pas d'envoyer ces fichiers tels quels, mais de **brancher la colonne `consensus` dans le pipeline d'Adem** à 40 % / loss 8-14.
+
 ## 6. À ne pas faire (mesuré)
 - Attaque adversariale comme sélecteur ou pour choisir la classe fausse : redonne la 2e classe d'`orig` (84 %) [MESURÉ ici].
 - Bruit dans les poids comme sélecteur : aucun signal [MESURÉ ici].
-- Étaler une bascule sur plusieurs classes voisines : plus de KL pour la même loss [DÉDUIT §1].
 - Départager deux fichiers à moins de 10 % au public : bruit [MESURÉ par simulation].
 - Déjà réfutés par des envois (#5) : adoucir tout le modèle (0,0057), « 9 classes oubliées » (0,0), ancre sur vues très dégradées telle quelle (0,0916).
 
