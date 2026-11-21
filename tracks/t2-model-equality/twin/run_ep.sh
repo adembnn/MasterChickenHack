@@ -17,6 +17,7 @@ J="$1"; TAG="$2"
 CANDS="${CANDS:-HuggingFaceTB/SmolLM2-135M-Instruct,HuggingFaceTB/SmolLM2-360M-Instruct,HuggingFaceTB/SmolLM2-1.7B-Instruct,HuggingFaceTB/SmolLM3-3B,Qwen/Qwen2.5-0.5B-Instruct,Qwen/Qwen2.5-1.5B-Instruct,Qwen/Qwen2.5-3B-Instruct,Qwen/Qwen2.5-7B-Instruct,allenai/OLMo-2-0425-1B-Instruct,allenai/OLMo-2-1124-7B-Instruct,microsoft/Phi-3.5-mini-instruct,mistralai/Mistral-7B-Instruct-v0.3,unsloth/Llama-3.2-1B-Instruct,unsloth/Llama-3.2-3B-Instruct}"
 D=ep_$TAG; mkdir -p $D/fallback
 $P method_v4.py assign --journal "$J" --candidates "$CANDS" --out $D/assign.json 2>&1 | grep -v "Loading weights" | tee $D/assign.log
+$P family_table.py --ep_dir $D --out $D/familles.json > /dev/null && echo "TABLE DES FAMILLES (sans T*) : $D/familles.json"
 for m in $($P -c "import json;print(' '.join(sorted(set(json.load(open('$D/assign.json'))['family_twin'].values()))))"); do
   t=$(basename $m)
   mem=$($P -c "import json;a=json.load(open('$D/assign.json'))['family_twin'];print(','.join(sorted(e for e,v in a.items() if v=='$m')))")
@@ -33,6 +34,7 @@ for m in $($P -c "import json;print(' '.join(sorted(set(json.load(open('$D/assig
          --score_dir . --log $D/decide_$t.log --dump $D/dump_$t.json > /dev/null 2>&1 ) &
 done
 wait
+$P family_table.py --ep_dir $D --out $D/familles.json > /dev/null && echo "TABLE DES FAMILLES (avec T*) : $D/familles.json"
 echo "=== PRINCIPAL (règle « lecteurs » : fp8 par tenseur + LoRA estimée si famille SmolLM2-360M) ==="
 $P method_v4.py merge_ep --assign $D/assign.json --dir $D --out $D/submission_ep.csv
 $P validate_t2.py $D/submission_ep.csv
