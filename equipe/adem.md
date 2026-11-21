@@ -15,8 +15,8 @@ Fiche personnelle : seul Adem (ou son agent) l'édite. Les autres agents la lise
 | Tâche | Notre meilleur | Tête du tableau | Fichier | Ce que vaut un gain pour le classement général |
 |---|---|---|---|---|
 | T1 | **0,7384** (soumission 1540), 2e à 22 h 05 | Eugenia 0,75, WhatThePhoques 0,74 | `submission_candidat_5.pt` (h200, h200b, `E:\EAC-lab\sauvegarde-t1\`) | presque rien tant qu'on est 1er (score ramené à 1) |
-| T2 | **aucun envoi** | Fable 4.2 0,75 ; quatre équipes à 0,70 | — | **le plus gros levier** : sans T2 l'équipe n'est pas classée ; 0,70 ≈ +0,3 au général |
-| T3 | **0,2779** (soumission 1763, 22 h 25 ; `PG_T85_f50_l814c.pt`). Série à loss 8-14, part d'images basculées seule changée : 20 % 0,1487 / 30 % 0,1962 / 35 % 0,2179 / 40 % 0,2400 / 50 % 0,2779 ; hauteur de loss saturée (30 % à 12-18 = 0,1998) | 0,32 | `h200:~/eac/t3/t3-methodes/candidates/` | suite : 60, 70, 80 %, puis variantes rétention PGh / PGo et classe fausse de t3-redistill à la part gagnante |
+| T2 | **0,10** (premier envoi de Titouan, 22 h 39 ; équipe classée) | Fable 4.2 0,75 ; quatre équipes à 0,70 | — | **le plus gros levier** : sans T2 l'équipe n'est pas classée ; 0,70 ≈ +0,3 au général |
+| T3 | **0,3159** (soumission 1895, 23 h 21 ; `PG_T85_f70_l814c.pt`, sauvegardé dans `E:/EAC-lab/sauvegarde-t3/`). Série à loss 8-14, part d'images basculées seule changée : 20 % 0,1487 / 30 % 0,1962 / 40 % 0,2400 / 50 % 0,2779 / 60 % 0,3009 / 70 % 0,3159. Sondes de porte `G10_f60` 0,189 et `G10_f70` 0,2025 (> 0 : au moins 10 points de marge). `PGho_f60` 0,2701 (pire). Piste « 9 classes entières » réfutée (`reports/critique/t3-tour-classes-entieres.md`) | 0,40 (Skesiea), 0,35 (Fable 4.2) | `h200:~/eac/t3/t3-methodes/candidates/` | suite : sonde `G10_f80` puis `f80` ; forme des cibles à m et s égaux (masse fausse répartie, images non basculées plus étalées, copies) chez t3-methodes |
 
 À 21 h 50 : grille (part × loss) et variantes `PGr_` (rotations) sur `h200`, variantes rétention `PGl6_` (`--lam 6`), `PGs3k_` (3000 pas) et parts 50-60 % sur `h200c` (`~/eac/t3/t3-methodes`, lancées par `vague3c.sh`), candidats écrits par `code/finish.sh`. Avant, à 21 h 10 : deux entraînements lancés par l'orchestrateur sur `h200e` (`~/eac/t3/t3-methodes/logs/PG_T85_f30_l814c.log` et `…f40_l814c.log`, mêmes réglages à 30 % et 40 % d'images) ; le fichier candidat s'écrit ensuite par `code/dash.py --save` (voir `code/finish.sh`). Session neuve `t3-redistill` (id `local_b4394f32-4858-48d7-8fc2-2374103c08d1`) lancée sur la piste 3 ci-dessous. Ids des autres sessions : liste « linked » de l'application.
 
@@ -55,7 +55,7 @@ Arrêtées : t3-simulateur (mission rendue à 21 h 35), t3-sondes (son calage es
 - T1 : aucun envoi sans +0,02 de moyenne de réserve et feu vert écrit du vérificateur.
 - T3 : annoncer chaque envoi sur l'issue #5 ; 10 min entre deux envois, partagés avec l'agent de Yassir ; envois détachés depuis `h200:~/eac/t3/orchestrateur/` (`nohup bash sub.sh <fichier> > sub_<nom>.log`).
 - T2 : aucun appel API, aucun envoi.
-- Calcul : cinq H200 (hôtes SSH `h200`, `h200b`, `h200c`, `h200d`, `h200e` ; les deux dernières par rebond sur `h200`), toutes à remplir. Jülich : rien.
+- Calcul : six H200 (hôtes SSH `h200`, `h200b`, `h200c`, `h200d`, `h200e` par rebond sur `h200`, et `h200f` = nœud 6, 204.12.188.1, autre réseau), toutes à remplir ; suivi https://h200.ami.exchange/ (en retard de quelques minutes) ; VM préemptibles (n4 et n5 éteintes de 22 h 25 à 22 h 45, disques conservés). Jülich : rien.
 - Clé du leaderboard : `h200:~/eac/.env`, jamais lue ni affichée.
 - Scripts de l'orchestrateur : `E:\EAC-lab\remote\`. Dans une commande SSH, ne jamais écrire un `pkill -f` ou `pgrep -f` dont le motif apparaît dans la commande elle-même : il tue sa propre session. Passer par un fichier de script.
 
