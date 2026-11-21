@@ -72,8 +72,13 @@ def window_map(wm, img_u8, msg, win=256, stride=64, mode="canvas"):
             else:
                 crops.append(crop)
             boxes.append((y, x))
-    batch = torch.cat([to_tensor(c) for c in crops], 0)
-    scores = agreement(wm.logits(batch), msg).cpu().numpy()
+    # Les lots de fenetres sont decoupes : le decodeur StegaStamp en ONNX reclame 1,43 Go par tampon
+    # des que le lot grossit (mesure du 21/11), ce qui fait tomber la session CUDA.
+    scores = []
+    for i in range(0, len(crops), 8):
+        chunk = torch.cat([to_tensor(c) for c in crops[i:i + 8]], 0)
+        scores.append(agreement(wm.logits(chunk), msg).cpu().numpy())
+    scores = np.concatenate(scores)
     for (y, x), s in zip(boxes, scores):
         total[y:y + win, x:x + win] += s
         count[y:y + win, x:x + win] += 1
