@@ -105,6 +105,19 @@ sur 4 000 tirages d'un public de 30 %, le rapport (m + s) public / privé a un �
 - Ce que ça tranche : la classe fausse du gold ressemble-t-elle plus à celle d'une sonde qui n'a pas vu l'image qu'à la 2e classe d'`orig` ? (Elles ne coïncident que dans 28 % des cas, donc l'envoi est informatif.)
 - Coût : 1 cible + 1 entraînement + 1 créneau. Validation locale : comme E1. Recoupe en partie E1 (b) : à fusionner avec lui si les créneaux manquent.
 
+## 5 bis. Mise à jour 22 h 15 : si le gold du vérificateur est juste (m 2,1-2,7 / s 3,5-4,2, précision 0,57-0,62)
+Nous sommes à m 2,56 / s 4,29 sur les exactes : **m est dans la fourchette, s est déjà au-dessus** [DÉDUIT de ces deux chiffres].
+- Le score de loss est alors proche de son plafond sur les exactes (≥ 0,8 avec D = m_gold + s_gold ≈ 6). Monter la hauteur ne rapporte plus : chaque point de s en trop retire autant qu'un point de m rapporte.
+  **`PG_T85_f20_l1218c` et le croisement 30 % × 12-18 devraient baisser ou stagner** (ils montent s de ≈ 1,5 à 2 points). À n'envoyer que comme sondes du plafond, pas comme candidats.
+- Rapport s/m du gold ≈ 1,6. Pour une loss en deux paliers (fraction f d'images à loss h, le reste ≈ 0), s/m = √((1 − f)/f), donc f ≈ 1/(1 + 1,6²) ≈ 0,28 et h ≈ m_gold/f ≈ 7,5 à 9,6 [DÉDUIT].
+  **La recette actuelle (30 %, loss 8,5) est déjà calée sur ce gold.** Il ne faut plus bouger ces deux réglages, sauf sur les copies, où m + s reste à 5,80.
+- D'où vient alors l'écart 0,20 → 0,27 ? Avec S_loss ≈ 0,8-0,9 et rétention ≈ 0,8 (réserve), 0,1962 implique **S_pred ≈ 0,27 à 0,31** [DÉDUIT : 0,1962 / (0,85 × 0,8)].
+  C'est désormais le facteur limitant. Il dépend uniquement de **quelles** images basculent et **vers quelle** classe, et de la douceur du reste.
+- Nouvel ordre conseillé : **E1** (choix des images, à 30 %/loss 8-14 fixes), **E5** (classe fausse hors pli), **E2** (bascules graduées : garder m et s, déplacer la loss vers les images sûres),
+  puis **E4** (copies : seul endroit où la loss manque encore), **E3** (rétention, validable sans envoi). Gain attendu d'E1 + E5 si le sélecteur gagne : de ×1,2 à ×1,5 sur S_pred,
+  soit 0,24 à 0,29 [DÉDUIT, borne haute = le facteur 2 à 3 du vérificateur ramené à la part déjà acquise].
+- Rétention : la porte n'est pas en jeu à 30 % (marge ≥ 10 points mesurée par `G10_PG_T70`). Ne pas monter à 40 % (rétention de réserve 0,716).
+
 ## 6. À ne pas faire (mesuré)
 - Attaque adversariale comme sélecteur ou pour choisir la classe fausse : redonne la 2e classe d'`orig` (84 %) [MESURÉ ici].
 - Bruit dans les poids comme sélecteur : aucun signal [MESURÉ ici].
