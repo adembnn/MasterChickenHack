@@ -59,6 +59,7 @@ Connexion pas à pas (SSH, MFA, `teammate.sh`) : `reports/notes/connexion-cluste
 
 ## Décisions (la plus récente gagne)
 Le journal complet est dans `docs/decisions.md`.
+- 2026-11-21 20:15 (Adem) : **Jülich, un seul job à la fois pour tout le compte `banni1`** (un nœud = 4 A100). Aucune session ne lance `sbatch` elle-même : elle demande à l'orchestrateur, qui vérifie `squeue -u banni1` avant. À 20 h 15, 4 jobs tournaient et 3 attendaient : tous annulés sauf un.
 - 2026-11-21 20:06 (Adem) : **la 3e H200 (`66.201.6.94`) est réservée à Titouan.** Les agents et sessions d'Adem n'utilisent que le nœud 1 (`h200`), le nœud 2 (`h200b`) et Jülich.
 - 2026-11-21 19:46 (Adem) : **T1, on n'envoie plus par petits gains.** Un fichier T1 ne part que s'il est « solide » : gain d'au moins +0,02 sur la moyenne de réserve des trois filigranes par rapport au dernier envoi, écart apparié dont l'intervalle à 95 % exclut 0, et feu vert écrit du vérificateur. Les gains plus petits s'accumulent hors ligne. T3 : les sondes de mesure restent autorisées, sans précipitation (remplace en partie la décision de 19:05).
 - 2026-11-21 19:05 (Adem) : **autorisation permanente de soumettre sur T1 et T3**, y compris des sondes destinées à mesurer (un envoi toutes les 10 min par tâche, délai partagé par l'équipe ; annoncer chaque envoi T3 sur l'issue #5). T2 reste réservé à Titouan. **Maker-checker obligatoire sur chaque track** : celui qui produit un résultat n'est pas celui qui le valide ; un vérificateur séparé recalcule les scores et relit le code avant qu'un résultat serve de base.
