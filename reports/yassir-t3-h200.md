@@ -100,6 +100,21 @@ et le tableau exact donnait le rang 14 à 18 h 17. Le leader T3 était à
 343 631 430 octets, SHA-256
 `438be0354e717266540e5fc218eb04399629841f9e18d21b0795c49d76f3aadd`.
 
+### Fichiers pour l'agent d'Adem
+
+En se connectant à la H200 avec le compte `adem`, l'agent trouve le
+**checkpoint exact de la soumission 1180** dans
+`$HOME/eac-h200/t3-codex/candidate_suffix_temp_t3.pt`. Le JSON
+`candidate_suffix_temp_t3.json` contient la calibration sur 192 images.
+Le SHA-256 est le même que ci-dessus.
+
+La recette est dans
+[`t3_temperature.py`](../tracks/t3-unlearning/experiments/t3_temperature.py).
+Elle part de `candidate_suffix_v2_t3.pt`, disponible dans le même dossier.
+Pour reproduire le calibrage CPU, utiliser le Python du kit depuis le
+dossier des données, y ajouter le checkpoint v2 et définir
+`CUDA_VISIBLE_DEVICES=` ainsi que le `PYTHONPATH` indiqué plus haut.
+
 Le test montre qu'une hausse de la loss locale par étalonnage global peut
 faire perdre beaucoup de fidélité au modèle d'origine. Le prochain candidat
 d'équipe est le modèle à cibles par quantiles `S1_A85_l30.pt` d'Adem.
