@@ -7,6 +7,7 @@ from common import *
 NAME, SEL, FSET = sys.argv[1:4]; LAM = float(sys.argv[4]) if len(sys.argv) > 4 else 10.; FRAC = float(sys.argv[5]) if len(sys.argv) > 5 else 0.30
 K, BF, BA, SEED = 4, 96, 96, 0
 STEPS = int(sys.argv[6]) if len(sys.argv) > 6 else 600; LR = float(sys.argv[7]) if len(sys.argv) > 7 else 1e-4
+WH = float(sys.argv[8]) if len(sys.argv) > 8 else 0.
 torch.manual_seed(SEED); ref = load_orig(); model = load_orig(); fgd = load_forget().to(dev); N = len(fgd); S = split_sets()
 P = torch.load(f'{CACHE}/pg_prep.pt'); yhat = P['yhat'].to(dev); lg0 = P['lg0'].to(dev); pdeg = P['pdeg'].to(dev)
 fidx = S[FSET].to(dev)
@@ -49,6 +50,11 @@ for it in range(STEPS):
     lf = kl(q[idx], F.log_softmax(zf, 1)).mean(); l2 = kl(q2[idx], F.log_softmax(zf / 2, 1)).mean()
     la = kl(F.softmax(zo / 2, 1), F.log_softmax(za / 2, 1)).mean() + 0.5 * kl(F.softmax(zo, 1), F.log_softmax(za, 1)).mean()
     loss = lf + l2 + LAM * la
+    if WH > 0:  # terme de hauteur : la KL avant ne contraint pas une probabilité cible minuscule
+        fm = flip[idx]
+        if fm.any():
+            ce = F.cross_entropy(zf[fm], yhat[idx][fm], reduction='none')
+            loss = loss + WH * ((ce - Lt[idx][fm]).clamp(-6, 6) ** 2).mean() / 10  # symétrique : vise la loss cible, ne la dépasse plus
     opt.zero_grad(); loss.backward(); torch.nn.utils.clip_grad_norm_(tr, 1.0); opt.step(); sched.step()
     if it % 100 == 0 or it == STEPS - 1:
         print(f'{it:4d} {time.time() - t0:5.0f}s KL1 {lf.item():.3f} KL2 {l2.item():.3f} ancre {la.item():.4f}', flush=True)
@@ -74,7 +80,7 @@ def jpeg_like(x): return blur(x, torch.full((x.shape[0],), 0.7, device=dev))
 
 
 fu = fgd.cpu(); zs = logits_u8(m2, fu); zo_ = logits_u8(ref, fu)
-tri = S[FSET]; cc = S['c']; out = {'name': NAME, 'sel': SEL, 'fset': FSET, 'lam': LAM, 'steps': STEPS, 'lr': LR, 'sha256': sha, 'path': path}
+tri = S[FSET]; cc = S['c']; out = {'name': NAME, 'sel': SEL, 'fset': FSET, 'lam': LAM, 'steps': STEPS, 'lr': LR, 'wh': WH, 'sha256': sha, 'path': path}
 out['exact_trained'] = stats(zs, tri); out['flip_share_on_flipped'] = (zs[flip.cpu()].argmax(1) == wrong.cpu()[flip.cpu()]).float().mean().item()
 out['maxprob_T2_trained'] = F.softmax(zs[tri] / 2, 1).max(1).values.mean().item()
 

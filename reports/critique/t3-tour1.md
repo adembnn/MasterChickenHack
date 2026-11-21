@@ -134,6 +134,10 @@ Nous sommes à m 2,56 / s 4,29 sur les exactes : **m est dans la fourchette, s e
 Lecture : à réglages égaux, le consensus oublie plus (m+s +9 %) et retient mieux (flou fort +7 points) que l'instabilité.
 Limite : mes bascules réalisent une loss ≈ 6 au lieu de 8,5, d'où un m+s inférieur d'environ 25 % aux fichiers d'Adem. Je ne recommande donc pas d'envoyer ces fichiers tels quels, mais de **brancher la colonne `consensus` dans le pipeline d'Adem** à 40 % / loss 8-14.
 
+**Mise à jour 22/11, 0 h 30** [MESURÉ] : le terme de hauteur de mon premier portage dépassait la cible (40 % : m 5,90 / s 7,52 ; 75 % : 10,44 / 6,65, sur-poussés) ; version symétrique corrigée :
+`all8_cons65` (consensus, 65 %) m 6,64 / s 5,23 ; `all8_consrd65` (même sélection, classe fausse « redistill » de t3-redistill) m 6,53 / s 5,18 ; bascules à loss ≈ 10,2 ; rétention de réserve **non mesurée**.
+Le levier « classe fausse » est confirmé par Adem (`PG_RDt24_60_l915c` = 0,3273, +0,026 à sélection égale) ; mon audit de `vote_class` (90 % de 2e choix) en était la cause. Fichiers : `h200c:/home/titouan/critique-t3/cand/`, sha256 sur #5.
+
 ## 6. À ne pas faire (mesuré)
 - Attaque adversariale comme sélecteur ou pour choisir la classe fausse : redonne la 2e classe d'`orig` (84 %) [MESURÉ ici].
 - Bruit dans les poids comme sélecteur : aucun signal [MESURÉ ici].
