@@ -1,5 +1,10 @@
 # Accès SSH à la H200 Nebius
 
+> **Deux nœuds depuis le 21 novembre 18h.** Ce document décrit le premier nœud
+> (`green-starfish-instance-6`, `66.201.7.7`). Le deuxième nœud, `fuchsia-mosquito-instance-6`
+> (`66.201.4.154`, IP privée `10.48.0.101`), a son propre mode d'emploi avec l'environnement déjà
+> installé : [`acces-h200-nebius-noeud-2.md`](acces-h200-nebius-noeud-2.md).
+
 Accès vérifiés le 21 novembre 2026. La VM `green-starfish-instance-6`
 (`computeinstance-e01w9a2hev5w1t9mdb`) est dans `default-project-eu-west1`.
 Elle a une NVIDIA H200 de **143 771 MiB**. Son adresse IPv4 publique actuelle
