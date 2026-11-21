@@ -52,13 +52,15 @@ Tous les agents de l'équipe l'appliquent, sur chaque track :
 - Ne jamais collaborer avec une autre équipe : c'est la disqualification.
 
 ## Calcul : JURECA (Jülich)
-Projet `training2666`, réservation `cispahack`, partition `dc-gpu`, 1 nœud par job = 4×A100 40 Go.
+Projet `training2666`, réservation `cispahack`, partition `dc-gpu`, un nœud = 4×A100 40 Go.
+**Règle stricte (Adem, 21/11 20:30) : un seul GPU à la fois pour le compte `banni1`** : un job au plus, avec `--gres=gpu:1`, lancé par l'orchestrateur seulement (voir Décisions).
 Équipe Jülich **MasterChickenHack**, chef `destors1` (Titouan) ; `banni1` (Adem), `boudda1` (Yassir). Dossier partagé : `/p/scratch/training2666/destors1/MasterChickenHack/` (`Hackathon_Watermark_Localisation_Task/`, `model_equality/`, `unlearning/`).
 Connexion pas à pas (SSH, MFA, `teammate.sh`) : `reports/notes/connexion-cluster.md`, écrit par Titouan. Ne jamais lancer `hackathon_setup.sh`, c'est le travail du chef. Les jetons d'API des tâches arrivent par mail au premier membre inscrit dans le formulaire d'équipe.
 À chaque connexion : `jutil env activate -p training2666`.
 
 ## Décisions (la plus récente gagne)
 Le journal complet est dans `docs/decisions.md`.
+- 2026-11-21 20:30 (Adem) : **Jülich, règle stricte : un seul GPU à la fois pour tout le compte `banni1`.** Au plus un job en cours ou en file, et ce job demande `#SBATCH --gres=gpu:1` (jamais `gpu:2` ni `gpu:4`, jamais deux jobs, même en attente). Aucune session ne lance `sbatch` : elle demande à l'orchestrateur, qui colle la sortie de `squeue -u banni1` avant et après. Un job qui réserve plus d'un GPU est annulé puis relancé à un GPU depuis son dernier point de contrôle. Tout ce qui demande plus part sur les H200 (nœuds 1 et 2). Les `.sbatch` du dépôt qui portent encore `gpu:4` sont à corriger avant tout réemploi (durcit la décision de 20:15).
 - 2026-11-21 20:15 (Adem) : **Jülich, un seul job à la fois pour tout le compte `banni1`** (un nœud = 4 A100). Aucune session ne lance `sbatch` elle-même : elle demande à l'orchestrateur, qui vérifie `squeue -u banni1` avant. À 20 h 15, 4 jobs tournaient et 3 attendaient : tous annulés sauf un.
 - 2026-11-21 20:06 (Adem) : **la 3e H200 (`66.201.6.94`) est réservée à Titouan.** Les agents et sessions d'Adem n'utilisent que le nœud 1 (`h200`), le nœud 2 (`h200b`) et Jülich.
 - 2026-11-21 19:46 (Adem) : **T1, on n'envoie plus par petits gains.** Un fichier T1 ne part que s'il est « solide » : gain d'au moins +0,02 sur la moyenne de réserve des trois filigranes par rapport au dernier envoi, écart apparié dont l'intervalle à 95 % exclut 0, et feu vert écrit du vérificateur. Les gains plus petits s'accumulent hors ligne. T3 : les sondes de mesure restent autorisées, sans précipitation (remplace en partie la décision de 19:05).
