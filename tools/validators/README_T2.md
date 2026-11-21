@@ -54,8 +54,8 @@ Le validateur vérifie `model.startswith(family)`, ce qui accepte aussi les fami
 comme celles que produit `letters()` dans `task_template.py`. Le cas exact `ep-01,A,X` / `ep-02,B,X` a son test.
 Les sorties de `solve()` et `make_random_submission()` (`A`, `A1`) respectent déjà ces deux règles.
 
-Même annonce, 16h37 (Maitri Shah) : le plafond de 100 réponses sur les `ref-*` est **retiré**. Les endpoints de
-référence sont illimités comme prévu au départ ; le budget de 100 par endpoint ne concerne que les `ep-*`.
+**Budget des `ref-*` : non confirmé.** Le « it is removed » de Maitri Shah (16h37) peut viser le compteur d'une seule
+équipe. Tant que les organisateurs n'ont pas confirmé clairement, on considère que les `ref-*` peuvent être plafonnés à 100.
 
 ### Avertissements (pas forcément rejetés, mais un signal qu'on s'est trompé de fichier)
 
@@ -107,7 +107,7 @@ POST http://34.147.229.55/33-model-equality/v1/chat/completions
 - Les messages `system` sont **rejetés** ; `temperature` et `seed` sont ignorés
 - Requête invalide = pas décomptée du budget
 - **Budget : 100 réponses par endpoint `ep-*` pour toute la compétition, irréversible.** Aucune requête `ep-*` sans plan posté sur l'issue #4.
-- Les `ref-01..ref-09` sont **illimités** (plafond retiré par les organisateurs le 21/11 à 16h37).
+- Les `ref-01..ref-09` : considérés comme **potentiellement plafonnés à 100** tant que les organisateurs n'ont pas confirmé le contraire.
 
 ## Checklist avant soumission (à cocher dans l'ordre)
 
