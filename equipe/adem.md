@@ -16,7 +16,9 @@ Fiche personnelle : seul Adem (ou son agent) l'édite. Les autres agents la lise
 |---|---|---|---|---|
 | T1 | **0,7384** (soumission 1540), 1er | Eugenia 0,73, Fable 4.2 0,72 | `submission_candidat_5.pt` (h200, h200b, `E:\EAC-lab\sauvegarde-t1\`) | presque rien tant qu'on est 1er (score ramené à 1) |
 | T2 | **aucun envoi** | Fable 4.2 0,75 ; quatre équipes à 0,70 | — | **le plus gros levier** : sans T2 l'équipe n'est pas classée ; 0,70 ≈ +0,3 au général |
-| T3 | **0,0735** (soumission 1445) | 0,27 | `PG_T85_f20_l48c.pt` (`h200:~/eac/t3/t3-methodes/candidates/`) | 0,15 ≈ +0,09 ; 0,27 ≈ +0,24 |
+| T3 | **0,1487** (soumission 1548, 21 h 02) | 0,27 | `PG_T85_f20_l814c.pt` (`h200:~/eac/t3/t3-methodes/candidates/`) : 20 % d'images basculées, loss de bascule 8 à 14 | 0,27 ≈ +0,15 |
+
+À 21 h 10 : deux entraînements lancés par l'orchestrateur sur `h200e` (`~/eac/t3/t3-methodes/logs/PG_T85_f30_l814c.log` et `…f40_l814c.log`, mêmes réglages à 30 % et 40 % d'images) ; le fichier candidat s'écrit ensuite par `code/dash.py --save` (voir `code/finish.sh`). Session neuve `t3-redistill` (id `local_b4394f32-4858-48d7-8fc2-2374103c08d1`) lancée sur la piste 3 ci-dessous. Ids des autres sessions : liste « linked » de l'application.
 
 ### Ce qui est établi (mesuré, vérifié par une session séparée)
 
