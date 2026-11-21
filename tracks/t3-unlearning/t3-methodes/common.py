@@ -3,8 +3,8 @@ Charge orig (strict), images, pretraitement du gabarit, vues GPU faibles/fortes,
 evaluation aux conditions du serveur (eval, autocast fp16)."""
 import os, sys, math, json, time, io
 import numpy as np, torch, torch.nn.functional as F
-BASE = os.path.expanduser('~/eac/t3')
-ADEM = BASE + '/t3-methodes'; CACHE = ADEM + '/cache'; CAND = ADEM + '/candidates'; DIAG = ADEM + '/diag'
+BASE = os.environ.get('T3BASE', os.path.expanduser('~/eac/t3'))
+ADEM = os.environ.get('T3ME', BASE + '/t3-methodes'); CACHE = ADEM + '/cache'; CAND = ADEM + '/candidates'; DIAG = ADEM + '/diag'
 os.makedirs(CACHE, exist_ok=True); os.makedirs(CAND, exist_ok=True); os.makedirs(DIAG, exist_ok=True)
 os.chdir(BASE); sys.path.insert(0, BASE)
 import task_template as tt
