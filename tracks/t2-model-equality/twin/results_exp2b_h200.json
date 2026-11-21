@@ -1,0 +1,313 @@
+{
+ "config": {
+  "n": 300,
+  "max_new": 96,
+  "bs": 16,
+  "dtype": "bfloat16",
+  "exp2_outputs": "results_exp2_h200_outputs.json",
+  "B": 2000,
+  "out": "results_exp2b_h200.json"
+ },
+ "pairs": {
+  "base_bs16 vs noise_bs32": {
+   "identical_frac": 0.9533,
+   "token_match_frac": 0.98
+  },
+  "base_bs16 vs noise_bs8": {
+   "identical_frac": 0.7633,
+   "token_match_frac": 0.8507
+  },
+  "base_bs16 vs int8_w_channel": {
+   "identical_frac": 0.47,
+   "token_match_frac": 0.672
+  },
+  "base_bs16 vs int8_w_group128": {
+   "identical_frac": 0.5633,
+   "token_match_frac": 0.7291
+  },
+  "base_bs16 vs int8_w_group32": {
+   "identical_frac": 0.57,
+   "token_match_frac": 0.7387
+  },
+  "base_bs16 vs int8_w8a8": {
+   "identical_frac": 0.1233,
+   "token_match_frac": 0.2602
+  },
+  "base_bs16 vs int8_w_tensor": {
+   "identical_frac": 0.06,
+   "token_match_frac": 0.1638
+  },
+  "noise_bs32 vs noise_bs8": {
+   "identical_frac": 0.7733,
+   "token_match_frac": 0.8572
+  },
+  "noise_bs32 vs int8_w_channel": {
+   "identical_frac": 0.4667,
+   "token_match_frac": 0.6699
+  },
+  "noise_bs32 vs int8_w_group128": {
+   "identical_frac": 0.5667,
+   "token_match_frac": 0.7347
+  },
+  "noise_bs32 vs int8_w_group32": {
+   "identical_frac": 0.5633,
+   "token_match_frac": 0.7422
+  },
+  "noise_bs32 vs int8_w8a8": {
+   "identical_frac": 0.1267,
+   "token_match_frac": 0.2624
+  },
+  "noise_bs32 vs int8_w_tensor": {
+   "identical_frac": 0.06,
+   "token_match_frac": 0.1654
+  },
+  "noise_bs8 vs int8_w_channel": {
+   "identical_frac": 0.4833,
+   "token_match_frac": 0.6604
+  },
+  "noise_bs8 vs int8_w_group128": {
+   "identical_frac": 0.5867,
+   "token_match_frac": 0.7427
+  },
+  "noise_bs8 vs int8_w_group32": {
+   "identical_frac": 0.5967,
+   "token_match_frac": 0.7448
+  },
+  "noise_bs8 vs int8_w8a8": {
+   "identical_frac": 0.1233,
+   "token_match_frac": 0.2613
+  },
+  "noise_bs8 vs int8_w_tensor": {
+   "identical_frac": 0.06,
+   "token_match_frac": 0.1615
+  },
+  "int8_w_channel vs int8_w_group128": {
+   "identical_frac": 0.4067,
+   "token_match_frac": 0.6197
+  },
+  "int8_w_channel vs int8_w_group32": {
+   "identical_frac": 0.4367,
+   "token_match_frac": 0.6396
+  },
+  "int8_w_channel vs int8_w8a8": {
+   "identical_frac": 0.12,
+   "token_match_frac": 0.2641
+  },
+  "int8_w_channel vs int8_w_tensor": {
+   "identical_frac": 0.06,
+   "token_match_frac": 0.1761
+  },
+  "int8_w_group128 vs int8_w_group32": {
+   "identical_frac": 0.57,
+   "token_match_frac": 0.7203
+  },
+  "int8_w_group128 vs int8_w8a8": {
+   "identical_frac": 0.1233,
+   "token_match_frac": 0.2603
+  },
+  "int8_w_group128 vs int8_w_tensor": {
+   "identical_frac": 0.06,
+   "token_match_frac": 0.1554
+  },
+  "int8_w_group32 vs int8_w8a8": {
+   "identical_frac": 0.1133,
+   "token_match_frac": 0.2617
+  },
+  "int8_w_group32 vs int8_w_tensor": {
+   "identical_frac": 0.06,
+   "token_match_frac": 0.1653
+  },
+  "int8_w8a8 vs int8_w_tensor": {
+   "identical_frac": 0.0567,
+   "token_match_frac": 0.1599
+  }
+ },
+ "bootstrap": {
+  "n50": {
+   "identical_frac": {
+    "noise_mean": 0.7752,
+    "noise_p05": 0.68,
+    "noise_p50": 0.78,
+    "int8_w_channel": {
+     "mean": 0.46869,
+     "power_at_fpr5": 0.9995,
+     "p_below_noise": 1.0
+    },
+    "int8_w_group128": {
+     "mean": 0.5676100000000001,
+     "power_at_fpr5": 0.951,
+     "p_below_noise": 0.991
+    },
+    "int8_w_group32": {
+     "mean": 0.56232,
+     "power_at_fpr5": 0.9545,
+     "p_below_noise": 0.994
+    },
+    "int8_w8a8": {
+     "mean": 0.12762,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_tensor": {
+     "mean": 0.061560000000000004,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    }
+   },
+   "token_match_frac": {
+    "noise_mean": 0.8572424301470305,
+    "noise_p05": 0.7829806393516434,
+    "noise_p50": 0.8601147776183644,
+    "int8_w_channel": {
+     "mean": 0.6705072059776742,
+     "power_at_fpr5": 0.9865,
+     "p_below_noise": 0.997
+    },
+    "int8_w_group128": {
+     "mean": 0.7431218668954047,
+     "power_at_fpr5": 0.7935,
+     "p_below_noise": 0.963
+    },
+    "int8_w_group32": {
+     "mean": 0.7496346287972455,
+     "power_at_fpr5": 0.744,
+     "p_below_noise": 0.957
+    },
+    "int8_w8a8": {
+     "mean": 0.26157229814981003,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_tensor": {
+     "mean": 0.13366643595029368,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    }
+   }
+  },
+  "n100": {
+   "identical_frac": {
+    "noise_mean": 0.77366,
+    "noise_p05": 0.72,
+    "noise_p50": 0.77,
+    "int8_w_channel": {
+     "mean": 0.468335,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_group128": {
+     "mean": 0.56575,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_group32": {
+     "mean": 0.5621799999999999,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w8a8": {
+     "mean": 0.127275,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_tensor": {
+     "mean": 0.06056,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    }
+   },
+   "token_match_frac": {
+    "noise_mean": 0.856089349063329,
+    "noise_p05": 0.8134167807549384,
+    "noise_p50": 0.85607081008274,
+    "int8_w_channel": {
+     "mean": 0.6710272418080824,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_group128": {
+     "mean": 0.7422601270055612,
+     "power_at_fpr5": 0.9895,
+     "p_below_noise": 0.9985
+    },
+    "int8_w_group32": {
+     "mean": 0.7497152788015938,
+     "power_at_fpr5": 0.9845,
+     "p_below_noise": 0.996
+    },
+    "int8_w8a8": {
+     "mean": 0.25990153772311564,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_tensor": {
+     "mean": 0.1328844015994762,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    }
+   }
+  },
+  "n200": {
+   "identical_frac": {
+    "noise_mean": 0.773325,
+    "noise_p05": 0.745,
+    "noise_p50": 0.775,
+    "int8_w_channel": {
+     "mean": 0.467115,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_group128": {
+     "mean": 0.5661875,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_group32": {
+     "mean": 0.5627675000000001,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w8a8": {
+     "mean": 0.12667,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_tensor": {
+     "mean": 0.060045,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    }
+   },
+   "token_match_frac": {
+    "noise_mean": 0.8559902390901374,
+    "noise_p05": 0.8352196431996931,
+    "noise_p50": 0.8556005398110661,
+    "int8_w_channel": {
+     "mean": 0.6710201758971366,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_group128": {
+     "mean": 0.7424162873771728,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_group32": {
+     "mean": 0.7508632661157825,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w8a8": {
+     "mean": 0.2588129683565143,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    },
+    "int8_w_tensor": {
+     "mean": 0.13235235039907076,
+     "power_at_fpr5": 1.0,
+     "p_below_noise": 1.0
+    }
+   }
+  }
+ }
+}
