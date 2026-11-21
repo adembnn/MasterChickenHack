@@ -59,6 +59,8 @@ Connexion pas à pas (SSH, MFA, `teammate.sh`) : `reports/notes/connexion-cluste
 
 ## Décisions (la plus récente gagne)
 Le journal complet est dans `docs/decisions.md`.
+- 2026-11-21 19:05 (Adem) : **autorisation permanente de soumettre sur T1 et T3**, y compris des sondes destinées à mesurer (un envoi toutes les 10 min par tâche, délai partagé par l'équipe ; annoncer chaque envoi T3 sur l'issue #5). T2 reste réservé à Titouan. **Maker-checker obligatoire sur chaque track** : celui qui produit un résultat n'est pas celui qui le valide ; un vérificateur séparé recalcule les scores et relit le code avant qu'un résultat serve de base.
+- 2026-11-21 19:00 : deuxième H200 `h200b` (66.201.4.154) ouverte par Yassir, réservée en priorité au track 1 ; la première (`h200`) sert aux tracks 2 et 3 ; Jülich est de nouveau utilisé pour les gros entraînements en parallèle (remplace la décision de 18:35).
 - 2026-11-21 18:35 (Adem) : **tout le calcul se fait sur la H200 de Yassir** (`docs/acces-h200-nebius.md` sur la branche `yassir/baselines`, comptes `adem`, `titouan`, `yassir`, `hermes`). On n'utilise plus Jülich : sa connexion tombe et exige un code MFA à chaque fois. Une seule carte de 144 Go partagée : annoncer les gros jobs sur le bus, points de contrôle fréquents (VM préemptible).
 - 2026-11-21 : soumissions T1 autorisées par Adem (1103 : 0,635 ; 1190 : 0,674). Soumissions T3 autorisées (1180 : 0,0039 ; 1197 : 0,0114). T2 : seul Titouan appelle l'API et soumet. Délai de 10 min entre deux envois sur une même tâche, partagé par l'équipe.
 - 2026-11-21 : les essais locaux (données, environnements, poids) vivent dans `E:\EAC-lab` sur le PC d'Adem, hors dépôt, supprimable après le hack.
