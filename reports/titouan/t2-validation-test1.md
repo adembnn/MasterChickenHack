@@ -167,7 +167,13 @@ Variantes locales : fp8 = fausse quantification e4m3 **par ligne** (pas par tens
 - aucun ep assigné à SmolLM2-360M-Instruct : les ref ne sont PAS un banc de calibration direct pour les ep.
 
 ## 8. Score public après soumission
-- à remplir après la soumission (session principale).
+- **Soumission 1882, « fp8 seul »** (familles + ep-05, ep-15, ep-22 isolés, 6 modèles) : **0,40 en public**.
+- Soumission 1803, « familles + 5 isolés par la température » (étiquettes LoRA distillées, artefacts) : 0,10.
+- Lecture : familles justes (terme famille plein) + au moins une partie des fp8 justes. Isoler à tort coûte cher : les 5
+  « LoRA » de température faisaient tomber le score à 0,10. Cohérent avec l'attendu (terme modèle faible mais non nul).
+- Candidat suivant préparé : « fp8 seul + ep-12 » (7 modèles). Ce pipeline lui donne z=3,1 en e4m3 par tenseur contre la
+  moyenne des 9 autres qwen3b de T*<1,0 (sans ep-33), sur 24 réponses, mais W8A8 par tenseur dit 0,4 et la session fp8
+  trouve 2,3 / −0,05 : désaccord des deux lecteurs, signal faible.
 
 ## Note : ce qui a été soumis
 Soumis à 23 h 09 : la variante « fp8 seul » (familles de cette table ; base + ep-05, ep-15, ep-22 isolés ; 6 modèles), et non
