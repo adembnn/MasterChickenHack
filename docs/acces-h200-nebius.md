@@ -1,5 +1,9 @@
 # Accès SSH à la H200 Nebius
 
+> **Live board :** [h200.ami.exchange](https://h200.ami.exchange) (compute % + VRAM % + power).
+> Nouveau nœud → câbler + guide, puis ajouter dans
+> `/home/boudda/Projects/h200-dashboard/fleet.default.json` (le collector pousse le registre).
+>
 > **Six nœuds depuis le 21 novembre ~21h00.** Ce document décrit le premier nœud
 > (`green-starfish-instance-6`, `66.201.7.7`). Les autres :
 > - Nœud 2 `fuchsia-mosquito-instance-6` (`66.201.4.154`, privé `10.48.0.101`) :
