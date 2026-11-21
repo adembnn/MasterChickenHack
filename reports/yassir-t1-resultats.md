@@ -81,6 +81,23 @@ Sur la réserve TrustMark, le résidu seul atteint **0,2644 mIoU**. Le canevas
 atteint **0,4750**. Le poids retenu pour le résidu est **0**. L'essai ne
 justifie pas de changer la soumission 1190.
 
+## Rectangles TrustMark guidés par le décodeur
+
+Sur H200, `tracks/t1-watermark/experiments/t1_trustmark_boxes.py` filtre
+d'abord les images dont le filigrane couvre presque toute l'image avec
+l'accord des bits sur l'image entière. Sur les autres, la carte canevas
+présélectionne des boîtes à plusieurs tailles. L'extracteur cherche le
+message fourni dans chaque boîte et affine les meilleurs bords.
+
+Le seuil d'accord de **0,70** appris sur 136 images a remplacé 3 des
+34 masques réservés. Le mIoU TrustMark de la baseline canevas est monté
+de **0,4770 à 0,5097**. Les trois boîtes acceptées ont un mIoU moyen de
+**0,7318**. Avant de l'ajouter au meilleur U-Net, comparer ces substitutions
+sur les mêmes ID de réserve de l'U-Net.
+
+Au relevé public de 18 h 36, MasterChickenHack avait repris la première place
+à **0,696951929**. Le test de rectangles est un résultat local séparé.
+
 ## Ce que je ferais ensuite, dans l'ordre
 
 1. Segmentateur supervisé sur les 510 masques connus, en prenant l'image et la carte de décodage en
