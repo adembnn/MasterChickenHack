@@ -51,7 +51,57 @@ Réserve : ce bruit H200 bs8/bs32 vaut 77 % ; le pire plancher mesuré (A100 vs 
 - int8 poids par canal sur A100 vs H200 : 64 % identique, int8 par tenseur : 59 %.
 - Un seul modèle (1B) ; un 7B pourrait être plus ou moins robuste. Prompts fixes (5 familles) : la recherche de prompts discriminants est traitée par la session « mining de prompts ».
 
-## Conclusion
+## Conclusion (exp2)
 - int8 W8A8 (le plus courant en production) : détectable de façon fiable (10-12 % vs ≥66 %).
 - int8 poids seuls par canal ou groupe : détectable avec ≥100 prompts si le plancher ressemble au nôtre (puissance 100 % à 5 % de FP sur H200), mais l'écart au pire plancher (66-68 %) n'est que de 10-20 points ; ne pas utiliser de seuil fixe, mais calibrer le seuil sur des paires de bruit mesurées (ref-* ou jumeau).
 - Allonger les générations ou forcer le déterminisme n'aide pas.
+
+# Exp3 : un meilleur signal que « texte identique » ? (OLMo-1B + Qwen2.5-1.5B)
+Script `exp3_margin.py`, 300 prompts, max_new=96. L'API ne donne que du texte (pas de logprobs), donc tous les signaux
+se calculent depuis deux textes + un modèle local « scoreur » : `margin` = |écart de logits| entre les deux tokens au
+premier point de divergence (scoreur fp32 = le modèle cible, oracle) ; `dnll_self` = |ΔNLL| des deux réponses sous ce
+scoreur ; `dnll_for` = |ΔNLL| sous un scoreur ÉTRANGER (Qwen pour OLMo, OLMo pour Qwen : le cas réaliste).
+Bootstrap B=2000 ; seuil = quantile 5 % de la paire bruit la PLUS défavorable ; on donne la puissance MINIMALE sur toutes
+les paires int8 (int8 contre chaque configuration fp). Bruit OLMo = lots 1/8/16/32 + A100 vs H200 ; Qwen = lots 1/8/16/32.
+
+## 3a. Puissance à n=100 prompts, faux positifs 5 %, pire paire bruit
+| Modèle (GPU) | Signal | int8 canal | int8 g128 | int8 g32 |
+|---|---|---|---|---|
+| OLMo (H200) | texte identique | 97 % | 38 % | 33 % |
+| | margin | 98 % | 28 % | 8 % |
+| | dnll_self | 77 % | 33 % | 34 % |
+| | dnll_for | 70 % | 10 % | 6 % |
+| OLMo (A100) | texte identique | 90 % | 40 % | 63 % |
+| | margin | 95 % | 42 % | 36 % |
+| | dnll_for | 59 % | 13 % | 16 % |
+| Qwen (A100) | texte identique | 71 % | 38 % | 30 % |
+| | margin | 22 % | 20 % | 4 % |
+| | dnll_self | 26 % | 15 % | 5 % |
+| | dnll_for | 14 % | 7 % | 2 % |
+**Résultat négatif mesuré : aucun signal par score ne bat « texte identique ».** Raison visible dans les moyennes :
+le bruit et int8 bifurquent tous deux à des quasi-égalités (OLMo : margin moyen 0,01-0,02 bruit vs 0,02-0,04 int8 ;
+aucune divergence > 1 logit). Sur Qwen, le bruit bf16 lui-même bifurque à > 1 logit dans 11-17 % des prompts (plancher
+55-62 % identique), ce qui noie tout. Le scoreur étranger est le pire (il ajoute son propre désaccord de style).
+
+## 3b. Ce qui marche : choisir des prompts stables face au bruit (`exp3b_stable_prompts.py`, CPU seul)
+On garde les prompts dont toutes les paires bruit de SÉLECTION sont identiques, puis on évalue sur des paires bruit
+TENUES À L'ÉCART (jamais vues à la sélection) et sur les paires int8 (jamais regardées). Puissance minimale, 5 % de FP :
+| Cas | prompts gardés | n=100 tous prompts (g128 / g32 / canal) | n=100 prompts stables (g128 / g32 / canal) |
+|---|---|---|---|
+| OLMo H200, sélection lots H200, éval A100 vs H200 | 192/300 | 38 / 32 / 97 % | **87 / 75 / 100 %** |
+| OLMo A100, sélection sans lot 1, éval paires lot 1 | 158/300 | 68 / 85 / 98 % | **99 / 100 / 100 %** |
+| Qwen A100, sélection sans lot 1, éval paires lot 1 | 139/300 | 31 / 23 / 60 % | **91 / 87 / 100 %** |
+| **Transfert : prompts stables d'OLMo → Qwen** | 149/300 | 31 / 24 / 61 % | **20 / 25 / 32 %** (pire) |
+Sur prompts stables, le bruit tenu à l'écart remonte à 85 % identique (OLMo et Qwen) alors qu'int8 reste à 53-75 % (OLMo H200).
+**Mais la stabilité d'un prompt est propre au modèle** : les prompts stables choisis sur OLMo n'aident pas sur Qwen
+(bruit Qwen sur ces prompts : 60-71 %, à peine mieux que 55-62 %). On ne peut donc pas présélectionner les prompts
+sur un jumeau local d'une autre famille.
+
+## Conclusion exp3 (décision pour la méthode T2)
+1. Garder « texte identique » comme statistique ; abandonner margin / NLL croisée (mesurés inférieurs, 2 modèles).
+2. Le levier qui marche est la sélection de prompts stables, mais elle doit se faire sur le modèle lui-même. Piste à
+   mesurer ensuite : estimer la stabilité sur les réponses réelles (accord entre endpoints déjà regroupés, ou ref-* si la
+   limite est levée), puis ne tester int8 que sur ces prompts. Risque à quantifier : réutiliser les mêmes réponses pour
+   choisir et pour tester.
+3. W8A8 reste séparé quel que soit le signal (Qwen : 12 % identique vs 55-62 % de bruit).
+Limites : modèles 1-1,5B seulement ; fausse quantification simulée (pas de noyaux int8 réels type bitsandbytes/vLLM).

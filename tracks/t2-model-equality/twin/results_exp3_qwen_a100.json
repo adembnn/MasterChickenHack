@@ -1,0 +1,792 @@
+{
+ "config": {
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "foreign": "allenai/OLMo-2-0425-1B-Instruct",
+  "n": 300,
+  "max_new": 96,
+  "bs": 16,
+  "noise_bs": "1,8,32",
+  "a100_outputs": "",
+  "B": 2000,
+  "out": "results_exp3_qwen_a100.json"
+ },
+ "pair_means": {
+  "fp_bs16|fp_bs1": {
+   "ident": 0.5467,
+   "margin": 0.4424,
+   "hard": 0.16,
+   "dnll_self": 0.0313,
+   "dnll_for": 0.1051
+  },
+  "fp_bs16|fp_bs8": {
+   "ident": 0.56,
+   "margin": 0.4194,
+   "hard": 0.1533,
+   "dnll_self": 0.0309,
+   "dnll_for": 0.1043
+  },
+  "fp_bs16|fp_bs32": {
+   "ident": 0.5933,
+   "margin": 0.4034,
+   "hard": 0.15,
+   "dnll_self": 0.0261,
+   "dnll_for": 0.0802
+  },
+  "fp_bs1|fp_bs8": {
+   "ident": 0.59,
+   "margin": 0.4643,
+   "hard": 0.1667,
+   "dnll_self": 0.027,
+   "dnll_for": 0.0848
+  },
+  "fp_bs1|fp_bs32": {
+   "ident": 0.5967,
+   "margin": 0.3758,
+   "hard": 0.1367,
+   "dnll_self": 0.0249,
+   "dnll_for": 0.0838
+  },
+  "fp_bs8|fp_bs32": {
+   "ident": 0.6233,
+   "margin": 0.3114,
+   "hard": 0.11,
+   "dnll_self": 0.0244,
+   "dnll_for": 0.0746
+  },
+  "int8_channel|fp_bs16": {
+   "ident": 0.3767,
+   "margin": 0.6536,
+   "hard": 0.23,
+   "dnll_self": 0.0417,
+   "dnll_for": 0.145
+  },
+  "int8_channel|fp_bs1": {
+   "ident": 0.42,
+   "margin": 0.5868,
+   "hard": 0.2033,
+   "dnll_self": 0.0402,
+   "dnll_for": 0.1355
+  },
+  "int8_channel|fp_bs8": {
+   "ident": 0.44,
+   "margin": 0.5473,
+   "hard": 0.1867,
+   "dnll_self": 0.0381,
+   "dnll_for": 0.1256
+  },
+  "int8_channel|fp_bs32": {
+   "ident": 0.4133,
+   "margin": 0.6083,
+   "hard": 0.21,
+   "dnll_self": 0.0382,
+   "dnll_for": 0.1324
+  },
+  "int8_group128|fp_bs16": {
+   "ident": 0.4733,
+   "margin": 0.5417,
+   "hard": 0.19,
+   "dnll_self": 0.0355,
+   "dnll_for": 0.1231
+  },
+  "int8_group128|fp_bs1": {
+   "ident": 0.46,
+   "margin": 0.5498,
+   "hard": 0.1967,
+   "dnll_self": 0.0369,
+   "dnll_for": 0.1134
+  },
+  "int8_group128|fp_bs8": {
+   "ident": 0.47,
+   "margin": 0.5527,
+   "hard": 0.1967,
+   "dnll_self": 0.0383,
+   "dnll_for": 0.1312
+  },
+  "int8_group128|fp_bs32": {
+   "ident": 0.48,
+   "margin": 0.5552,
+   "hard": 0.2,
+   "dnll_self": 0.0354,
+   "dnll_for": 0.118
+  },
+  "int8_group32|fp_bs16": {
+   "ident": 0.46,
+   "margin": 0.5464,
+   "hard": 0.1967,
+   "dnll_self": 0.0365,
+   "dnll_for": 0.1233
+  },
+  "int8_group32|fp_bs1": {
+   "ident": 0.4933,
+   "margin": 0.4539,
+   "hard": 0.16,
+   "dnll_self": 0.0326,
+   "dnll_for": 0.1067
+  },
+  "int8_group32|fp_bs8": {
+   "ident": 0.4667,
+   "margin": 0.5174,
+   "hard": 0.1833,
+   "dnll_self": 0.0369,
+   "dnll_for": 0.1204
+  },
+  "int8_group32|fp_bs32": {
+   "ident": 0.4533,
+   "margin": 0.4964,
+   "hard": 0.1733,
+   "dnll_self": 0.0343,
+   "dnll_for": 0.1131
+  },
+  "int8_w8a8|fp_bs16": {
+   "ident": 0.12,
+   "margin": 0.9249,
+   "hard": 0.2833,
+   "dnll_self": 0.091,
+   "dnll_for": 0.2865
+  },
+  "int8_w8a8|fp_bs1": {
+   "ident": 0.1167,
+   "margin": 0.9581,
+   "hard": 0.3,
+   "dnll_self": 0.09,
+   "dnll_for": 0.2813
+  },
+  "int8_w8a8|fp_bs8": {
+   "ident": 0.12,
+   "margin": 0.9212,
+   "hard": 0.2867,
+   "dnll_self": 0.0924,
+   "dnll_for": 0.2786
+  },
+  "int8_w8a8|fp_bs32": {
+   "ident": 0.1167,
+   "margin": 0.9516,
+   "hard": 0.2933,
+   "dnll_self": 0.0888,
+   "dnll_for": 0.2771
+  }
+ },
+ "bootstrap": {
+  "n25": {
+   "ident": {
+    "worst_noise_pair": "fp_bs16|fp_bs1",
+    "threshold": 0.36,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.5454,
+     "fp_bs16|fp_bs8": 0.5567,
+     "fp_bs16|fp_bs32": 0.5936,
+     "fp_bs1|fp_bs8": 0.5891,
+     "fp_bs1|fp_bs32": 0.5972,
+     "fp_bs8|fp_bs32": 0.6226
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.3732,
+     "int8_channel|fp_bs1": 0.4248,
+     "int8_channel|fp_bs8": 0.4362,
+     "int8_channel|fp_bs32": 0.4132,
+     "int8_group128|fp_bs16": 0.473,
+     "int8_group128|fp_bs1": 0.4617,
+     "int8_group128|fp_bs8": 0.4724,
+     "int8_group128|fp_bs32": 0.4776,
+     "int8_group32|fp_bs16": 0.4595,
+     "int8_group32|fp_bs1": 0.4936,
+     "int8_group32|fp_bs8": 0.4648,
+     "int8_group32|fp_bs32": 0.4515
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.3825,
+     "int8_channel|fp_bs1": 0.2045,
+     "int8_channel|fp_bs8": 0.1715,
+     "int8_channel|fp_bs32": 0.2405,
+     "int8_group128|fp_bs16": 0.085,
+     "int8_group128|fp_bs1": 0.103,
+     "int8_group128|fp_bs8": 0.0995,
+     "int8_group128|fp_bs32": 0.091,
+     "int8_group32|fp_bs16": 0.1115,
+     "int8_group32|fp_bs1": 0.065,
+     "int8_group32|fp_bs8": 0.1035,
+     "int8_group32|fp_bs32": 0.1285
+    },
+    "min_power": 0.065
+   },
+   "margin": {
+    "worst_noise_pair": "fp_bs1|fp_bs8",
+    "threshold": 0.7848,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.4445,
+     "fp_bs16|fp_bs8": 0.4195,
+     "fp_bs16|fp_bs32": 0.4046,
+     "fp_bs1|fp_bs8": 0.4613,
+     "fp_bs1|fp_bs32": 0.3677,
+     "fp_bs8|fp_bs32": 0.309
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.6454,
+     "int8_channel|fp_bs1": 0.5869,
+     "int8_channel|fp_bs8": 0.5454,
+     "int8_channel|fp_bs32": 0.6079,
+     "int8_group128|fp_bs16": 0.5419,
+     "int8_group128|fp_bs1": 0.5582,
+     "int8_group128|fp_bs8": 0.5533,
+     "int8_group128|fp_bs32": 0.5561,
+     "int8_group32|fp_bs16": 0.5476,
+     "int8_group32|fp_bs1": 0.4574,
+     "int8_group32|fp_bs8": 0.5072,
+     "int8_group32|fp_bs32": 0.4907
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.2635,
+     "int8_channel|fp_bs1": 0.188,
+     "int8_channel|fp_bs8": 0.1275,
+     "int8_channel|fp_bs32": 0.2115,
+     "int8_group128|fp_bs16": 0.117,
+     "int8_group128|fp_bs1": 0.134,
+     "int8_group128|fp_bs8": 0.131,
+     "int8_group128|fp_bs32": 0.1405,
+     "int8_group32|fp_bs16": 0.126,
+     "int8_group32|fp_bs1": 0.0455,
+     "int8_group32|fp_bs8": 0.095,
+     "int8_group32|fp_bs32": 0.0715
+    },
+    "min_power": 0.0455
+   },
+   "hard": {
+    "worst_noise_pair": "fp_bs16|fp_bs1",
+    "threshold": 0.28,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.1593,
+     "fp_bs16|fp_bs8": 0.1541,
+     "fp_bs16|fp_bs32": 0.1501,
+     "fp_bs1|fp_bs8": 0.1667,
+     "fp_bs1|fp_bs32": 0.1359,
+     "fp_bs8|fp_bs32": 0.1107
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.233,
+     "int8_channel|fp_bs1": 0.2015,
+     "int8_channel|fp_bs8": 0.1876,
+     "int8_channel|fp_bs32": 0.2101,
+     "int8_group128|fp_bs16": 0.1901,
+     "int8_group128|fp_bs1": 0.1933,
+     "int8_group128|fp_bs8": 0.1982,
+     "int8_group128|fp_bs32": 0.2003,
+     "int8_group32|fp_bs16": 0.1964,
+     "int8_group32|fp_bs1": 0.1582,
+     "int8_group32|fp_bs8": 0.1841,
+     "int8_group32|fp_bs32": 0.1745
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.2055,
+     "int8_channel|fp_bs1": 0.111,
+     "int8_channel|fp_bs8": 0.0845,
+     "int8_channel|fp_bs32": 0.136,
+     "int8_group128|fp_bs16": 0.076,
+     "int8_group128|fp_bs1": 0.093,
+     "int8_group128|fp_bs8": 0.104,
+     "int8_group128|fp_bs32": 0.1045,
+     "int8_group32|fp_bs16": 0.1085,
+     "int8_group32|fp_bs1": 0.04,
+     "int8_group32|fp_bs8": 0.085,
+     "int8_group32|fp_bs32": 0.0645
+    },
+    "min_power": 0.04
+   },
+   "dnll_self": {
+    "worst_noise_pair": "fp_bs16|fp_bs1",
+    "threshold": 0.0517,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.0311,
+     "fp_bs16|fp_bs8": 0.0308,
+     "fp_bs16|fp_bs32": 0.0261,
+     "fp_bs1|fp_bs8": 0.0275,
+     "fp_bs1|fp_bs32": 0.0251,
+     "fp_bs8|fp_bs32": 0.0249
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.0418,
+     "int8_channel|fp_bs1": 0.0402,
+     "int8_channel|fp_bs8": 0.0383,
+     "int8_channel|fp_bs32": 0.0381,
+     "int8_group128|fp_bs16": 0.0359,
+     "int8_group128|fp_bs1": 0.036,
+     "int8_group128|fp_bs8": 0.038,
+     "int8_group128|fp_bs32": 0.0351,
+     "int8_group32|fp_bs16": 0.0364,
+     "int8_group32|fp_bs1": 0.0325,
+     "int8_group32|fp_bs8": 0.0365,
+     "int8_group32|fp_bs32": 0.0346
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.18,
+     "int8_channel|fp_bs1": 0.168,
+     "int8_channel|fp_bs8": 0.109,
+     "int8_channel|fp_bs32": 0.11,
+     "int8_group128|fp_bs16": 0.1045,
+     "int8_group128|fp_bs1": 0.087,
+     "int8_group128|fp_bs8": 0.1315,
+     "int8_group128|fp_bs32": 0.084,
+     "int8_group32|fp_bs16": 0.0985,
+     "int8_group32|fp_bs1": 0.039,
+     "int8_group32|fp_bs8": 0.0935,
+     "int8_group32|fp_bs32": 0.0755
+    },
+    "min_power": 0.039
+   },
+   "dnll_for": {
+    "worst_noise_pair": "fp_bs16|fp_bs1",
+    "threshold": 0.1995,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.1033,
+     "fp_bs16|fp_bs8": 0.1037,
+     "fp_bs16|fp_bs32": 0.0803,
+     "fp_bs1|fp_bs8": 0.0849,
+     "fp_bs1|fp_bs32": 0.0848,
+     "fp_bs8|fp_bs32": 0.0748
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.1433,
+     "int8_channel|fp_bs1": 0.1344,
+     "int8_channel|fp_bs8": 0.1252,
+     "int8_channel|fp_bs32": 0.1334,
+     "int8_group128|fp_bs16": 0.1227,
+     "int8_group128|fp_bs1": 0.112,
+     "int8_group128|fp_bs8": 0.13,
+     "int8_group128|fp_bs32": 0.118,
+     "int8_group32|fp_bs16": 0.1229,
+     "int8_group32|fp_bs1": 0.1052,
+     "int8_group32|fp_bs8": 0.1211,
+     "int8_group32|fp_bs32": 0.1137
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.143,
+     "int8_channel|fp_bs1": 0.0975,
+     "int8_channel|fp_bs8": 0.081,
+     "int8_channel|fp_bs32": 0.1015,
+     "int8_group128|fp_bs16": 0.0765,
+     "int8_group128|fp_bs1": 0.048,
+     "int8_group128|fp_bs8": 0.0935,
+     "int8_group128|fp_bs32": 0.0535,
+     "int8_group32|fp_bs16": 0.063,
+     "int8_group32|fp_bs1": 0.029,
+     "int8_group32|fp_bs8": 0.065,
+     "int8_group32|fp_bs32": 0.0365
+    },
+    "min_power": 0.029
+   }
+  },
+  "n50": {
+   "ident": {
+    "worst_noise_pair": "fp_bs16|fp_bs1",
+    "threshold": 0.42,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.5457,
+     "fp_bs16|fp_bs8": 0.5592,
+     "fp_bs16|fp_bs32": 0.5927,
+     "fp_bs1|fp_bs8": 0.5947,
+     "fp_bs1|fp_bs32": 0.5948,
+     "fp_bs8|fp_bs32": 0.623
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.3798,
+     "int8_channel|fp_bs1": 0.4214,
+     "int8_channel|fp_bs8": 0.4398,
+     "int8_channel|fp_bs32": 0.414,
+     "int8_group128|fp_bs16": 0.4759,
+     "int8_group128|fp_bs1": 0.4589,
+     "int8_group128|fp_bs8": 0.4724,
+     "int8_group128|fp_bs32": 0.4806,
+     "int8_group32|fp_bs16": 0.4623,
+     "int8_group32|fp_bs1": 0.4914,
+     "int8_group32|fp_bs8": 0.4664,
+     "int8_group32|fp_bs32": 0.4525
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.6745,
+     "int8_channel|fp_bs1": 0.443,
+     "int8_channel|fp_bs8": 0.336,
+     "int8_channel|fp_bs32": 0.481,
+     "int8_group128|fp_bs16": 0.175,
+     "int8_group128|fp_bs1": 0.2355,
+     "int8_group128|fp_bs8": 0.179,
+     "int8_group128|fp_bs32": 0.154,
+     "int8_group32|fp_bs16": 0.235,
+     "int8_group32|fp_bs1": 0.12,
+     "int8_group32|fp_bs8": 0.215,
+     "int8_group32|fp_bs32": 0.285
+    },
+    "min_power": 0.12
+   },
+   "margin": {
+    "worst_noise_pair": "fp_bs1|fp_bs8",
+    "threshold": 0.7184,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.4432,
+     "fp_bs16|fp_bs8": 0.417,
+     "fp_bs16|fp_bs32": 0.3991,
+     "fp_bs1|fp_bs8": 0.4667,
+     "fp_bs1|fp_bs32": 0.3772,
+     "fp_bs8|fp_bs32": 0.3116
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.6517,
+     "int8_channel|fp_bs1": 0.5901,
+     "int8_channel|fp_bs8": 0.5477,
+     "int8_channel|fp_bs32": 0.612,
+     "int8_group128|fp_bs16": 0.5437,
+     "int8_group128|fp_bs1": 0.5497,
+     "int8_group128|fp_bs8": 0.5545,
+     "int8_group128|fp_bs32": 0.5533,
+     "int8_group32|fp_bs16": 0.5475,
+     "int8_group32|fp_bs1": 0.4541,
+     "int8_group32|fp_bs8": 0.5184,
+     "int8_group32|fp_bs32": 0.4997
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.321,
+     "int8_channel|fp_bs1": 0.2085,
+     "int8_channel|fp_bs8": 0.125,
+     "int8_channel|fp_bs32": 0.2345,
+     "int8_group128|fp_bs16": 0.1165,
+     "int8_group128|fp_bs1": 0.1265,
+     "int8_group128|fp_bs8": 0.13,
+     "int8_group128|fp_bs32": 0.127,
+     "int8_group32|fp_bs16": 0.13,
+     "int8_group32|fp_bs1": 0.027,
+     "int8_group32|fp_bs8": 0.078,
+     "int8_group32|fp_bs32": 0.0745
+    },
+    "min_power": 0.027
+   },
+   "hard": {
+    "worst_noise_pair": "fp_bs1|fp_bs8",
+    "threshold": 0.26,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.1612,
+     "fp_bs16|fp_bs8": 0.1541,
+     "fp_bs16|fp_bs32": 0.1502,
+     "fp_bs1|fp_bs8": 0.1683,
+     "fp_bs1|fp_bs32": 0.1355,
+     "fp_bs8|fp_bs32": 0.11
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.2304,
+     "int8_channel|fp_bs1": 0.2033,
+     "int8_channel|fp_bs8": 0.1862,
+     "int8_channel|fp_bs32": 0.2106,
+     "int8_group128|fp_bs16": 0.1893,
+     "int8_group128|fp_bs1": 0.1971,
+     "int8_group128|fp_bs8": 0.1981,
+     "int8_group128|fp_bs32": 0.2008,
+     "int8_group32|fp_bs16": 0.1946,
+     "int8_group32|fp_bs1": 0.1601,
+     "int8_group32|fp_bs8": 0.1855,
+     "int8_group32|fp_bs32": 0.1732
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.243,
+     "int8_channel|fp_bs1": 0.116,
+     "int8_channel|fp_bs8": 0.0695,
+     "int8_channel|fp_bs32": 0.154,
+     "int8_group128|fp_bs16": 0.072,
+     "int8_group128|fp_bs1": 0.0955,
+     "int8_group128|fp_bs8": 0.0975,
+     "int8_group128|fp_bs32": 0.1075,
+     "int8_group32|fp_bs16": 0.092,
+     "int8_group32|fp_bs1": 0.0235,
+     "int8_group32|fp_bs8": 0.0645,
+     "int8_group32|fp_bs32": 0.0375
+    },
+    "min_power": 0.0235
+   },
+   "dnll_self": {
+    "worst_noise_pair": "fp_bs16|fp_bs1",
+    "threshold": 0.0463,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.0315,
+     "fp_bs16|fp_bs8": 0.031,
+     "fp_bs16|fp_bs32": 0.026,
+     "fp_bs1|fp_bs8": 0.0268,
+     "fp_bs1|fp_bs32": 0.025,
+     "fp_bs8|fp_bs32": 0.0243
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.0413,
+     "int8_channel|fp_bs1": 0.0403,
+     "int8_channel|fp_bs8": 0.0382,
+     "int8_channel|fp_bs32": 0.0384,
+     "int8_group128|fp_bs16": 0.0357,
+     "int8_group128|fp_bs1": 0.0371,
+     "int8_group128|fp_bs8": 0.0381,
+     "int8_group128|fp_bs32": 0.0355,
+     "int8_group32|fp_bs16": 0.0366,
+     "int8_group32|fp_bs1": 0.0324,
+     "int8_group32|fp_bs8": 0.0366,
+     "int8_group32|fp_bs32": 0.0343
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.267,
+     "int8_channel|fp_bs1": 0.2215,
+     "int8_channel|fp_bs8": 0.1465,
+     "int8_channel|fp_bs32": 0.1575,
+     "int8_group128|fp_bs16": 0.1055,
+     "int8_group128|fp_bs1": 0.139,
+     "int8_group128|fp_bs8": 0.164,
+     "int8_group128|fp_bs32": 0.11,
+     "int8_group32|fp_bs16": 0.129,
+     "int8_group32|fp_bs1": 0.042,
+     "int8_group32|fp_bs8": 0.1235,
+     "int8_group32|fp_bs32": 0.0605
+    },
+    "min_power": 0.042
+   },
+   "dnll_for": {
+    "worst_noise_pair": "fp_bs16|fp_bs1",
+    "threshold": 0.1755,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.105,
+     "fp_bs16|fp_bs8": 0.1035,
+     "fp_bs16|fp_bs32": 0.0795,
+     "fp_bs1|fp_bs8": 0.0853,
+     "fp_bs1|fp_bs32": 0.0838,
+     "fp_bs8|fp_bs32": 0.074
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.1439,
+     "int8_channel|fp_bs1": 0.1359,
+     "int8_channel|fp_bs8": 0.1277,
+     "int8_channel|fp_bs32": 0.1322,
+     "int8_group128|fp_bs16": 0.1227,
+     "int8_group128|fp_bs1": 0.1139,
+     "int8_group128|fp_bs8": 0.1299,
+     "int8_group128|fp_bs32": 0.1185,
+     "int8_group32|fp_bs16": 0.123,
+     "int8_group32|fp_bs1": 0.1079,
+     "int8_group32|fp_bs8": 0.1211,
+     "int8_group32|fp_bs32": 0.112
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.192,
+     "int8_channel|fp_bs1": 0.1215,
+     "int8_channel|fp_bs8": 0.093,
+     "int8_channel|fp_bs32": 0.1135,
+     "int8_group128|fp_bs16": 0.0845,
+     "int8_group128|fp_bs1": 0.0525,
+     "int8_group128|fp_bs8": 0.11,
+     "int8_group128|fp_bs32": 0.0545,
+     "int8_group32|fp_bs16": 0.074,
+     "int8_group32|fp_bs1": 0.024,
+     "int8_group32|fp_bs8": 0.068,
+     "int8_group32|fp_bs32": 0.0355
+    },
+    "min_power": 0.024
+   }
+  },
+  "n100": {
+   "ident": {
+    "worst_noise_pair": "fp_bs16|fp_bs1",
+    "threshold": 0.47,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.5469,
+     "fp_bs16|fp_bs8": 0.5635,
+     "fp_bs16|fp_bs32": 0.5908,
+     "fp_bs1|fp_bs8": 0.5901,
+     "fp_bs1|fp_bs32": 0.5973,
+     "fp_bs8|fp_bs32": 0.6241
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.3786,
+     "int8_channel|fp_bs1": 0.4193,
+     "int8_channel|fp_bs8": 0.439,
+     "int8_channel|fp_bs32": 0.4122,
+     "int8_group128|fp_bs16": 0.4734,
+     "int8_group128|fp_bs1": 0.4609,
+     "int8_group128|fp_bs8": 0.4696,
+     "int8_group128|fp_bs32": 0.4805,
+     "int8_group32|fp_bs16": 0.4575,
+     "int8_group32|fp_bs1": 0.4921,
+     "int8_group32|fp_bs8": 0.4669,
+     "int8_group32|fp_bs32": 0.454
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.962,
+     "int8_channel|fp_bs1": 0.819,
+     "int8_channel|fp_bs8": 0.706,
+     "int8_channel|fp_bs32": 0.861,
+     "int8_group128|fp_bs16": 0.434,
+     "int8_group128|fp_bs1": 0.5375,
+     "int8_group128|fp_bs8": 0.4655,
+     "int8_group128|fp_bs32": 0.3795,
+     "int8_group32|fp_bs16": 0.5595,
+     "int8_group32|fp_bs1": 0.3,
+     "int8_group32|fp_bs8": 0.486,
+     "int8_group32|fp_bs32": 0.582
+    },
+    "min_power": 0.3
+   },
+   "margin": {
+    "worst_noise_pair": "fp_bs1|fp_bs8",
+    "threshold": 0.6234,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.447,
+     "fp_bs16|fp_bs8": 0.4198,
+     "fp_bs16|fp_bs32": 0.4017,
+     "fp_bs1|fp_bs8": 0.4628,
+     "fp_bs1|fp_bs32": 0.3737,
+     "fp_bs8|fp_bs32": 0.314
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.6573,
+     "int8_channel|fp_bs1": 0.5863,
+     "int8_channel|fp_bs8": 0.5468,
+     "int8_channel|fp_bs32": 0.6108,
+     "int8_group128|fp_bs16": 0.5383,
+     "int8_group128|fp_bs1": 0.5493,
+     "int8_group128|fp_bs8": 0.5499,
+     "int8_group128|fp_bs32": 0.5544,
+     "int8_group32|fp_bs16": 0.5503,
+     "int8_group32|fp_bs1": 0.4522,
+     "int8_group32|fp_bs8": 0.5198,
+     "int8_group32|fp_bs32": 0.4951
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.613,
+     "int8_channel|fp_bs1": 0.3665,
+     "int8_channel|fp_bs8": 0.224,
+     "int8_channel|fp_bs32": 0.444,
+     "int8_group128|fp_bs16": 0.2005,
+     "int8_group128|fp_bs1": 0.233,
+     "int8_group128|fp_bs8": 0.2405,
+     "int8_group128|fp_bs32": 0.257,
+     "int8_group32|fp_bs16": 0.241,
+     "int8_group32|fp_bs1": 0.0365,
+     "int8_group32|fp_bs8": 0.159,
+     "int8_group32|fp_bs32": 0.0905
+    },
+    "min_power": 0.0365
+   },
+   "hard": {
+    "worst_noise_pair": "fp_bs1|fp_bs8",
+    "threshold": 0.23,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.1621,
+     "fp_bs16|fp_bs8": 0.1515,
+     "fp_bs16|fp_bs32": 0.1496,
+     "fp_bs1|fp_bs8": 0.1668,
+     "fp_bs1|fp_bs32": 0.1372,
+     "fp_bs8|fp_bs32": 0.1108
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.2298,
+     "int8_channel|fp_bs1": 0.2024,
+     "int8_channel|fp_bs8": 0.1869,
+     "int8_channel|fp_bs32": 0.2101,
+     "int8_group128|fp_bs16": 0.1899,
+     "int8_group128|fp_bs1": 0.1967,
+     "int8_group128|fp_bs8": 0.1975,
+     "int8_group128|fp_bs32": 0.2017,
+     "int8_group32|fp_bs16": 0.1976,
+     "int8_group32|fp_bs1": 0.1613,
+     "int8_group32|fp_bs8": 0.1824,
+     "int8_group32|fp_bs32": 0.1729
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.4315,
+     "int8_channel|fp_bs1": 0.213,
+     "int8_channel|fp_bs8": 0.1175,
+     "int8_channel|fp_bs32": 0.271,
+     "int8_group128|fp_bs16": 0.1195,
+     "int8_group128|fp_bs1": 0.1675,
+     "int8_group128|fp_bs8": 0.179,
+     "int8_group128|fp_bs32": 0.1975,
+     "int8_group32|fp_bs16": 0.1695,
+     "int8_group32|fp_bs1": 0.0225,
+     "int8_group32|fp_bs8": 0.0985,
+     "int8_group32|fp_bs32": 0.0475
+    },
+    "min_power": 0.0225
+   },
+   "dnll_self": {
+    "worst_noise_pair": "fp_bs16|fp_bs1",
+    "threshold": 0.0415,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.0313,
+     "fp_bs16|fp_bs8": 0.031,
+     "fp_bs16|fp_bs32": 0.0261,
+     "fp_bs1|fp_bs8": 0.027,
+     "fp_bs1|fp_bs32": 0.0249,
+     "fp_bs8|fp_bs32": 0.0247
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.0416,
+     "int8_channel|fp_bs1": 0.0404,
+     "int8_channel|fp_bs8": 0.0382,
+     "int8_channel|fp_bs32": 0.0384,
+     "int8_group128|fp_bs16": 0.0354,
+     "int8_group128|fp_bs1": 0.0371,
+     "int8_group128|fp_bs8": 0.0386,
+     "int8_group128|fp_bs32": 0.0353,
+     "int8_group32|fp_bs16": 0.0365,
+     "int8_group32|fp_bs1": 0.0327,
+     "int8_group32|fp_bs8": 0.0369,
+     "int8_group32|fp_bs32": 0.0343
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.493,
+     "int8_channel|fp_bs1": 0.4195,
+     "int8_channel|fp_bs8": 0.2575,
+     "int8_channel|fp_bs32": 0.283,
+     "int8_group128|fp_bs16": 0.147,
+     "int8_group128|fp_bs1": 0.2145,
+     "int8_group128|fp_bs8": 0.3055,
+     "int8_group128|fp_bs32": 0.1525,
+     "int8_group32|fp_bs16": 0.199,
+     "int8_group32|fp_bs1": 0.0505,
+     "int8_group32|fp_bs8": 0.2015,
+     "int8_group32|fp_bs32": 0.1005
+    },
+    "min_power": 0.0505
+   },
+   "dnll_for": {
+    "worst_noise_pair": "fp_bs16|fp_bs1",
+    "threshold": 0.1528,
+    "noise_means": {
+     "fp_bs16|fp_bs1": 0.1054,
+     "fp_bs16|fp_bs8": 0.1045,
+     "fp_bs16|fp_bs32": 0.0803,
+     "fp_bs1|fp_bs8": 0.0847,
+     "fp_bs1|fp_bs32": 0.0832,
+     "fp_bs8|fp_bs32": 0.0745
+    },
+    "int8_means": {
+     "int8_channel|fp_bs16": 0.1451,
+     "int8_channel|fp_bs1": 0.1354,
+     "int8_channel|fp_bs8": 0.1254,
+     "int8_channel|fp_bs32": 0.1325,
+     "int8_group128|fp_bs16": 0.1232,
+     "int8_group128|fp_bs1": 0.1147,
+     "int8_group128|fp_bs8": 0.131,
+     "int8_group128|fp_bs32": 0.1182,
+     "int8_group32|fp_bs16": 0.1225,
+     "int8_group32|fp_bs1": 0.1068,
+     "int8_group32|fp_bs8": 0.1203,
+     "int8_group32|fp_bs32": 0.113
+    },
+    "power_at_fpr5": {
+     "int8_channel|fp_bs16": 0.3715,
+     "int8_channel|fp_bs1": 0.221,
+     "int8_channel|fp_bs8": 0.1375,
+     "int8_channel|fp_bs32": 0.2005,
+     "int8_group128|fp_bs16": 0.1255,
+     "int8_group128|fp_bs1": 0.0695,
+     "int8_group128|fp_bs8": 0.201,
+     "int8_group128|fp_bs32": 0.0775,
+     "int8_group32|fp_bs16": 0.1055,
+     "int8_group32|fp_bs1": 0.022,
+     "int8_group32|fp_bs8": 0.0925,
+     "int8_group32|fp_bs32": 0.048
+    },
+    "min_power": 0.022
+   }
+  }
+ }
+}

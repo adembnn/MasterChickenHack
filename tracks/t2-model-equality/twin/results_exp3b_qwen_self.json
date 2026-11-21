@@ -1,0 +1,146 @@
+{
+ "n_stable": 139,
+ "n": 300,
+ "select_pairs": [
+  "fp_bs16|fp_bs8",
+  "fp_bs16|fp_bs32",
+  "fp_bs8|fp_bs32"
+ ],
+ "eval_noise_pairs": [
+  "fp_bs16|fp_bs1",
+  "fp_bs1|fp_bs8",
+  "fp_bs1|fp_bs32"
+ ],
+ "rates": {
+  "fp_bs16|fp_bs1": {
+   "all": 0.5467,
+   "stable": 0.8489
+  },
+  "fp_bs1|fp_bs8": {
+   "all": 0.59,
+   "stable": 0.8489
+  },
+  "fp_bs1|fp_bs32": {
+   "all": 0.5967,
+   "stable": 0.8489
+  },
+  "int8_channel|fp_bs16": {
+   "all": 0.3767,
+   "stable": 0.6475
+  },
+  "int8_channel|fp_bs1": {
+   "all": 0.42,
+   "stable": 0.6403
+  },
+  "int8_channel|fp_bs8": {
+   "all": 0.44,
+   "stable": 0.6475
+  },
+  "int8_channel|fp_bs32": {
+   "all": 0.4133,
+   "stable": 0.6475
+  },
+  "int8_group128|fp_bs16": {
+   "all": 0.4733,
+   "stable": 0.7266
+  },
+  "int8_group128|fp_bs1": {
+   "all": 0.46,
+   "stable": 0.6763
+  },
+  "int8_group128|fp_bs8": {
+   "all": 0.47,
+   "stable": 0.7266
+  },
+  "int8_group128|fp_bs32": {
+   "all": 0.48,
+   "stable": 0.7266
+  },
+  "int8_group32|fp_bs16": {
+   "all": 0.46,
+   "stable": 0.7338
+  },
+  "int8_group32|fp_bs1": {
+   "all": 0.4933,
+   "stable": 0.7338
+  },
+  "int8_group32|fp_bs8": {
+   "all": 0.4667,
+   "stable": 0.7338
+  },
+  "int8_group32|fp_bs32": {
+   "all": 0.4533,
+   "stable": 0.7338
+  }
+ },
+ "power": {
+  "all_n50": {
+   "threshold": 0.42,
+   "per_variant": {
+    "int8_channel": {
+     "min": 0.322,
+     "mean": 0.486
+    },
+    "int8_group128": {
+     "min": 0.155,
+     "mean": 0.199
+    },
+    "int8_group32": {
+     "min": 0.117,
+     "mean": 0.21
+    }
+   }
+  },
+  "all_n100": {
+   "threshold": 0.46,
+   "per_variant": {
+    "int8_channel": {
+     "min": 0.603,
+     "mean": 0.777
+    },
+    "int8_group128": {
+     "min": 0.308,
+     "mean": 0.377
+    },
+    "int8_group32": {
+     "min": 0.232,
+     "mean": 0.405
+    }
+   }
+  },
+  "stable_n50": {
+   "threshold": 0.76,
+   "per_variant": {
+    "int8_channel": {
+     "min": 0.93,
+     "mean": 0.939
+    },
+    "int8_group128": {
+     "min": 0.636,
+     "mean": 0.698
+    },
+    "int8_group32": {
+     "min": 0.579,
+     "mean": 0.585
+    }
+   }
+  },
+  "stable_n100": {
+   "threshold": 0.79,
+   "per_variant": {
+    "int8_channel": {
+     "min": 0.998,
+     "mean": 0.998
+    },
+    "int8_group128": {
+     "min": 0.911,
+     "mean": 0.933
+    },
+    "int8_group32": {
+     "min": 0.874,
+     "mean": 0.878
+    }
+   }
+  }
+ }
+}
