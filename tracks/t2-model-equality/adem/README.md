@@ -19,6 +19,27 @@ Les fichiers de sondes sont des `.jsonl` (`id`, `prompt`) lisibles tels quels pa
 
 Faire d'abord les étapes 1 à 5 sur les 9 `ref-*` (`--prefix ref-`) puis `score_practice.py` : c'est la seule mesure réelle de la méthode.
 
+## Commandes exactes sur les 9 `ref-*`
+À lancer depuis `tracks/t2-model-equality/adem/`, avec `query_reference.py` (clé renseignée) copié dans ce dossier. Les réponses s'ajoutent à `reference_answers.jsonl` ; relancer une commande ne repaie pas ce qui est déjà fait.
+```
+# 1. Ronde 0 : 4 sondes x 2 répétitions x 9 endpoints = 72 requêtes
+python -c "import query_reference as q; q.query(q.read_prompts(q.Path('probes/ronde0.jsonl')), endpoints=q.ENDPOINTS, repeats=2)"
+python analyse/plan_budget.py --answers reference_answers.jsonl --prefix ref-     # 0 requête : écrit les 2 listes d'endpoints
+
+# 2. Reste du plan : 92 requêtes par endpoint = 828 (total 900, soit 100 par ref)
+python -c "import query_reference as q; e=open('endpoints_deterministes.txt').read().split(); e and q.query(q.read_prompts(q.Path('probes/deterministe.jsonl')), endpoints=e, repeats=1)"
+python -c "import query_reference as q; e=open('endpoints_echantillonnes.txt').read().split(); e and q.query(q.read_prompts(q.Path('probes/echantillonne_x2.jsonl')), endpoints=e, repeats=2)"
+python -c "import query_reference as q; e=open('endpoints_echantillonnes.txt').read().split(); e and q.query(q.read_prompts(q.Path('probes/echantillonne_x4.jsonl')), endpoints=e, repeats=4)"
+
+# 3. Analyse et score : 0 requête
+python t2_pipeline.py --answers reference_answers.jsonl --probes probes/probes_gelees.jsonl --out ref_v4 --prefix ref-
+python ../../../reports/sources/t2/score_practice.py ref_v4.csv
+```
+Résultat : `ref_v4.csv` (`endpoint,family,model` pour ref-01 à ref-09), `ref_v4_repli.csv`, `ref_v4_diag.txt`, et le MCC imprimé par `score_practice.py`. Lire `ref_v4_diag.txt` : ref-03 et ref-05 doivent être typés S, ref-08 typé T.
+
+## Mode dégradé : un premier envoi « familles seules »
+`python t2_pipeline.py --answers answers.jsonl --probes probes/probes_gelees.jsonl --out premier --prefix ep- --variante repli` écrit un CSV valide (modèle préfixé par sa famille, chaque endpoint seul dans son modèle). Il ne rapporte que la part famille (10 % de la note, 0,10 au mieux) mais fait entrer l'équipe au classement. Il fonctionne dès la ronde 0 ; le MCC famille selon le nombre de réponses est dans le rapport (§3.8).
+
 ## Ce que contient le dossier
 | Fichier | Rôle |
 |---|---|

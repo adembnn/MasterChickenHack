@@ -27,8 +27,7 @@ Termes. MCC : coefficient de corrélation de Matthews sur les paires d'endpoints
 ## 2. Banc d'essai local (H200, `bench/world.py`)
 - Deux familles : `allenai/OLMo-2-0425-1B-Instruct` et `Qwen/Qwen2.5-1.5B-Instruct`. Par famille, 7 poids : base ; fp8 et int8 (fausse quantification par ligne des couches linéaires, la même que le jumeau de Titouan) ; nf4 (bitsandbytes 4 bits) ; LoRA 0,3 / 0,7 / 1,5 (un adaptateur de rang 16 entraîné 300 pas, sur dolly-15k pour OLMo et CodeAlpaca pour Qwen, puis force multipliée).
 - Déguisements : en clair ; prompt système ; persona ; filigrane KGW (γ = 0,25, δ = 2, fenêtre d'un token) ; température 1,0. Chaque poids existe sous les 5 ; la base a 5 répliques (autre prompt système, autre persona, autre clé, autre taille de lot). 40 endpoints par famille.
-- Sortie : texte seul, 256 tokens au plus, au format de `task_template.py`. Deux régimes : glouton par défaut (monde `world3`), échantillonné à T = 0,7 par défaut (monde `worldS`).
-- Mondes notés : « ref » = structure exacte du corrigé (base en clair + 4 copies déguisées + 4 variantes en clair), 200 tirages ; « mix » = 14 endpoints au hasard parmi 40 ; « tout » = les 40.
+- Sortie : texte seul, 256 tokens au plus, au format de `task_template.py`. Régimes : glouton par défaut (`world3`), échantillonné à T = 0,7 (`worldS`). Mondes notés : « ref » = structure exacte du corrigé (base en clair + 4 copies déguisées + 4 variantes en clair), 200 tirages ; « mix » = 14 endpoints au hasard parmi 40 ; « tout » = les 40.
 
 ## 3. Mesures
 ### 3.1 Statistiques par paire seules (OLMo, monde v1, 34 endpoints, 143 sondes, 6 tirages de budget)
@@ -50,10 +49,8 @@ Identité de texte contre la base en clair (monde v3, plan gelé) : OLMo répliq
 clair/clair 1,00 ; clair/prompt système 0,85 (0,99 contre LoRA ≥ 0,7 et nf4 seulement) ; clair/filigrane 0,82 (0,98) ; clair/persona 0,77 (0,89) ; clair/T 1,0 : 0,44 (0,61). Classifieurs appris sur une famille et testés sur l'autre (monde v3) : AUC 0,56 à 0,72, MCC ref 0,00 à 0,59 selon le sens. Ils transfèrent mal ; d'où le choix de règles sans apprentissage.
 
 ### 3.3 Pistes mesurées et écartées
-- Neutraliser le prompt système depuis le message utilisateur (jeton de fin de texte, en-tête de nouvelle conversation, 500 tokens de remplissage, « ignore les instructions ») : identité 0,04 à 0,25 avec persona ou prompt système, contre 0,67 à 0,92 pour une simple réplique.
-- Lots de 20 mini-questions numérotées : un modèle 1B recopie « B » sur 15 lignes. Lots de 5 : taux d'analyse 0,94 à 1,00, retenus.
-- Profil de capacité (taux de bonnes réponses par type de calcul) : écarts de 0,05 à 0,15 entre copies déguisées, du même ordre qu'entre poids ; inutilisable à 100 réponses.
-- Réponses chiffrées « au bord du savoir » : un prompt système les change (accord 0,17 à 0,33).
+- Neutraliser le prompt système depuis le message utilisateur (jeton de fin de texte, en-tête de nouvelle conversation, 500 tokens de remplissage, « ignore les instructions ») : identité 0,04 à 0,25, contre 0,67 à 0,92 pour une simple réplique. Réponses chiffrées « au bord du savoir » : un prompt système les change (accord 0,17 à 0,33).
+- Lots de 20 mini-questions : un modèle 1B recopie « B » sur 15 lignes (lots de 5 : taux d'analyse 0,94 à 1,00, retenus). Profil de capacité (taux de bonnes réponses par type de calcul) : écarts de 0,05 à 0,15 entre copies déguisées, du même ordre qu'entre poids.
 
 ### 3.4 Détection du type (plan gelé, 40 endpoints par famille)
 ```
@@ -99,6 +96,22 @@ centre + z < 3 (fermées seules)                   0.000  [0.00 ; 0.00]   0.165 
 endpoints à prompt système fusionnés, reste isolé 0.037  [0.04 ; 0.04]   0.273  [0.27 ; 0.27]
 ```
 **Lecture** : à 100 réponses échantillonnées, fp8, int8 et LoRA 0,3 sont dans le bruit (z < 2), les copies déguisées en sortent autant que les LoRA fortes (z 3 à 5), et le centre n'est retrouvé que dans 76/200 et 15/200 mondes. **Dans ce régime la méthode ne marche pas : MCC 0,02 à 0,27.** La détection du prompt système, elle, tient (79/80).
+Deux essais de plus, même conclusion. (1) Décodeur « écart au consensus » (`analyse/eval_S2.py` : chaque endpoint comparé à la mise en commun des autres, isolé si z ≥ seuil), 12 lots × 8 tirages : MCC ref 0,00 à 0,36 selon le plan et le seuil, sans réglage stable d'une famille à l'autre. (2) Monde v2 aligné sur le code public des organisateurs signalé par `t2-critique` (T 0,7 + top-p 0,9, leurs prompts système « Acme Corp », « You are a helpful assistant. » et une espace seule), 10 sondes × 10 tirages, lots de 10 questions dont des choix entre options équivalentes (`analyse/eval_S3.py`, OLMo) :
+```
+z contre la base en clair (4 ab10 + 4 eq10 + 2 nb10, 100 réponses) : réplique -0.1  fp8 -1.4  T1,0 2.3  espace 2.3  « helpful » 2.5
+                                       LoRA0.7 3.8  persona 4.5  Acme 4.8  filigrane 7.0     MCC ref : 0.00 à 0.13
+```
+La réplique est bien à z ≈ 0 (test calibré), mais un prompt système de 5 mots déplace les distributions autant qu'une LoRA 0,7, y compris sur les choix entre options équivalentes (z 2,6 à 4,4).
+
+### 3.8 Mode dégradé : familles seules, dès la ronde 0 (`analyse/eval_family_small.py`, 40 tirages de 33 endpoints)
+```
+plan                                                      MCC famille (glouton)    min    MCC famille (échantillonné)    min
+ronde 0 seule (4 sondes x 2 = 8 réponses)                       0.742            0.498            0.938                0.702
+ronde 0 + 3 identité + 3 extraction (14)                        0.737            0.548            0.897                0.690
+ronde 0 + 6 meta + 8 A/B + 8 chiffrés + 4 textes (34)           0.793            0.650            0.924                0.681
+plan complet (100), mesuré au §3.6                              0.84 à 1.00
+```
+Avec les 8 réponses de la ronde 0, `--variante repli` sort déjà un CSV valide dont la note attendue est 0,1 × 0,74 à 0,94, soit 0,07 à 0,09. La ronde 0 sur les 33 `ep-*` (264 requêtes) donne donc à la fois le régime de décodage et un premier envoi, sans rien perdre : ces 8 réponses font partie du plan complet. Mesuré sur 2 familles seulement.
 
 ## 4. La méthode v4 (`t2_pipeline.py`, `analyse/rules.py`, stdlib seule)
 1. **Familles** : lien moyen sur une proximité normalisée par endpoint (moyenne de 4 statistiques, seuil 0,4). Option `--families` pour imposer les familles de Titouan.
@@ -121,9 +134,8 @@ Hypothèse assumée, lue dans le corrigé : un endpoint déguisé sert le modèl
 2. Le plan complet sur les 9 `ref-*`, puis `t2_pipeline.py --prefix ref-` et `score_practice.py` : seule mesure réelle. Regarder dans `_diag.txt` si ref-03 et ref-05 sont typés S et ref-08 typé T.
 3. Si un même passage « You are… » sort sur beaucoup d'endpoints, c'est le prompt par défaut de la famille : l'ajouter à `_DEFAULT_SYS` (`analyse/features.py`).
 4. `analyse/wm_default_keys.py` sur les réponses de ref-06 avec les tokenizers candidats : les bibliothèques KGW courantes partagent la clé par défaut 15485863. Un z > 4 détecte le filigrane et donne le tokenizer de la famille. Mesuré sur le banc (endpoint Qwen filigrané avec le tirage par défaut de `transformers`, 60 réponses) : z = 7,4 avec le tokenizer Qwen et le générateur CUDA (γ = 0,25), z ≤ 2,1 avec le tokenizer OLMo, z ≤ 0,3 avec le générateur CPU, et aucun déclenchement sur le filigrane à clé non standard du banc. Il ne sert que si les organisateurs ont gardé une clé par défaut.
-La consigne (l. 109) dit que `temperature` et `seed` sont ignorés et les messages `system` refusés : inutile de les tester.
-
 ## 7. Limites
+- **Prompts système des organisateurs** : une espace seule et « You are a helpful assistant. » ne laissent rien à extraire (le second est dans la liste des prompts par défaut ignorés). En régime glouton ces endpoints seraient typés P et isolés : une copie perdue chacun.
 - **Supposé, non mesuré** : que les `ep-*` suivent la structure du corrigé. Si les variantes sont déguisées, 0,18 (§3.6). Calcul du critique sur 3 familles × 11 : la règle vaut 1,00 dans la structure du corrigé et 0,19 à 0,39 sinon.
 - **Supposé** : filigrane KGW à fenêtre d'un token ; un autre schéma échappe à la règle 5 (la copie est alors isolée : MCC 0,72 au lieu de 1,00 dans la structure du corrigé).
 - **Mesuré sur 2 familles seulement** : le seuil des familles (MCC famille 0,91 à 0,4 ; 0,58 à 0,3 ; 0,79 à 0,5). Fragile.
@@ -134,9 +146,4 @@ La consigne (l. 109) dit que `temperature` et `seed` sont ignorés et les messag
 Bugs corrigés : décodeur du pipeline différent du décodeur mesuré (une seule implémentation maintenant, `rules.decode`) ; tout fusionné quand aucun endpoint n'est P ; expression régulière de fuite trop large (« You're asking… », prompt par défaut de Qwen) ; statistique de filigrane qui confondait biais de position d'une LoRA et filigrane (remplacée par l'écart type des écarts signés) ; nombres collés par un espace. Non traité : seuil calibré sur une fréquence attendue de paires ; test de l'hypothèse endpoint par endpoint en rejouant le prompt extrait dans le message utilisateur.
 
 ## 9. Reproduire
-```
-python probes/make_probes.py --v3 --n_fs 0 --out probes/probes_v3.jsonl ; python probes/geler.py probes/probes_v3.jsonl probes/probes_meta2.jsonl
-python bench/world.py --model allenai/OLMo-2-0425-1B-Instruct --fam olmo --regime G --probes probes/probes_v3.jsonl --lora lora_olmo --out world3/olmo_G_base.jsonl
-python analyse/eval_rules.py --probes probes/probes_gelees.jsonl --plan probes/plan.json --world world3 --fams olmo,qwen
-python analyse/e2e.py --world world3 --structure ref --seeds 12
-```
+Commandes dans `tracks/t2-model-equality/adem/README.md` ; chaque script de `analyse/` porte sa ligne d'usage en tête. Mondes générés sur la H200 : `~/eac/t2/world3` (glouton), `worldS` et `worldS3` (échantillonnés).

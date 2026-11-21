@@ -7,6 +7,8 @@ Sortie  : <out>.csv         soumission principale (endpoint,family,model)
           <out>_repli.csv   repli à faible risque : familles seules, chaque endpoint isolé (MCC modèle 0, compte
                             seulement pour la part famille, 10 % de la note)
           <out>_diag.txt    type détecté par endpoint, prompt système extrait, groupe central, rattachements
+Mode dégradé : --variante repli écrit le repli comme soumission principale. Il marche dès la ronde 0 (8 réponses par
+endpoint) : mesure du MCC famille selon le nombre de réponses dans analyse/eval_family_small.py.
 
 Étapes (analyse/rules.py et analyse/features.py) :
   1. familles : lien moyen sur une proximité normalisée (ou --families fichier.csv pour imposer les familles).
@@ -31,6 +33,7 @@ VARIANTES = {
     "centre": {"margin": 9.0},                               # tout endpoint déguisé va au groupe central
     "ancre": {"margin": 0.0, "attach_t": "nearest"},         # plus proche ancre en clair, sans a priori
     "prudent": {"attach_s": False, "attach_t": False, "detect_w": False},   # déguisés isolés
+    "repli": {},   # mode dégradé : familles seules, chaque endpoint isolé (le CSV principal est alors le repli)
 }
 
 
@@ -91,6 +94,8 @@ def run(answers, probes_path, variante="principal", fam_cut=0.4, endpoints=None,
             diag.append(f"  {e:22s} type={kd[e]} modèle={fn}M{ren[lab[e]]:<3d} nondet={x.nondet:.2f} fuites={x.n_leak} "
                         f"mots_récurrents={','.join(x.recur_words[:4])} rattachement={info.get('attach', {}).get(e, '')} "
                         f"prompt_système={x.leak[:60]!r}")
+    if variante == "repli":
+        rows = list(rows_repli)
     return rows, rows_repli, diag
 
 
