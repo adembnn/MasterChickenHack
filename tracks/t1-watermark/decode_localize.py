@@ -42,8 +42,15 @@ def agreement(logits, msg):
 
 
 @torch.no_grad()
-def window_map(wm, img_u8, msg, win=256, stride=64):
-    """Carte d'accord en pleine resolution par fenetre glissante, accumulee sur les recouvrements."""
+def window_map(wm, img_u8, msg, win=256, stride=64, mode="canvas"):
+    """Carte d'accord en pleine resolution par fenetre glissante, accumulee sur les recouvrements.
+
+    mode="canvas" : la fenetre est replacee a sa position exacte dans un canevas de la taille de
+    l'image, le reste en gris neutre. Les trois decodeurs redimensionnent l'entree a une resolution
+    fixe, donc c'est le seul mode qui garde l'echelle du motif. Hypotheses d'Adem, 21/11.
+    mode="crop" : la fenetre est passee telle quelle au decodeur, donc agrandie. Plus sensible mais
+    l'echelle du motif change, ce qui peut faire echouer le decodage.
+    """
     H, W = img_u8.shape[:2]
     total = np.zeros((H, W), np.float32)
     count = np.zeros((H, W), np.float32)
@@ -53,10 +60,17 @@ def window_map(wm, img_u8, msg, win=256, stride=64):
         ys.append(H - win)
     if xs[-1] != W - win:
         xs.append(W - win)
+    H_img, W_img = img_u8.shape[:2]
     crops, boxes = [], []
     for y in ys:
         for x in xs:
-            crops.append(img_u8[y:y + win, x:x + win])
+            crop = img_u8[y:y + win, x:x + win]
+            if mode == "canvas":
+                canvas = np.full((H_img, W_img, 3), 128, np.uint8)
+                canvas[y:y + crop.shape[0], x:x + crop.shape[1]] = crop
+                crops.append(canvas)
+            else:
+                crops.append(crop)
             boxes.append((y, x))
     batch = torch.cat([to_tensor(c) for c in crops], 0)
     scores = agreement(wm.logits(batch), msg).cpu().numpy()
@@ -85,13 +99,13 @@ def position_map(wm, img_u8, msg):
     return s[0, 0].cpu().numpy()
 
 
-def predict_image(wm, item, win=256, stride=64, w_win=1.0, w_pos=0.5, use_window=True):
+def predict_image(wm, item, win=256, stride=64, w_win=1.0, w_pos=0.5, use_window=True, mode="canvas"):
     img = item["image"]
     msg = item["message"]
     acc = np.zeros(img.shape[:2], np.float32)
     norm = 0.0
     if use_window:
-        acc += w_win * window_map(wm, img, msg, win, stride)
+        acc += w_win * window_map(wm, img, msg, win, stride, mode)
         norm += w_win
     pm = position_map(wm, img, msg)
     if pm is not None and w_pos > 0:
@@ -118,6 +132,8 @@ def main():
     ap.add_argument("--stride", type=int, default=64)
     ap.add_argument("--w-pos", type=float, default=0.5)
     ap.add_argument("--no-window", action="store_true")
+    ap.add_argument("--decode-mode", default="canvas", choices=["canvas", "crop"],
+                    help="canvas garde l'echelle du motif, crop agrandit la fenetre")
     ap.add_argument("--thr", type=float, default=None, help="seuil global, sinon celui du fichier de calibration")
     ap.add_argument("--calibrate", action="store_true", help="balaye le seuil sur le train par methode")
     ap.add_argument("--calib-out", default="calib_t1.json")
@@ -135,7 +151,8 @@ def main():
             ds.meta = ds.meta[: a.limit]
         out = []
         for i, it in enumerate(ds):
-            acc = predict_image(wms[it["method"]], it, a.win, a.stride, 1.0, a.w_pos, not a.no_window)
+            acc = predict_image(wms[it["method"]], it, a.win, a.stride, 1.0, a.w_pos,
+                                not a.no_window, a.decode_mode)
             out.append((it, acc))
             if i % 20 == 0:
                 print(f"{split} {i}/{len(ds)}", flush=True)
@@ -159,6 +176,7 @@ def main():
             print(m, calib[m])
         overall = score([to_grid(acc, calib[it["method"]]["thr"]) for it, acc in tr],
                         [it["mask128"] for it, _ in tr])
+        calib["decode_mode"] = a.decode_mode
         calib["overall_train_miou"] = round(overall, 4)
         Path(a.calib_out).write_text(json.dumps(calib, indent=2))
         print("train mIoU avec seuils par methode :", round(overall, 4))
