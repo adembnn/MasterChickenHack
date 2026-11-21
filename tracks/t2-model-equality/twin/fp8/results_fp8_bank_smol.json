@@ -1,0 +1,391 @@
+{
+ "config": {
+  "n": 220,
+  "n_numeric": 60,
+  "max_new": 96,
+  "bs": 16,
+  "delta": 4.0,
+  "B": 3000,
+  "model": "HuggingFaceTB/SmolLM2-360M-Instruct",
+  "temperature": 0.8,
+  "out": "results_fp8_bank_smol.json"
+ },
+ "matrix_mean_s": {
+  "plain/null_bs16": {
+   "e4m3_ch": -0.437,
+   "e4m3_tensor": -0.3,
+   "w8a8_tensor": -0.578,
+   "w8a8_ch": -0.779,
+   "e5m2_ch": -1.371
+  },
+  "sys_wm/null_bs16": {
+   "e4m3_ch": -0.438,
+   "e4m3_tensor": -0.676,
+   "w8a8_tensor": -1.112,
+   "w8a8_ch": -0.817,
+   "e5m2_ch": -1.809
+  },
+  "t1/null_bs16": {
+   "e4m3_ch": -0.495,
+   "e4m3_tensor": -0.491,
+   "w8a8_tensor": -0.785,
+   "w8a8_ch": -0.817,
+   "e5m2_ch": -1.518
+  },
+  "plain/null_bs5": {
+   "e4m3_ch": -0.362,
+   "e4m3_tensor": -0.205,
+   "w8a8_tensor": -0.469,
+   "w8a8_ch": -0.666,
+   "e5m2_ch": -1.254
+  },
+  "sys_wm/null_bs5": {
+   "e4m3_ch": -0.474,
+   "e4m3_tensor": -0.752,
+   "w8a8_tensor": -1.086,
+   "w8a8_ch": -0.665,
+   "e5m2_ch": -1.367
+  },
+  "t1/null_bs5": {
+   "e4m3_ch": -0.448,
+   "e4m3_tensor": -0.45,
+   "w8a8_tensor": -0.784,
+   "w8a8_ch": -0.741,
+   "e5m2_ch": -1.513
+  },
+  "plain/null_fp16": {
+   "e4m3_ch": -0.354,
+   "e4m3_tensor": -0.26,
+   "w8a8_tensor": -0.528,
+   "w8a8_ch": -0.658,
+   "e5m2_ch": -1.533
+  },
+  "sys_wm/null_fp16": {
+   "e4m3_ch": -0.352,
+   "e4m3_tensor": -0.543,
+   "w8a8_tensor": -0.773,
+   "w8a8_ch": -0.632,
+   "e5m2_ch": -1.002
+  },
+  "t1/null_fp16": {
+   "e4m3_ch": -0.459,
+   "e4m3_tensor": -0.375,
+   "w8a8_tensor": -0.786,
+   "w8a8_ch": -0.877,
+   "e5m2_ch": -1.445
+  },
+  "plain/fp8_e4m3_ch": {
+   "e4m3_ch": 0.113,
+   "e4m3_tensor": -0.213,
+   "w8a8_tensor": -0.483,
+   "w8a8_ch": -0.235,
+   "e5m2_ch": -1.471
+  },
+  "sys_wm/fp8_e4m3_ch": {
+   "e4m3_ch": 0.837,
+   "e4m3_tensor": -0.868,
+   "w8a8_tensor": -1.175,
+   "w8a8_ch": 0.54,
+   "e5m2_ch": -2.038
+  },
+  "t1/fp8_e4m3_ch": {
+   "e4m3_ch": 0.349,
+   "e4m3_tensor": -0.306,
+   "w8a8_tensor": -0.614,
+   "w8a8_ch": 0.04,
+   "e5m2_ch": -1.678
+  },
+  "plain/fp8_e4m3_tensor": {
+   "e4m3_ch": -0.36,
+   "e4m3_tensor": 0.494,
+   "w8a8_tensor": 0.191,
+   "w8a8_ch": -0.729,
+   "e5m2_ch": -1.565
+  },
+  "sys_wm/fp8_e4m3_tensor": {
+   "e4m3_ch": -0.577,
+   "e4m3_tensor": 0.529,
+   "w8a8_tensor": -0.086,
+   "w8a8_ch": -1.18,
+   "e5m2_ch": -2.712
+  },
+  "t1/fp8_e4m3_tensor": {
+   "e4m3_ch": -0.364,
+   "e4m3_tensor": 0.468,
+   "w8a8_tensor": 0.1,
+   "w8a8_ch": -0.703,
+   "e5m2_ch": -1.507
+  },
+  "plain/fp8_w8a8_tensor": {
+   "e4m3_ch": -0.314,
+   "e4m3_tensor": 0.39,
+   "w8a8_tensor": 0.56,
+   "w8a8_ch": -0.656,
+   "e5m2_ch": -1.378
+  },
+  "sys_wm/fp8_w8a8_tensor": {
+   "e4m3_ch": -0.235,
+   "e4m3_tensor": 0.349,
+   "w8a8_tensor": -0.109,
+   "w8a8_ch": -0.561,
+   "e5m2_ch": -1.96
+  },
+  "t1/fp8_w8a8_tensor": {
+   "e4m3_ch": -0.419,
+   "e4m3_tensor": 0.279,
+   "w8a8_tensor": 0.499,
+   "w8a8_ch": -0.614,
+   "e5m2_ch": -1.449
+  },
+  "plain/fp8_w8a8_ch": {
+   "e4m3_ch": 0.126,
+   "e4m3_tensor": -0.187,
+   "w8a8_tensor": -0.424,
+   "w8a8_ch": 0.23,
+   "e5m2_ch": -1.52
+  },
+  "sys_wm/fp8_w8a8_ch": {
+   "e4m3_ch": 0.665,
+   "e4m3_tensor": -0.476,
+   "w8a8_tensor": -0.681,
+   "w8a8_ch": 0.39,
+   "e5m2_ch": -1.197
+  },
+  "t1/fp8_w8a8_ch": {
+   "e4m3_ch": 0.344,
+   "e4m3_tensor": -0.379,
+   "w8a8_tensor": -0.704,
+   "w8a8_ch": 0.539,
+   "e5m2_ch": -1.85
+  },
+  "plain/fp8_e5m2_ch": {
+   "e4m3_ch": -0.641,
+   "e4m3_tensor": -0.203,
+   "w8a8_tensor": -0.428,
+   "w8a8_ch": -0.917,
+   "e5m2_ch": 1.154
+  },
+  "sys_wm/fp8_e5m2_ch": {
+   "e4m3_ch": -0.769,
+   "e4m3_tensor": -0.679,
+   "w8a8_tensor": -0.916,
+   "w8a8_ch": -1.008,
+   "e5m2_ch": 3.373
+  },
+  "t1/fp8_e5m2_ch": {
+   "e4m3_ch": -0.697,
+   "e4m3_tensor": -0.34,
+   "w8a8_tensor": -0.632,
+   "w8a8_ch": -1.013,
+   "e5m2_ch": 1.932
+  }
+ },
+ "power_bank": {
+  "plain": {
+   "n10": {
+    "thr": 2.021,
+    "fp8_e4m3_ch": 0.465,
+    "fp8_e4m3_tensor": 0.81,
+    "fp8_w8a8_tensor": 0.87,
+    "fp8_w8a8_ch": 0.774,
+    "fp8_e5m2_ch": 0.996
+   },
+   "n25": {
+    "thr": 2.071,
+    "fp8_e4m3_ch": 0.866,
+    "fp8_e4m3_tensor": 0.995,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 0.989,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n50": {
+    "thr": 2.107,
+    "fp8_e4m3_ch": 0.994,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n100": {
+    "thr": 2.025,
+    "fp8_e4m3_ch": 1.0,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   }
+  },
+  "sys_wm": {
+   "n10": {
+    "thr": 2.121,
+    "fp8_e4m3_ch": 0.827,
+    "fp8_e4m3_tensor": 0.723,
+    "fp8_w8a8_tensor": 0.614,
+    "fp8_w8a8_ch": 0.733,
+    "fp8_e5m2_ch": 0.999
+   },
+   "n25": {
+    "thr": 2.238,
+    "fp8_e4m3_ch": 0.996,
+    "fp8_e4m3_tensor": 0.981,
+    "fp8_w8a8_tensor": 0.909,
+    "fp8_w8a8_ch": 0.988,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n50": {
+    "thr": 2.277,
+    "fp8_e4m3_ch": 1.0,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 0.997,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n100": {
+    "thr": 2.376,
+    "fp8_e4m3_ch": 1.0,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   }
+  },
+  "t1": {
+   "n10": {
+    "thr": 2.135,
+    "fp8_e4m3_ch": 0.667,
+    "fp8_e4m3_tensor": 0.747,
+    "fp8_w8a8_tensor": 0.81,
+    "fp8_w8a8_ch": 0.826,
+    "fp8_e5m2_ch": 0.996
+   },
+   "n25": {
+    "thr": 2.106,
+    "fp8_e4m3_ch": 0.974,
+    "fp8_e4m3_tensor": 0.993,
+    "fp8_w8a8_tensor": 0.996,
+    "fp8_w8a8_ch": 0.999,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n50": {
+    "thr": 2.09,
+    "fp8_e4m3_ch": 1.0,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n100": {
+    "thr": 1.956,
+    "fp8_e4m3_ch": 1.0,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   }
+  }
+ },
+ "power_matched": {
+  "plain": {
+   "n10": {
+    "thr": 1.566,
+    "fp8_e4m3_ch": 0.633,
+    "fp8_e4m3_tensor": 0.893,
+    "fp8_w8a8_tensor": 0.932,
+    "fp8_w8a8_ch": 0.883,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n25": {
+    "thr": 1.586,
+    "fp8_e4m3_ch": 0.942,
+    "fp8_e4m3_tensor": 0.997,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 0.999,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n50": {
+    "thr": 1.564,
+    "fp8_e4m3_ch": 0.998,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n100": {
+    "thr": 1.512,
+    "fp8_e4m3_ch": 1.0,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   }
+  },
+  "sys_wm": {
+   "n10": {
+    "thr": 1.595,
+    "fp8_e4m3_ch": 0.917,
+    "fp8_e4m3_tensor": 0.851,
+    "fp8_w8a8_tensor": 0.492,
+    "fp8_w8a8_ch": 0.643,
+    "fp8_e5m2_ch": 0.999
+   },
+   "n25": {
+    "thr": 1.598,
+    "fp8_e4m3_ch": 1.0,
+    "fp8_e4m3_tensor": 0.994,
+    "fp8_w8a8_tensor": 0.792,
+    "fp8_w8a8_ch": 0.956,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n50": {
+    "thr": 1.662,
+    "fp8_e4m3_ch": 1.0,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 0.951,
+    "fp8_w8a8_ch": 0.999,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n100": {
+    "thr": 1.731,
+    "fp8_e4m3_ch": 1.0,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 0.999,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   }
+  },
+  "t1": {
+   "n10": {
+    "thr": 1.568,
+    "fp8_e4m3_ch": 0.808,
+    "fp8_e4m3_tensor": 0.9,
+    "fp8_w8a8_tensor": 0.923,
+    "fp8_w8a8_ch": 0.945,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n25": {
+    "thr": 1.544,
+    "fp8_e4m3_ch": 0.994,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n50": {
+    "thr": 1.491,
+    "fp8_e4m3_ch": 1.0,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   },
+   "n100": {
+    "thr": 1.377,
+    "fp8_e4m3_ch": 1.0,
+    "fp8_e4m3_tensor": 1.0,
+    "fp8_w8a8_tensor": 1.0,
+    "fp8_w8a8_ch": 1.0,
+    "fp8_e5m2_ch": 1.0
+   }
+  }
+ }
+}

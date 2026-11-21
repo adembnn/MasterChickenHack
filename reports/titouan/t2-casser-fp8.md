@@ -67,13 +67,50 @@ contexte, l'erreur de contexte s'annule en grande partie).
 3. **Le matériel distant ne compte pas.** fp8 calculée en fp16 au lieu de bf16 : puissance identique (0,998). Les nuls bf16/fp16/eager/
    autres lots donnent la même moyenne (−0,13 à −0,14) : le LLR est insensible au bruit de service, contrairement au texte identique.
 
-## 3. Format fp8 inconnu : banque de lecteurs
+## 3. Format fp8 inconnu : banque de lecteurs (jumeau SmolLM2-360M-Instruct, base réelle des ref, échantillonné T=0,8)
 
-<!-- BANK_SECTION -->
+Après identification de la base des ref (SmolLM2-360M-Instruct) et du décodage (T≈0,8), le jumeau a été refait sur ce modèle,
+en échantillonné. 5 schémas fp8 distants × 3 classes (clair T=0,8 ; system+persona+filigrane δ=4 à T=0,8 ; T=1,0), contre 3
+endpoints nuls par classe (lot 16, lot 5, fp16). 280 réponses par endpoint. Statistique = max sur les 5 lecteurs du z standardisé,
+seuil = 95e centile de ce **même max** sur les nuls (les tests multiples sont donc couverts).
 
-## 4. Généralisation à une 2e famille (Qwen2.5-1.5B-Instruct)
+| n réponses | clair | system+persona+filigrane | T=1,0 |
+|---|---|---|---|
+| 25 | 0,87-1,00 | 0,91-1,00 | 0,97-1,00 |
+| 50 | ≥ 0,99 | ≥ 0,99 | 1,00 |
+| 100 | 1,00 | 1,00 | 1,00 |
 
-<!-- QWEN_SECTION -->
+Matrice croisée (moyenne de s, extrait) : les schémas se regroupent en **3 groupes qui se reconnaissent entre eux** : per-canal
+{e4m3_ch, W8A8_ch}, per-tensor {e4m3_tensor, W8A8_tensor}, et e5m2 seul. Un lecteur d'un autre groupe ne voit rien, voire un signal
+inversé. Sur un 360M, la fp8 est une perturbation bien plus forte que sur OLMo-1B (écart fp8/nul ≈ 0,8 nat par réponse en clair).
+
+## 4. Sur les VRAIES réponses ref (bloc 0 : 24 prompts communs × 9 ref, 25 réponses par ref)
+
+Réponses déjà collectées par la session principale, relues localement (`score_ref.py`, puis `ep_readers.py`). z apparié par prompt
+contre la médiane des copies (endpoint testé exclu, ref-08 T=1,0 exclu du plancher) :
+
+| Lecteur | ref-02 (fp8) | meilleure copie | LoRA 04 / 07 / 09 |
+|---|---|---|---|
+| e4m3 per-tensor | **2,9** | ref-03 2,1 | −0,7 / −1,6 / 0,3 |
+| W8A8 per-tensor | **3,6** | ref-03 2,0 | 0,8 / −1,4 / −0,1 |
+| e4m3 per-canal | 1,0 | ref-08 1,4 | – |
+| e5m2 | 0,1 | – | – |
+
+- **Le groupe per-tensor est le bon** : ref-02 sort 1er sur 9 avec les deux lecteurs per-tensor, et seulement avec eux (cohérent
+  avec la matrice croisée du jumeau). L'écart de ref-02 à la moyenne des copies (+1,15 nat/réponse) est du même ordre que sur le jumeau.
+- **Ce qui manque** : les copies réelles sont bien plus dispersées que dans le jumeau (moyenne de s de −0,83 à +0,21 selon le
+  déguisement). ref-03 (system prompt) monte presque autant que ref-02. Ce décalage ne diminue pas avec n.
+- Correction par la surprise du lecteur base (régression de s sur −log p_base) : pente ≈ 0, aucun effet.
+- La sonde d'extraction ne rend pas proprement le system prompt à T=0,8 sur ce 360M : impossible de relire ref-03 avec son contexte.
+
+<!-- REAL100_SECTION -->
+
+## 4b. Bonus demandé par la session principale : LoRA faible (0,3) par LoRA distillée
+
+LoRA r=16 entraînée localement pour imiter les réponses de ref-07 (×1,0) et ref-04 (×0,47), ref-09 exclu, validation croisée par
+prompt (2 plis). Lecteur s = log p_{base+LoRA·k} − log p_base. Sur le bloc 0 : **ref-09 z = 2,8-3,2** (échelle pleine), copies
+01/03/05/06 ≤ 1,2, fp8 ref-02 −0,6 ; ref-04 3,7-5,0. ref-08 (T=1,0) tombe à −4 à −7 et doit sortir du plancher.
+Adaptateur partagé avec la session v4 : `h200c:/tmp/eac-t2-real/lora_est/`. Généralisé aux 3 bases des ep dans `ep_readers.py`.
 
 ## 5. Recommandation
 
