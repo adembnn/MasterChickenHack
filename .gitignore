@@ -9,6 +9,7 @@ data/
 checkpoints/
 runs/
 wandb/
+tracks/t2-model-equality/logs/
 *.pt
 *.safetensors
 *.ckpt
