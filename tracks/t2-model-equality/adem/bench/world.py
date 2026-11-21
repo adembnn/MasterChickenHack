@@ -88,6 +88,8 @@ def kgw_bias(prev, vocab, key, gamma, delta, device):
 def generate(model, tok, texts, max_new, temp, wm_key, bs, eos_ids, gamma=0.25, delta=2.0, seed=0):
     """Génère par lots. temp None ou 0 = glouton. Renvoie les textes décodés (sans tokens spéciaux)."""
     g = torch.Generator(device="cuda").manual_seed(seed)
+    inner = model.base_model.model if hasattr(model, "peft_config") else model
+    core, head = inner.model, inner.lm_head  # on n'applique lm_head qu'à la dernière position (mémoire)
     order = sorted(range(len(texts)), key=lambda i: len(texts[i]))
     outs = [None] * len(texts)
     eos = torch.tensor(sorted(eos_ids), device="cuda")
@@ -95,8 +97,8 @@ def generate(model, tok, texts, max_new, temp, wm_key, bs, eos_ids, gamma=0.25, 
         idx = order[s:s + bs]
         enc = tok([texts[i] for i in idx], return_tensors="pt", padding=True, add_special_tokens=False).to("cuda")
         mask = enc["attention_mask"]
-        out = model(input_ids=enc["input_ids"], attention_mask=mask, use_cache=True)
-        past, logits = out.past_key_values, out.logits[:, -1].float()
+        out = core(input_ids=enc["input_ids"], attention_mask=mask, use_cache=True)
+        past, logits = out.past_key_values, head(out.last_hidden_state[:, -1:])[:, -1].float()
         prev = enc["input_ids"][:, -1]
         done = torch.zeros(len(idx), dtype=torch.bool, device="cuda")
         gen = []
@@ -113,8 +115,8 @@ def generate(model, tok, texts, max_new, temp, wm_key, bs, eos_ids, gamma=0.25, 
             if done.all():
                 break
             mask = torch.cat([mask, torch.ones_like(mask[:, :1])], 1)
-            out = model(input_ids=nxt[:, None], attention_mask=mask, past_key_values=past, use_cache=True)
-            past, logits, prev = out.past_key_values, out.logits[:, -1].float(), nxt
+            out = core(input_ids=nxt[:, None], attention_mask=mask, past_key_values=past, use_cache=True)
+            past, logits, prev = out.past_key_values, head(out.last_hidden_state)[:, -1].float(), nxt
         gen = torch.stack(gen, 1).tolist()
         for i, row in zip(idx, gen):
             cut = len(row)
@@ -142,7 +144,7 @@ def main():
     ap.add_argument("--lora", default=None, help="dossier de l'adaptateur PEFT (sinon pas de variantes LoRA)")
     ap.add_argument("--weights", default="base,fp8,int8,nf4,lora0.3,lora0.7,lora1.5")
     ap.add_argument("--disguises", default=None, help="liste restreinte (défaut : 5 principaux + répliques de la base)")
-    ap.add_argument("--bs", type=int, default=48)
+    ap.add_argument("--bs", type=int, default=32)
     ap.add_argument("--max_new", type=int, default=256)
     ap.add_argument("--default_temp", type=float, default=0.7)
     ap.add_argument("--repeats", type=int, default=None, help="plafonne le nombre de répétitions par sonde")
