@@ -11,15 +11,15 @@ Hermes `ami` sur NemoClaw. Les commandes ci-dessous ont été exécutées.
 - NVIDIA H200, **143 771 MiB**, 16 vCPU, 200 GiB de RAM
 - **Préemptible** (prix spot). IP publique dynamique. Sauver les résultats souvent.
 
-| | Nœud 1 | Nœud 2 | Nœud 3 (celui-ci) |
-|---|---|---|---|
-| Identifiant | `computeinstance-e01w9a2hev5w1t9mdb` | `computeinstance-e01s01aed56r0tdfyy` | `computeinstance-e01xmbm7xkz7h69bn5` |
-| Nom console | `green-starfish-instance-6` | `fuchsia-mosquito-instance-6` | (création 21 nov.) |
-| IP publique | `66.201.7.7` | `66.201.4.154` | `66.201.6.94` |
-| IP privée | `10.48.0.47` | `10.48.0.101` | `10.48.0.159` |
-| Empreinte hôte ED25519 | `SHA256:z+SaIzu+B14CjewmXT/38KIub3w+ktoRqipczwSRsps` | `SHA256:VnLzDfZRhxVp9zIGpPWMuvzsnrqxEhWFLRCDHgrFgDY` | `SHA256:dyCoQ3+e1LGqjlkY7XB3nA3qoBA3p7PQid+yjn9ojWA` |
+| | Nœud 1 | Nœud 2 | Nœud 3 (celui-ci) | Nœud 4 |
+|---|---|---|---|---|
+| Identifiant | `computeinstance-e01w9a2hev5w1t9mdb` | `computeinstance-e01s01aed56r0tdfyy` | `computeinstance-e01xmbm7xkz7h69bn5` | `computeinstance-e01jfkvbjns4sd3796` |
+| Nom console | `green-starfish-instance-6` | `fuchsia-mosquito-instance-6` | (création 21 nov.) | `peach-rooster-instance-5` |
+| IP publique | `66.201.7.7` | `66.201.4.154` | `66.201.6.94` | **aucune** |
+| IP privée | `10.48.0.47` | `10.48.0.101` | `10.48.0.159` | `10.48.0.219` |
+| Empreinte hôte ED25519 | `SHA256:z+SaIzu+B14CjewmXT/38KIub3w+ktoRqipczwSRsps` | `SHA256:VnLzDfZRhxVp9zIGpPWMuvzsnrqxEhWFLRCDHgrFgDY` | `SHA256:dyCoQ3+e1LGqjlkY7XB3nA3qoBA3p7PQid+yjn9ojWA` | `SHA256:/36HFyO4qzbBV3Qgz/e+cdUhe6l8Ikx077pUFGviVU8` |
 
-Les trois VM sont dans `default-network` / `default-subnet-eqxzbx6y`. Depuis le nœud 1, le
+Les quatre VM sont dans `default-network` / `default-subnet-eqxzbx6y`. Depuis le nœud 1, le
 nœud 3 répond en **~2 ms** sur `10.48.0.159`, port 22 ouvert. Copier les données par l'IP
 **privée**, pas par le public.
 
@@ -27,6 +27,7 @@ Guides des autres nœuds :
 
 - Nœud 1 : [`acces-h200-nebius.md`](acces-h200-nebius.md)
 - Nœud 2 : [`acces-h200-nebius-noeud-2.md`](acces-h200-nebius-noeud-2.md)
+- Nœud 4 (privé seul) : [`acces-h200-nebius-noeud-4.md`](acces-h200-nebius-noeud-4.md)
 
 ## Comptes
 
