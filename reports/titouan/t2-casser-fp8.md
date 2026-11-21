@@ -15,6 +15,7 @@ fp8 reste hors de portée : aucune statistique texte seul ne sépare fp8 du brui
 Sur le serveur réel, les bases ont été identifiées (ref = SmolLM2-360M ; ep = Qwen2.5-3B / Qwen2.5-1.5B / Llama-3.2-1B), le test
 est donc applicable : avec 25 réponses par endpoint, la règle a donné **MCC 1,000 sur le corrigé ref**. Elle a étiqueté 3 fp8 et
 5 LoRA parmi les 33 ep pour la soumission du 21/11 à 23 h 09 (§5). Le seuil a été calé sur ces mêmes ref : le score réel tranchera.
+**Correction (§5b)** : les étiquettes LoRA sont des artefacts de température ; seules les 3 étiquettes fp8 tiennent.
 
 ## 1. Ce qui ne marche pas (et pourquoi les anciens chiffres optimistes étaient faux)
 
@@ -129,9 +130,24 @@ Pénalité de répétition auto : 1,0 dans les 3 familles (NLL/token nettement p
 | qwen3b | aucun (max 2,3 / 1,6) | ep-23 (NLL 0,827, ep-14 juste derrière à 0,809) | **ep-04** (2,7), **ep-17** (2,5), limites | 7 |
 
 Lecture : un fp8 net (ep-22), deux probables. Rien sur Qwen-3B, ce qui est attendu (plus le modèle est gros, plus la perturbation
-fp8 est faible). Les LoRA faibles de qwen3b sont tout juste au seuil. Les guichets T*=0,9 sont mal expliqués par « simple copie à
-température plus haute » : sous un lecteur entraîné sur l'un d'eux, les autres de la même famille tombent à −4,5 / −5,8, comme les
-T=1,0. Le choix du corpus LoRA par NLL maximale est fragile en qwen3b (écart de 0,02 nat).
+fp8 est faible).
+
+### 5b. Correction après coup : les z LoRA mesurent la température, pas les z fp8
+
+Contrôle demandé par la session principale (remarque d'Adem), avec comme proxy de température la NLL/token de chaque guichet sous
+la base :
+
+| Lecteur | corr(z, NLL) llama1b / qwen1.5b / qwen3b | Après régression z ~ NLL |
+|---|---|---|
+| LoRA distillée ×0,3 / ×1,0 | **−0,89 à −0,91 / −0,84 à −0,92 / −0,82 à −0,91** | aucun résidu > 1,5, sauf qwen3b ep-02 (2,3-3,7) |
+| fp8 e4m3 / W8A8 per-tensor | −0,04 / −0,45 / −0,07 (e4m3) | ep-22 (5,1 / 3,7), ep-05 (3,1 / 2,5), ep-15 (2,1 / 2,6) restent en tête |
+
+- **Les étiquettes LoRA de la soumission de 23 h 09 sont des artefacts de température.** ep-04 et ep-17 sont les deux guichets les
+  plus froids de qwen3b (résidus 0,7-1,0). Les corpus ep-07/16/23 ont été choisis par NLL maximale, donc ce sont les plus chauds
+  hors T=1, et rien ne les distingue d'une copie plus chaude.
+- **Mon indice « le lecteur rejette le texte T=1 » est le même artefact. Je le retire.** (Sur les ref, ref-09 n'était pas concerné : sa
+  NLL de 0,92 est au milieu des copies, 0,89-0,99.)
+- **Les fp8 ne sont pas touchés** : la statistique fp8 compare deux lecteurs tirés de la même base, donc la température s'annule.
 
 ## 6. Recommandation
 
@@ -140,8 +156,9 @@ T=1,0. Le choix du corpus LoRA par NLL maximale est fragile en qwen3b (écart de
    (c) calibrer contre des copies du même modèle via une médiane robuste, en excluant les guichets T≥1, jamais contre 0.
 2. **Budget** : 25 réponses suffisent pour un fp8 sur un petit modèle (360M-1,5B) en clair ; il en faut ~50 sous déguisement
    (system prompt + filigrane). Sur un 3B, 25 ne suffisent pas.
-3. **Après le score de 23 h 09** : si les fp8/LoRA limites (ep-15, ep-04, ep-17) coûtent, monter le seuil à 3,0. Avec les 100
-   réponses par endpoint, refaire la règle hors échantillon et vérifier que ref-02 reste au-dessus de ref-03.
+3. **Soumission suivante** : garder fp8 = {ep-22}, {ep-05, ep-15} ; remettre en base les 5 étiquettes LoRA (§5b). Une LoRA
+   distillée n'est utilisable que si elle est corrigée de la température : corpus et référence de même T*, ou z régressé sur la
+   NLL. Avec les 100 réponses par endpoint, refaire la règle hors échantillon et vérifier que ref-02 reste au-dessus de ref-03.
 4. Le reste de mes pistes de départ (texte identique, sondes numériques, variabilité, NLL croisée entre lecteurs) **ne sert à rien
    pour fp8** : ne pas y dépenser de requêtes.
 
