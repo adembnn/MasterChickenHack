@@ -128,7 +128,56 @@ bitsandbytes, LoRA entraînée (r=8, q_proj/v_proj ou qkv_proj fusionné selon l
 l'échelle 0,3/0,7/1,0/1,5), paramétré par `--model`, lancé sur Qwen2.5-1.5B, SmolLM2-1.7B, Mistral-7B,
 Ministral-8B et Phi-3.5-mini (réglages allégés : n=100 prompts, 56 tokens, pour tenir sur une VM partagée).
 
-<!-- TABLEAU_DIVERGENCE_MULTI -->
+Résultats bruts : `results_divergence_multi.json` (et un `*_outputs.json` par modèle avec les textes complets).
+Job terminé (`TOUT FINI`) sur les 5 familles. Toutes les valeurs sont des **taux de divergence**
+(1 − fraction de textes identiques à la base, même convention que `t2-mcc-simulation.md`/OLMo) pour comparer
+directement aux chiffres OLMo rappelés en tête de section (bruit 0,30-0,34 ; int8 0,50 ; fp8 0,78-0,93 ;
+nf4 0,98 ; LoRA 0,3 0,82 ; LoRA ≥0,7 ≥0,98).
+
+| Modèle | Plancher de bruit (min-max sur bs∈{1,4,16}+dtype fp16) | fp8 e4m3 | fp8 e5m2 | int8 | nf4 | LoRA 0,3 | LoRA 0,7 | LoRA 1,0 | LoRA 1,5 |
+|---|---|---|---|---|---|---|---|---|---|
+| OLMo-2-1B (référence, `t2-mcc-simulation.md`) | 0,30-0,34 | — | — | 0,50 | 0,98 | 0,82 | ≥0,98 | ≥0,98 | ≥0,98 |
+| Qwen2.5-1.5B-Instruct | 0,11-0,42 | 0,77 | 0,80 | 0,61 | 1,00 | 0,84 | 0,97 | 1,00 | 1,00 |
+| SmolLM2-1.7B-Instruct | 0,13-0,30 | 0,59 | 0,76 | 0,47 | 0,95 | 0,85 | 1,00 | 1,00 | 1,00 |
+| Mistral-7B-Instruct-v0.3 | 0,25-0,29 | 0,67 | 0,73 | 0,48 | 0,98 | 0,77 | 1,00 | 1,00 | 1,00 |
+| **Ministral-8B-Instruct-2410** | **0,07-0,16** | **0,20** | 0,53 | **0,15** | 0,68 | 0,57 | 1,00 | 1,00 | 1,00 |
+| **Phi-3.5-mini-instruct** | **0,14-0,58** | 0,77 | 0,85 | 0,56 | 1,00 | 0,64 | 1,00 | 1,00 | 1,00 |
 
 ### Lecture
-<!-- LECTURE_DIVERGENCE_MULTI -->
+
+**1. nf4 et LoRA ≥ 0,7 se généralisent très bien** : partout ≥ 0,68 (nf4) et ≥ 1,00 (LoRA ≥ 0,7), comme sur
+OLMo. Ces deux variantes restent détectables quelle que soit la famille — pas de recalibrage nécessaire.
+
+**2. Le seuil OLMo τ ≈ 0,42-0,43 et « seul int8 est fragile » NE SE GÉNÉRALISENT PAS : résultat majeur.**
+- **Ministral-8B casse l'hypothèse « int8 proche du seuil mais détectable »** : int8 (0,15) et **fp8 e4m3 (0,20)**
+  tombent *en dessous ou au niveau du plancher de bruit (0,07-0,16)* — avec ce prompt-set et ce τ, Ministral-8B
+  en int8 ou en fp8-e4m3 serait classé **« même modèle »** alors qu'il est quantifié : faux négatif quasi garanti,
+  pas seulement une perte de puissance comme sur OLMo (où int8 restait à 0,50, loin au-dessus du plancher 0,30-0,34).
+  nf4 (0,68) est aussi anormalement bas pour Ministral comparé aux autres familles (0,95-1,00) — cette famille
+  semble globalement plus tolérante/robuste à la quantification poids-seule sur ce protocole, à confirmer avec
+  plus de prompts avant de généraliser plus loin.
+- **Phi-3.5-mini casse l'hypothèse « le plancher de bruit est un petit intervalle stable »** : le plancher varie
+  de **0,14 à 0,58** selon la seule taille de lot (bs=1 vs bs=16) — *au-dessus* du τ=0,42-0,43 calibré sur OLMo.
+  Avec ce seuil, **deux copies du même Phi-3.5-mini servies à des tailles de lot différentes seraient classées
+  « modèles différents »** (faux positif), et int8 (0,56) ne se distingue plus franchement du pire cas de bruit
+  (0,58). Hypothèse à vérifier : Phi-3.5 (architecture avec `qkv_proj`/`gate_up_proj` fusionnés, RoPE à plage
+  étendue) est peut-être plus sensible au padding/à l'ordre de batching sous HF `generate` que les architectures
+  Llama-like ; si confirmé sur le vrai serving des organisateurs, le plancher de bruit devra être mesuré par
+  famille (étape 0 du plan, déjà prévue dans `t2-method-v3.md`) et pas supposé universel.
+- Qwen2.5-1.5B, SmolLM2 et Mistral-7B, en revanche, reproduisent assez bien le patron OLMo : plancher ≤ 0,30-0,42,
+  int8 et fp8 clairement au-dessus (0,47-0,80), nf4 et LoRA forte proches de 1,0. Sur ces trois familles, le
+  seuil τ ≈ 0,42-0,43 sépare encore raisonnablement int8/fp8 du bruit (marge plus courte pour Qwen : bruit max
+  0,42 est déjà au seuil).
+
+**3. Conséquence pour la méthode T2** : ne jamais figer un seuil unique avant d'avoir mesuré, sur les `ref-*`
+réels, (a) le plancher de bruit à au moins deux tailles de lot et (b) si possible une comparaison fp8/int8
+contre la base — l'écart entre OLMo et Ministral/Phi-3.5 ici (facteur 2-3 sur la marge signal/bruit) montre que
+la calibration dépend de la famille réelle derrière les endpoints, pas seulement de la variante organisateur.
+Si la vraie famille s'avère être une « famille Ministral-like » (fp8/int8 presque invisibles, bruit faible),
+`t2-mcc-simulation.md` sous-estimerait fortement le risque de faux négatif sur les variantes quantifiées légères.
+
+**Limites** : n=100 prompts (contre 200 pour OLMo), `max_new_tokens`=56 (contre 64), LoRA entraînée 80 pas
+(contre 120), une seule graine de LoRA par modèle — réglages allégés pour tenir sur une VM partagée en
+~30 min/modèle (LoRA incluse). Les écarts qualitatifs ci-dessus (facteur 2-3, pas quelques points) sont
+probablement robustes à ces réglages plus légers, mais les valeurs exactes devraient être resserrées avec
+n=200+ avant de les figer dans un seuil de soumission.
