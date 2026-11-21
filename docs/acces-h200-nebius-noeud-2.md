@@ -14,17 +14,18 @@ premier nœud. Tout ce qui suit a été exécuté, pas supposé : les commandes 
   dynamique. Conséquence pratique : sauver les résultats au fur et à mesure, ne pas compter sur une
   session longue sans surveillance.
 
-| | Premier nœud | Deuxième nœud |
-|---|---|---|
-| Nom | `green-starfish-instance-6` | `fuchsia-mosquito-instance-6` |
-| IP publique | `66.201.7.7` | `66.201.4.154` |
-| IP privée | (réseau `default-network`) | `10.48.0.101` |
-| Empreinte hôte ED25519 | `SHA256:z+SaIzu+B14CjewmXT/38KIub3w+ktoRqipczwSRsps` | `SHA256:VnLzDfZRhxVp9zIGpPWMuvzsnrqxEhWFLRCDHgrFgDY` |
+| | Nœud 1 | Nœud 2 (celui-ci) | Nœud 3 |
+|---|---|---|---|
+| Nom / id | `green-starfish-instance-6` | `fuchsia-mosquito-instance-6` | `computeinstance-e01xmbm7xkz7h69bn5` |
+| IP publique | `66.201.7.7` | `66.201.4.154` | `66.201.6.94` |
+| IP privée | `10.48.0.47` | `10.48.0.101` | `10.48.0.159` |
+| Empreinte hôte ED25519 | `SHA256:z+SaIzu+B14CjewmXT/38KIub3w+ktoRqipczwSRsps` | `SHA256:VnLzDfZRhxVp9zIGpPWMuvzsnrqxEhWFLRCDHgrFgDY` | `SHA256:dyCoQ3+e1LGqjlkY7XB3nA3qoBA3p7PQid+yjn9ojWA` |
 
-Les deux VM sont dans le même réseau privé `default-network`, sous-réseau `default-subnet-eqxzbx6y`.
+Les trois VM sont dans le même réseau privé `default-network`, sous-réseau `default-subnet-eqxzbx6y`.
 Depuis le premier nœud, le second répond en **1,2 ms** en moyenne sur `10.48.0.101`, et le port 22 est
 ouvert. C'est le chemin à utiliser pour copier des données : passer par l'IP publique serait plus
-lent et inutilement exposé.
+lent et inutilement exposé. Mode d'emploi du troisième nœud :
+[`acces-h200-nebius-noeud-3.md`](acces-h200-nebius-noeud-3.md).
 
 ## Comptes
 
