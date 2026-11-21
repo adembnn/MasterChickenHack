@@ -1,0 +1,787 @@
+European AI
+Championship
+
+Dr. Adam Dziedzic CISPA
+Prof. Dr. Franziska Boenisch
+TUM & Fraunhofer AISEC
+Introduction by Adam & Franziska
+
+          Adam Dziedzic             Franziska Boenisch
+
+          CISPA, University of      Full Professor at the Technical
+          Toronto and Vector        University of Munich, Director at
+          Institute, University of  Fraunhofer AISEC, University of
+SprintML  Chicago, Google,          Toronto, Vector Institute, FU
+          Microsoft Research,       Berlin, Fraunhofer AISEC,
+          Barclays Investment       AbiBac: Berlin & Lyon, TU
+          Bank, DTU, EPFL,          Eindhoven, Chung Cheng
+          CERN                      University in Taiwan
+                                                                     2
+         European Championship 2025/2026
+
+                                          6 x 24-hour competitions + FINALE
+                                             More than 1000 registrations!
+
+                                         Grand FINALE at CISPA July 1-3, 2026
+
+             Regional rounds in:
+                     Paris,
+                    Vienna,
+
+                  Stockholm,
+                    Munich,
+
+More info! Barcelona &
+                    Warsaw
+
+                                                                                                                                                     4
+SprintML
+
+S - ecure
+P - rivate
+R - obust
+In - terpretable
+T ­ rustworthy
+
+     Machine Learning
+
+We create the tasks!
+                                                                                                                                                             5
+                  About CISPA
+
+· Research about Security & Machine Learning
+· Located in Saarbrücken (<2h from
+
+   Paris/Frankfurt/Luxembourg)
+· International community with > 750 employees
+
+   from 66 different nations
+· >50 Faculty Members and their research groups
+
+                                                                                                                                                          6
+   What makes us proud at CISPA?
+
+https://csrankings.org/#/fromyear/2016/toyear/2026/index?sec&world
+                                                                                                                                  7
+About Fraunhofer AISEC
+
+· Applied cybersecurity research, incl. AI security              Berlin
+· Garching campus, right next to TUM
+· Part of Fraunhofer: 74 institutes, >30,000 staff     Weiden
+· Theses, student jobs & PhD positions: talk to us!  Munich
+
+                                                                         8
+Awards      1st place:
+        10,000
+
+                        9
+                Sponsors
+
+SprintML
+                 Internship at CISPA
+
+Link: https://career.cispa.de/internship
+
+                                                                                                                                                      11
+Communication via Discord https://discord.gg/urUG53tnbJ
+
+                                                                                                                            12
+          Discord
+
+Link: https://discord.gg/urUG53tnbJ
+
+                                                                                                                                            13
+          Plan for Our 24-hour Championship
+
+November 21st (Saturday):
+12:00 ­ Participant registration and lunch provided in the Lobby
+13:00 ­ Opening plenary, keynote lecture, information about the tasks
+14:30 ­ Hackathon begins
+17:00 ­ Dinner delivered in the Lobby
+18:00 ­ Hacking the whole night
+November 22nd (Sunday):
+08:00 ­ Breakfast delivered in the Lobby
+12:00 ­ Hackathon ends & Lunch
+13:00 ­ 6 min presentations of the solutions to the tasks by 6 best teams
+14:00 ­ Jury deliberation
+14:30 ­ Award ceremony
+15:00 ­ Official end
+
+                                                                                                                                            14
+Leaderboard: Ranking of All the Teams
+
+                                                                                                                           15
+Jury  CISPA Technical Team
+
+                            16
+Technical
+Information
+
+17  CISPA Championship  17
+Our Large Data Leads to Impressive Capabilities
+
+Generative Models:  GPT  ...  LLaMA
+
+Train                    Generate
+
+                                     import sys # system
+
+                                     print("Data Provenance
+                                     for Generative AI")
+
+                                                             18
+Generative Models Memorize Training Data
+
+Train  Generate
+
+Copyright & Privacy
+     Violations
+
+   > 100 lawsuits, 100 bn 
+
+                                                                                                                                                   19
+Generative Models Produce Misinformation
+
+                       Train  Generate
+                                               Fake Data
+Copyright & Privacy
+     Violations                                                                           20
+Generative Models Create Data Loops
+
+Copyright        Data Loops                      Fake Data
+& Privacy Train
+Violations                            Generate
+
+                 Quality Degradation
+
+                                                            21
+                       Data Provenance Tracing for Generative AI
+
+                                   CDhaatallLeonogpes :            Fake Data
+
+                       TraDin ata Provenance Tracing for Generate
+                                 GQueanlietyraDteigvreadAatIion
+
+22 CISPA Championship                                                         22
+We Need Data Provenance for GenAI Now!
+
+                                                                                              2026
+
+Copyright        Data Loops                                 EU
+& Privacy Train                                           AI Act
+Violations
+                                      Generate Fake Data
+EU AI Act:
+Article 53       Quality Degradation  EU AI Act:
+                                      Article 50
+Keynote: Pierre Fernandez from Meta
+TASK 1:
+Localize Image
+Watermarking
+
+                                                                                                                                                  25
+Which part of the image carries a watermark?
+
+                                                                                                                                                           26
+Which part of the image carries a watermark?
+
+                                                               Watermark
+
+                                                                                                                                                           27
+Which part of the image carries a watermark?
+
+                                                               Watermark Methods:
+                                                               1. PixelSeal
+                                                               2. TrustMark
+                                                               3. StegaStamp
+
+                                                                                                                                                           28
+Which part of the image carries a watermark?
+
+                                                      Image Resolution: 512 x 512
+                                                      Evaluation: 128 x 128 grid
+                                                      One Cell: 4 x 4 pixels
+
+                                                      Task: Assign Labels to Cells
+
+                                                      1: At least 50% of the Cell is
+                                                      watermarked
+                                                      0: Clean (No watermark)
+
+                                                                                                                                                           29
+Metric: Intersection over Union (IoU)
+
+  =    =      
+          |   |
+
+Compute Intersection over Union (IoU) for class c
+Class c: c=1 ­ watermarked, c=0 ­ clean (no watermark)
+
+ - the set of cells you predict as class c
+- ground truth - the set of cells that truly belong to class c
+ - intersection ­ the numerator counts cells where you and the
+ground truth agree on
+
+ - union ­ the denominator counts cells that are either labeled as c
+or ground truth with class c
+
+                                                                                                                                                          30
+     Metric: Intersection over Union (IoU)
+
+Per class:  =       = 
+
+                    ||
+
+Per  Image:        =  0+1
+                            2
+
+Final Score Across Images:
+
+ = 1           =   ,  where      is  an  image
+               =1
+             
+index and  is the total number of images. 31
+      Artifacts for the Watermarking Task
+
+You are given 1530 images in total.
+Images: split equally across 3 watermarks.
+
+Train split: 510 images (170 per watermark) with:
+1. Ground-truth mask (512 x 512 and 128 x 128)
+2. Watermarking method
+3. Embedded message (bit string)
+
+Test split: 1020 images (340 per watermark) with:
+1. Image
+2. Watermarking method and embedded message
+
+                                                                                                                                                          32
+TASK 2:
+Model Equality
+Testing
+
+                                                                                                                                                    33
+Do two APIs serve the same model?
+
+      Your Queries to the API
+
+Enco  =   DeEcnoco
+de    dede
+
+    Model Responses
+                                                                                                                    34
+Do two APIs serve the same model?
+
+      Your Queries to the API
+
+Enco  =   DeEcnoco
+de    dede
+
+      Watermarked
+
+    Model Responses
+                                                                                                                    35
+           Various Model Families
+
+Enco     DeEcnoco   DeEcnoco    ep-04  ...
+de       dede       dede
+                                                      ep-33
+  ep-01      ep-02     ep-03
+
+Differences in the deployment:         Same family
+   Base Model                          alone does
+   Quantization configuration          not mean the
+                                       same model
+   LoRA adapter
+
+Watermark
+
+System prompt
+
+Decoding strategy (e.g., greedy vs beam search)
+
+                                                             36
+               Various Model Families
+
+Enco     DeEcnoco   DeEcnoco       ep-04  ...
+de       dede       dede
+                                                         ep-33
+  ep-01      ep-02     ep-03
+
+Differences in the deployment:
+
+1. Base Model
+
+2. Quantization configuration Different Model Identities
+
+3. LoRA adapter
+
+4. Base Model +Watermark           The Same Model
+5. Base Model + System prompt      Identities
+6. Base Model + Decoding strategy
+
+                                                                37
+         Various Model Families
+
+Enco     DeEcnoco   DeEcnoco       ...  ep-33
+de       dede       dede
+                              ep-04
+  ep-01      ep-02     ep-03
+
+         Different Model      Same Model
+
+Your goal: : for every endpoint, find its family (same base model). For every pair, decide
+                                 whether they serve the same model.
+
+                                                                                                                                                      38
+Score: Matthews correlation coefficient (MCC)
+
+· Each unordered pair (i, j), i < j, counts once: 528 pairs  10% Family
+· TP: correctly called "same"                                                       same family? all pairs
+· TN: correctly called "different"
+· FP: wrongly called "same" (false alarm)                    90%  Model
+· FN: wrongly called "different" (missed pair)
+                                                                  same model? pairs
+                             (× - ×)                              within one family
+   =
+
+                  +   +   +  ( + )
+
+MCC_x = max(0, MCC)
+
+score = 0.1 × MCC_family + 0.9 × MCC_model
+
+Family alone gives at most 0.1. The rest is telling variants apart within a family.
+
+                                                                                                                                           39
+API Access to the End Points & Query Budget
+
+- Each query sends a prompt to one endpoint and returns
+    generated text only.
+
+- Each team may collect up to 100 responses per endpoint
+    for the whole competition. A request for several responses
+    uses one query per response.
+
+- At most 256 generated tokens per response, and at most
+    1,024 input tokens per prompt.
+
+- At most 4 requests at a time per team.
+- Sampling settings such as `temperature` and `seed` are
+
+    ignored, and system messages are rejected.
+- Invalid requests are rejected and not counted against your
+
+    budget.
+
+                                                                                                                                                            40
+Submission
+
+A .csv file with:                                endpoint,family,model
+· One line per endpoint                          ep-01,A,A1
+· Same family label: same base model             ep-02,B,B1
+· Same model label: same model, and same family  ep-03,A,A2
+
+   label too
+· One submission every 30 minutes
+
+Do not tune only to the public score. It covers part of the pairs.
+             The final ranking uses the unseen test set.
+
+                                                                                                                                         41
+TASK 3:
+Unlearning
+
+                                                                                                                                                    42
+How to unlearn a model on some samples?
+
+Pre-trained image                          Custom 100-class
+classifier ViT-B/16                        image dataset
+
+                                   FORGET  3500 training
+Submission: Unlearned Model state_dict()   samples that the
+                                           model has to forget
+
+                                                                43
+              Evaluation Metric
+
+         Final score = forget score × retain score
+
+Gate: under 70% held-out accuracy means both scores are 0
+
+Models:
+
+   orig: given model, trained on all data
+   gold: retrained without the forget images (average of
+   several models). This is the target.
+   sub: your submission
+
+                                                                                                                                                    44
+               Evaluation Metric
+
+   forget_score = mean_std_score × prediction_score
+
+Loss-distribution score: an_std_score = 1 -  sub/rig, 0,1
+d = | mean loss| + | std loss| vs gold
+Prediction score: 1 - clip(KL(goldsub) / KL(goldorig), 0, 1)
+Per image, against the gold average (softmax, T = 2)
+Loss-distribution score checks the loss on forget images at the group level.
+Gold has a specific average loss and spread.
+Prediction score checks each image on its own. It makes sure the full output
+distribution matches gold, not just the loss number
+
+                                                                                                                                                       45
+               Evaluation Metric
+
+    retain_score = retain_accuracy_score × retain_kl_similarity
+
+Accuracy score: clip(acc_sub(control) / acc_orig(control), 0, 1)
+Measured on the held-out control set. Score is 1 if accuracy matches or
+beats orig.
+KL Similarity: 1 / (1 + mean KL(origsub))
+Per image, against the orig distribution. Score is 1 if predictions match
+orig exactly.
+Accuracy score checks that the model still gets the right answers on data it
+should keep
+KL similarity checks that the outputs did not drift. Accuracy can stay flat
+while confidence and class probabilities change a lot
+
+                                                                                                                                                       46
+               Evaluation Metric
+
+Dataset
+The dataset is a custom 100-class image classification dataset.
+
+· model.pt: the provided pretrained model, as a weights-only PyTorch state
+· forget_images.npz: the 3,500 images that make up the forget set. Labels
+
+   are not included.
+· task_template.py: a helper script for loading the provided model
+
+   checkpoint and forget set images. It includes the model builder, the
+   preprocessing used by the server, a prediction helper and an `unlearn()`
+   stub; running it saves the unchanged model as a baseline
+   `submission.pt`.
+· submission.py - the code to submit your model
+
+                                                                                                                                                        47
+Compute
+Infrastructure
+
+                                                                                                                                                      48
+            Compute from Jülich Research Center
+
+  Compute Infrastructure:
+1. 40 compute nodes (1 compute node reserved per your job).
+2. Each compute node with:
+
+     1. 4× NVIDIA A100 GPU, 4× 40 GB HBM2e
+     2. 2× AMD EPYC 7742, 2× 64 cores, 2.25 GHz
+     3. 512 (16× 32) GB DDR4, 3200 MHz
+
+3. 12 login nodes for the initial access and coding.
+     1. 2× NVIDIA Quadro RTX8000 GPU
+     2. 2× AMD EPYC 7742, 2× 64 cores, 2.25 GHz
+     3. 1024 (16× 64) GB DDR4, 3200 MHz
+
+                                                                                                                                              49
+Register at: judoor.fz-juelich.de/login
+
+    Click
+    here!
+
+                                                                                                                           50
+      Enable the Multi-Factor Authentication (MFA)
+
+Click
+here!
+
+                                                                                                                                     51
+Sign the User Agreement
+
+                                                                                                                           52
+            Manage SSH-Keys to access the GPUs
+
+· Use/create SSH keys: ssh-keygen -t ed25519 -C "your_email"
+
+                                    Use SSH keys:
+
+                         Generate SSH keys:
+
+                                                                                                                                              53
+                                                                copy
+cat id_ed25519.puAbdodrthe ssh key here:
+
+ssh-keygen -t ed25519 -C "your_email goes here"
+
+                                                                                                                     54
+Wait up to 15 min until you can use the key
+
+                                                                                                                           55
+   Connected to the Juelich Login Node
+
+· adam$ ssh -i ~/ssh/id_ed25519 dziedzic4@jureca.fz-juelich.de
+
+· (dziedzic4@jureca.fz-juelich.de) JSC TOTP Verification code: Use your multi-factor authenticator like FreeOTP or Google
+   Authenticator
+
+· ************************************************************************************
+
+· Welcome to JURECA (Juelich Research on Exascale Cluster Architectures)
+
+· ************************************************************************************
+
+· * Information about the system, latest changes, user documentation and FAQs: *
+
+· * -> https://go.fzj.de/JURECA -> https://go.fzj.de/jureca-known-issues *
+
+· * Slurm job reports:                  *
+
+· * -> https://go.fzj.de/llview-jureca         *
+
+· *********************************************************************************
+
+· Status information also at https://go.fzj.de/status-jureca-dc                         *
+
+· ********************************************************************************
+
+·                       2025-03-31T15:54+0200
+
+· Information - Do not constrain GPU devices with Slurm
+
+· Due to a bug in Slurm the GPU devices will not be constrained by cgroups until it is properly fixed.
+
+· ********************************************************************************
+
+                                                                                                                           56
+Use Visual Studio Code for the Development
+
+                                                                                                                           57
+Configure SSH Hosts
+
+                                                                                                                           58
+Choose the default config file
+
+                                                                                                                           59
+Add the connection to the Juelich cluster
+
+                                                                                                                           60
+Then you can connect directly to the cluster
+
+                                                                                                                           61
+Open new terminal
+
+                                                                                                                           6622
+JURECA Setup: Two Scripts Does All
+
+1 Team lead                         2 Every teammate
+
+    runs hackathon_setup.sh once        runs teammate.sh after the lead is done
+
+  · Activates the project           · Activates the project
+  · Creates the scratch folder and  · Sets shared cache paths
+                                    · Checks shared folder access
+      permissions                   · Installs uv if needed
+  · Downloads datasets              · Writes the setup to ~/.bashrc
+  · Installs uv if needed
+  · Builds a .venv for each task
+  · Sets shared uv and HF caches
+
+ Project ID: training2666. Use your own Jülich account. Never run both scripts from the same account.
+
+FOLLOW THE README FILE PRESENT IN THE REPO CLOSELY. INSTRUCTIONS FOR ACCESSING THIS REPO
+                                        ARE PRESENT IN TASK DESCRIPTIONS
+
+                                                                                                                                             6633
+Team Lead: Run Once
+
+# edit the config section    · Download both scripts from the
+TEAM_LEAD="<your-username>"      SprintML/hackathon dataset on Hugging
+TEAMMATE_1="<username>"          Face
+TEAMMATE_2=""
+TEAMMATE_3=""                · Fill in real Jülich usernames. Leave unused
+TEAM_FOLDER="<team-name>"        slots empty
+
+source hackathon_setup.sh    · Wait until the script finishes before
+                                 teammates start
+
+                             · Tell teammates the exact TEAM_FOLDER
+                                 value
+
+Shared folder: /p/scratch/training2666/<lead>/<team>/
+
+                                                                                                                                            64
+Teammates: Join the Shared Folder
+
+TEAM_LEAD="<team-lead-username>"           <team>/
+TEAM_FOLDER="<team-name>"                   unlearning/
+source teammate.sh                          model_equality/
+                                            Hackathon_Watermark_
+· Values must match the lead's config       Localisation_Task/
+· TEAM_LEAD is not your own username        .uv/
+· Do not redownload datasets or rebuild     .cache/
+
+    environments                         Each task folder has .venv,
+                                         requirements.txt and output/
+
+                                                                       65
+Every Login and GPU Jobs
+
+jutil env activate -p training2666
+source ~/.bashrc # only if caches are missing
+cd /p/scratch/training2666/<lead>/<team>/<task_folder>
+source .venv/bin/activate
+
+#SBATCH --account=training2666   · Put these in main.sh
+#SBATCH --gres=gpu:1             · mkdir -p output first
+#SBATCH --partition=dc-gpu       · sbatch main.sh to submit
+#SBATCH --reservation=cispahack  · squeue -u $USER to check
+#SBATCH --output=output/%j.out   · Do not rerun setup at login
+
+srun python code.py
+
+                                                                66
+You are ready to use the GPUs
+
+                                                                                                                           67
+BACKUP
+
+                                                                                                                                                    68
+   Data Protection for Foundation Models
+
+1 How to audit training data leakage from foundation models?
+
+Training Data  PhD 2  - Meintz (...) Dziedzic
+       1              NeurIPS 2026 RADUIM
+
+  Data                - Kociszewski (...) Dziedzic
+ Audits               ICLR 2026 SERUM Mark
+                      - Zhao (...) Dziedzic
+     Part 1
+                      ECCV 2026 MGI Task
+                      - Kerner (...) Dziedzic
+                      NeurIPS 2025 BitMark
+                      - Dziedzic (...) ICML 2022
+
+                      Watermarking SSL model
+
+                                       PhD 3
+
+                                                                   69
+   Data Protection for Foundation Models
+
+2  How to train foundation models with privacy guarantees?
+
+   Training Data  Model Training                            PhD 3
+          1               2
+                                                                                      70
+      Data          Private
+     Audits        Training
+
+         Part 1         Part 2
+   Data Protection for Foundation Models
+
+3 How to amplify the signal to provide data provenance tracing?
+
+Training Data  Model Training  Output Data
+       1               2              3
+
+   Data          Private         Data
+  Audits        Training       Marking
+
+      Part 1         Part 2        Part 3
+
+                                                             71
+            Activate the project
+
+jutil env activate -p training2614
+cd $PROJECT
+mkdir $USER
+chown $USER:$USER $USER
+chmod o-r $USER
+
+                                                                                                                                              72
+            Install uv to manage python packages
+
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+                                                                                                                                              73
+            Configure UV to set the paths (e.g., for cache)
+
+cat << EOF >> ~/.bashrc
+export UV_PYTHON_INSTALL_DIR=$PROJECT/$USER/uv/python
+export UV_CACHE_DIR=$PROJECT/$USER/uv/cache
+export UV_TOOL_DIR=$PROJECT/$USER/uv/tools
+EOF
+
+                                                                                                                                              74
+            Alternative simple set the paths in ~/.bashrc
+
+vim ~/.bashrc (add the 3 lines below to the ~/.bashrc file)
+export UV_PYTHON_INSTALL_DIR=$PROJECT/$USER/uv/python
+export UV_CACHE_DIR=$PROJECT/$USER/uv/cache
+export UV_TOOL_DIR=$PROJECT/$USER/uv/tools
+
+75 CISPA Championship                                        75
+            Additional commands for the terminal
+
+exec bash # enable the environments with the paths for uv
+# enter the project Hackathon
+cd $PROJECT/$USER/Hackathon
+uv init -p 3.12
+uv venv
+# add packages
+uv add torch torchvision
+uv add requests
+uv add pandas
+# activate the environment
+source .venv/bin/activate
+# execute sample script
+python main.py
+
+                                                                                                                                              76
+            Create the submission script: main.sh
+
+#!/bin/bash
+#SBATCH --account=training2614
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=128 # JURECA has 128 physical CPU cores
+#SBATCH --partition=dc-gpu
+#SBATCH ­reservation=cispahack
+#SBATCH --output=output/%j.out
+
+# export MASTER_ADDR="$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)"
+# export MASTER_ADDR="$MASTER_ADDR"i
+# Go to folder where the sample_submission.py is located
+cd $PROJECT/$USER/Hackathon
+
+# Activate the environment from the directory
+source .venv/bin/activate
+
+# Run the file: sample_submission.py
+srun python sample_submission.py
+
+echo "done!"
+
+                                                                                                                                              77
+            Submit your script: sbatch main.sh
+
+$ls
+LICENSE main.py main.sh output pyproject.toml README.md sample_submission.py
+submission.csv uv.lock
+$ sbatch main.sh
+Submitted batch job 14244901
+
+$ cat output/14244901.out # see the logs
+Generating random prediction scores for submission...
+Saved submission file to submission.csv
+Format: id,label | Allowed labels: [0,1] (probability)
+Submitting to leaderboard server...
+Server response: {'submission_id': 2181, 'status': 'success', 'message': 'Submission evaluated
+successfully!'}
+done!
+
+                                                                                                                                              78
+

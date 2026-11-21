@@ -13,3 +13,4 @@ wandb/
 *.safetensors
 *.ckpt
 *.bin
+reports/discord/

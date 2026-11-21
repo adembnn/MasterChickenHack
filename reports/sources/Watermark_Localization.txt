@@ -1,0 +1,186 @@
+European AI Championship
+Supervisors: Adam Dziedzic and Franziska Boenisch
+Title: Localize Image Watermark
+Developed by: Simon Hector, Michel Meintz, Louis Kerner, Maitri Shah
+
+Goal
+
+The goal of this task is to find which parts of an image carry a watermark after image
+alterations have overwritten or added the watermark in parts of images. Every image in the
+dataset was watermarked with one of three public post-hoc watermarking methods: PixelSeal,
+TrustMark, or StegaStamp in a rectangular subset of the original image. The aspect ratio of
+this subset does not exceed 16:1 for PixelSeal and StegaStamp and 2:1 for TrustMark.
+
+For every test image, participants return a binary mask:
+    - 1 = watermarked region
+    - 0 = clean (unwatermarked) region
+
+Challenge
+Some watermarking models, like Watermark Anything, are explicitly trained for localization:
+they tell you which pixels are watermarked. Most post-hoc models, like PixelSeal, TrustMark
+and StegaStamp, are only trained to decode one message from the whole image. The
+question of this task is: can we localize existing post-hoc watermarks?
+
+What makes it hard is that these watermarking methods are not inherently trained for
+localization. The edits range from large (half of the image) to small and irregular (a thin
+object, a face), which requires your solution to be adaptive and general. The three watermarks
+behave very differently, so there is likely no one-size-fits-all solution.
+
+Without such capabilities, later edits are attributed to the original watermark owner - potentially
+allowing framing of the watermark owner by 3rd parties via the addition of undesirable content.
+
+Evaluation Metric
+
+Submissions are evaluated with mean Intersection over Union (mIoU) over the two classes,
+watermarked (1) and clean (0), computed per image and then averaged over all test images.
+
+Mask resolution. The resolution of the images is 512 x 512. Masks are evaluated on a 128 x
+128 grid (one cell = 4 x 4 pixels). A ground-truth cell is 1 if at least 50% of its pixels are
+watermarked, otherwise 0. The starter kit contains the exact downsampling function.
+
+Score:
+
+Per image:                          for c in {0, 1}
+
+   Python
+   IoU_c = |P_c  G_c| / |P_c  G_c|
+                                  (if P_c  G_c is empty, IoU_c = 1)
+
+mIoU_image = (IoU_0 + IoU_1) / 2
+
+where P is the predicted mask, G is the ground-truth mask and c is the class (0 = clean (no
+watermark), 1 = watermark). P_c and G_c are the sets of cells labelled c in P and G.
+
+Score = mean of mIoU_image over all test images
+
+The score is between 0 and 1. Higher is better.
+
+The formula, line by line:
+
+IoU_c = |P_c  G_c| / |P_c  G_c| computes Intersection over Union for one class c
+
+     P_c is the set of cells you predicted as class c.
+     G_c is the set of cells that truly are class c.
+     The numerator counts cells where you and the ground truth agree on c.
+     The denominator counts cells that either of you labeled c.
+
+A perfect prediction gives 1, and no overlap gives 0. Both false positives and false negatives
+enlarge the union, so both are penalized.
+
+for c in {0, 1} means the formula is computed separately for the watermarked class (1) and
+the clean (unwatermarked) class (0).
+
+(if P_c  G_c is empty, IoU_c = 1) handles a special case. Suppose an image has no
+watermarked region, and you correctly predict no watermarked region. Then the union for
+class 1 is empty, and 0/0 is undefined. The rule says this counts as a perfect score for that
+class.
+
+mIoU_image = (IoU_0 + IoU_1) / 2 averages the two classes for one image. The final
+leaderboard score is the average of mIoU_image over all test images. Every image counts
+equally, regardless of how big its edit is.
+
+Dataset
+
+The dataset contains 1,530 images (PNG), split equally across the three watermarking
+methods.
+
+    1. Train split: 510 images (170 per watermarking method)
+              - image
+              - ground-truth mask (512 x 512 and 128 x 128)
+              - watermarking method
+              - embedded message (bit string)
+
+    2. Test split: 1,020 images (340 per watermarking method)
+              - image
+              - watermarking method and embedded message
+
+Types of the image edits:
+    - Outpainting: A watermarked image is extended to a larger image. The full watermark
+         remains present but only covers a part of the image.
+    - Object Removal/alteration: An undesired object on a watermarked image is modifed
+         or edited out. A hole in the watermark remains.
+    - Object Addition: Something unwatermarked is added to a watermarked image,
+         covering the watermark in that region. Again a hole is formed.
+    - Object transplantation: An object from a watermarked image is added to an
+         unwatermarked image. The watermark is only present on this object.
+
+Additional Resources
+
+A starter kit is provided - download it at
+https://huggingface.co/datasets/SprintML/Hackathon_Watermark_Localisation_Task_Paris
+It includes:
+
+    - Code to unzip and load the dataset into PyTorch datasets
+    - Unified PyTorch wrappers for the PixelSeal, TrustMark and StegaStamp
+
+         extractors (and embedders), with the same interface: decode(images) -> bits
+         and access to intermediate feature maps
+    - Helper functions: bit accuracy, mask downsampling to 128 x 128, local mIoU
+         evaluation on the train split
+    - submission_template.py
+
+For complete setup on Juelich, including dataset downloads, Python environment
+configuration, and shared folder permissions for all the tasks together, follow the instructions
+in the repository below:
+
+   Shell
+
+  git clone https://huggingface.co/datasets/SprintML/hackathon
+
+After cloning, open the README.md file and follow the setup instructions.
+
+Submission Format
+Participants submit a .pt file containing a dictionary with the following structure:
+
+Submission = {"image_names": names, "masks": masks}
+
+Where names[i] corresponds to masks[i] and masks is a tensor of shape [num_images, 128,
+128]
+
+Requirements
+     Each image name must appear exactly once
+     Masks must have the correct shape and entries (0 or 1)
+     No duplicates, or invalid entries
+     File size must not exceed 20 MB
+
+Submissions that do not meet these requirements will be rejected automatically.
+
+Scoring
+All submissions are automatically validated and evaluated on the hidden test set.
+
+     Public leaderboard: based on 30% of test images
+     Private leaderboard: final ranking based on the remaining 70%
+The leaderboard score reflects the mIoU achieved by the submission. A higher score indicates
+better performance.
+
+Leaderboard
+After evaluation, your results can be found in the leaderboard:
+
+     You can access the leaderboard for this task at
+         http://34.147.229.55/leaderboard_page . This will help you to compare your solutions
+         with other teams and see where you stand.
+
+     The leaderboard shows the best result per team only. As output to your request, you
+         will get back the score for your current submission. If it is lower than the score saved in
+         the leaderboard, the score will not be updated.
+
+References
+
+     Tomás Soucek et al. "Pixel Seal: Adversarial-only training for invisible image and video
+         watermarking." https://arxiv.org/abs/2512.16874
+
+     Tu Bui, Shruti Agarwal, John Collomosse. "TrustMark: Robust Watermarking and
+         Watermark Removal for Arbitrary Resolution Images." ICCV 2025.
+         https://openaccess.thecvf.com/content/ICCV2025/html/Bui_TrustMark_Robust_Water
+         marking_and_Watermark_Removal_for_Arbitrary_Resolution_Images_ICCV_2025_pa
+         per.html
+
+     Matthew Tancik, Ben Mildenhall, Ren Ng. "StegaStamp: Invisible Hyperlinks in
+         Physical Photographs." CVPR 2020.
+         https://www.computer.org/csdl/proceedings-article/cvpr/2020/716800c114/1m3nYiyKXK
+         0
+
+     Tom Sander, Pierre Fernandez, Alain Durmus, Teddy Furon, Matthijs Douze.
+         "Watermark Anything with Localized Messages." ICLR 2025.
+         https://openreview.net/forum?id=IkZVDzdC8M
+

@@ -1,0 +1,213 @@
+Compute
+Infrastructure
+
+                                                                                                                                                        1
+            Compute from Jülich Research Center
+
+ Compute Infrastructure with around 200 GPUs:
+1. 40 compute nodes (1 compute node reserved per your job).
+
+2. Each compute node with:
+    1. 4× NVIDIA A100 GPUs, 4× 40 GB HBM2e
+    2. 2× AMD EPYC 7742, 2× 64 cores, 2.25 GHz
+    3. 512 (16× 32) GB DDR4, 3200 MHz
+
+3. 12 login nodes for the initial access and coding.
+    1. 2× NVIDIA Quadro RTX8000 GPU
+    2. 2× AMD EPYC 7742, 2× 64 cores, 2.25 GHz
+    3. 1024 (16× 64) GB DDR4, 3200 MHz
+
+                                                                                                                                                2
+Register at: judoor.fz-juelich.de/login
+
+    Click
+    here!
+
+                                                                                                                             3
+      Enable the Multi-Factor Authentication (MFA)
+
+Click
+here!
+
+                                                                                                                                       4
+Sign the User Agreement
+
+                                                                                                                             5
+            Manage SSH-Keys to access the GPUs
+
+· Use/create SSH keys: ssh-keygen -t ed25519 -C "your_email"
+
+                                    Use SSH keys:
+
+                         Generate SSH keys:
+
+                                                                                                                                                6
+Add the range of IP addresses
+
+                                                                     copy
+     cat id_ed25519.puAbdodrthe ssh key here:
+
+      ssh-keygen -t ed25519 -C "your_email goes here"
+                                                                                                                             7
+Wait up to 15 min until you can use the key
+
+                                                                                                                             8
+   Connected to the Juelich Login Node
+
+· adam$ ssh -i ~/ssh/id_ed25519 dziedzic4@jureca.fz-juelich.de
+
+· (dziedzic4@jureca.fz-juelich.de) JSC TOTP Verification code: Use your multi-factor authenticator like FreeOTP
+  or Google Authenticator
+
+· ************************************************************************************
+
+· Welcome to JURECA (Juelich Research on Exascale Cluster Architectures)
+
+· ************************************************************************************
+
+· * Information about the system, latest changes, user documentation and FAQs: *
+
+· * -> https://go.fzj.de/JURECA -> https://go.fzj.de/jureca-known-issues *
+
+· * Slurm job reports:                  *
+
+· * -> https://go.fzj.de/llview-jureca         *
+
+· *********************************************************************************
+
+· Status information also at https://go.fzj.de/status-jureca-dc                         *
+
+· ********************************************************************************
+
+·                       2025-03-31T15:54+0200
+
+· Information - Do not constrain GPU devices with Slurm
+
+· Due to a bug in Slurm the GPU devices will not be constrained by cgroups until it is properly fixed.
+
+· ********************************************************************************
+
+                                                                                                                                                9
+Use Visual Studio Code for the Development
+
+                                                                                                                           10
+Configure SSH Hosts
+
+                                                                                                                           11
+Choose the default config file
+
+                                                                                                                           12
+Add the connection to the Juelich cluster
+
+                                                                                                                           13
+Then you can connect directly to the cluster
+
+                                                                                                                           14
+Open new terminal
+
+                                                                                                                           1155
+            Activate the project
+
+jutil env activate -p training2614
+cd $PROJECT
+mkdir $USER
+chown $USER:$USER $USER
+chmod o-r $USER
+
+                                                                                                                                              16
+            Install uv to manage python packages
+
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+                                                                                                                                              17
+            Configure UV to set the paths (e.g., for cache)
+
+cat << EOF >> ~/.bashrc
+export UV_PYTHON_INSTALL_DIR=$PROJECT/$USER/uv/python
+export UV_CACHE_DIR=$PROJECT/$USER/uv/cache
+export UV_TOOL_DIR=$PROJECT/$USER/uv/tools
+EOF
+
+                                                                                                                                              18
+            Alternative simple set the paths in ~/.bashrc
+
+vim ~/.bashrc (add the 3 lines below to the ~/.bashrc file)
+export UV_PYTHON_INSTALL_DIR=$PROJECT/$USER/uv/python
+export UV_CACHE_DIR=$PROJECT/$USER/uv/cache
+export UV_TOOL_DIR=$PROJECT/$USER/uv/tools
+
+                                                                                                                                              19
+            Additional commands for the terminal
+
+exec bash # enable the environments with the paths for uv
+# enter the project Hackathon
+cd $PROJECT/$USER/Hackathon
+uv init -p 3.12
+uv venv
+# add packages
+uv add torch torchvision
+uv add requests
+uv add pandas
+# activate the environment
+source .venv/bin/activate
+# execute sample script
+python main.py
+
+                                                                                                                                              20
+             Create the submission script: main.sh
+
+#!/bin/bash
+
+#SBATCH --account=training2666
+
+#SBATCH --nodes=1
+
+#SBATCH --ntasks-per-node=1
+
+#SBATCH --gres=gpu:1
+
+#SBATCH --cpus-per-task=128 # JURECA has 128 physical CPU cores
+
+#SBATCH --partition=dc-gpu
+
+#SBATCH ­reservation=cispahack
+
+#SBATCH --output=output/%j.out
+
+# export MASTER_ADDR="$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)"
+
+# export MASTER_ADDR="$MASTER_ADDR"i
+
+# Go to folder where the sample_submission.py is located
+
+cd $PROJECT/$USER/Hackathon
+
+# Activate the environment from the directory
+
+source .venv/bin/activate
+
+# Run the file: sample_submission.py
+
+srun python sample_submission.py                                                     21
+            Submit your script: sbatch main.sh
+
+$ls
+LICENSE main.py main.sh output pyproject.toml README.md sample_submission.py
+submission.csv uv.lock
+$ sbatch main.sh
+Submitted batch job 14244901
+
+$ cat output/14244901.out # see the logs
+Generating random prediction scores for submission...
+Saved submission file to submission.csv
+Format: id,label | Allowed labels: [0,1] (probability)
+Submitting to leaderboard server...
+Server response: {'submission_id': 2181, 'status': 'success', 'message': 'Submission evaluated
+successfully!'}
+done!
+
+                                                                                                                                              22
+You are ready to use the GPUs
+
+                                                                                                                           23
+
