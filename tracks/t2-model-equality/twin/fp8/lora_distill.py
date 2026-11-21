@@ -63,6 +63,34 @@ def seq_logprob(model, tok, items, bs=16):
     return out
 
 
+def train_lora(a, tok, base, train, seed):
+    cfg = LoraConfig(r=a.r, lora_alpha=2 * a.r, lora_dropout=0.0, task_type="CAUSAL_LM",
+                     target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"])
+    pm = get_peft_model(base, cfg)
+    store = {}
+    opt = torch.optim.AdamW([p for p in pm.parameters() if p.requires_grad], lr=a.lr)
+    pm.train()
+    rnd = random.Random(seed)
+    for ep_i in range(a.epochs):
+        rnd.shuffle(train)
+        tot = 0.0
+        for i in range(0, len(train), 4):
+            chunk = train[i:i + 4]
+            for scale in sorted({c[2] for c in chunk}):  # même échelle dans un mini-lot
+                sub = [(p, r) for p, r, s in chunk if s == scale]
+                set_scale(pm, scale, store)
+                ids, att, lab, _, _ = batch_tensors(tok, sub, pm.device)
+                loss = pm(input_ids=ids, attention_mask=att, labels=lab).loss
+                loss.backward()
+                tot += loss.item()
+            opt.step()
+            opt.zero_grad()
+        print(f"graine {seed} époque {ep_i} perte {tot / max(1, len(train) / 4):.3f} (n_train={len(train)})", flush=True)
+    set_scale(pm, 1.0, store)
+    pm.eval()
+    return pm, store
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
@@ -75,6 +103,7 @@ def main():
     ap.add_argument("--folds", type=int, default=2)
     ap.add_argument("--kinds", default="", help="filtrer les sondes (ex. reading) ; vide = tout")
     ap.add_argument("--out", default="results_lora_distill.json")
+    ap.add_argument("--save_dir", default="")
     a = ap.parse_args()
     torch.manual_seed(0)
     tok = AutoTokenizer.from_pretrained(a.model)
@@ -97,30 +126,8 @@ def main():
         test_items = {ep: [(p, r) for p, r in by_ep[ep] if fold_of(p, a.folds) == f] for ep in eps}
         base.eval()
         lp_base = {ep: seq_logprob(base, tok, test_items[ep]) for ep in eps}
-        cfg = LoraConfig(r=a.r, lora_alpha=2 * a.r, lora_dropout=0.0, task_type="CAUSAL_LM",
-                         target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"])
-        pm = get_peft_model(base, cfg)
-        store = {}
         train = [(p, r, train_spec[ep]) for ep in train_spec for p, r in by_ep.get(ep, []) if fold_of(p, a.folds) != f]
-        opt = torch.optim.AdamW([p for p in pm.parameters() if p.requires_grad], lr=a.lr)
-        pm.train()
-        rnd = random.Random(f)
-        for ep_i in range(a.epochs):
-            rnd.shuffle(train)
-            tot = 0.0
-            for i in range(0, len(train), 4):
-                chunk = train[i:i + 4]
-                for scale in sorted({c[2] for c in chunk}):  # même échelle dans un mini-lot
-                    sub = [(p, r) for p, r, s in chunk if s == scale]
-                    set_scale(pm, scale, store)
-                    ids, att, lab, _, _ = batch_tensors(tok, sub, pm.device)
-                    loss = pm(input_ids=ids, attention_mask=att, labels=lab).loss
-                    loss.backward()
-                    tot += loss.item()
-                opt.step()
-                opt.zero_grad()
-            print(f"pli {f} époque {ep_i} perte {tot / max(1, len(train) / 4):.3f} (n_train={len(train)})", flush=True)
-        pm.eval()
+        pm, store = train_lora(a, tok, base, train, f)
         for k in scales:
             set_scale(pm, k, store)
             for ep in eps:
@@ -145,6 +152,12 @@ def main():
         print(f"échelle {k} (n prompts communs={len(common)}) z:", z, flush=True)
     res["S"] = {str(k): S[k] for k in scales}
     json.dump(res, open(a.out, "w"), indent=1)
+    if a.save_dir:  # adaptateur final sur TOUTES les réponses d'entraînement ; échelle relative 1,0 = force ref-07
+        base = AutoModelForCausalLM.from_pretrained(a.model, dtype=torch.bfloat16, device_map={"": 0})
+        train = [(p, r, train_spec[ep]) for ep in train_spec for p, r in by_ep.get(ep, [])]
+        pm, _ = train_lora(a, tok, base, train, 99)
+        pm.save_pretrained(a.save_dir)
+        print("adaptateur ->", a.save_dir, flush=True)
 
 
 if __name__ == "__main__":
