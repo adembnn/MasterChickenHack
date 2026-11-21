@@ -7,7 +7,8 @@ logf,scanf,mid,out,npos,reps=sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4],int
 tok=AutoTokenizer.from_pretrained(mid)
 S=json.load(open(scanf)); K=S['kept']
 rows=[json.loads(l) for l in open(logf)]
-rows=[r for r in rows if r['type']=='answer' and r['kind'] in('reading','repeat') and r.get('response')]
+ONLY=set(sys.argv[7].split(',')) if len(sys.argv)>7 and sys.argv[7] else None
+rows=[r for r in rows if r['type']=='answer' and r['kind'] in('reading','repeat') and r.get('response') and (ONLY is None or r['endpoint'] in ONLY)]
 sysk=[k for k in K[0] if k in('J_sysH','J_sysA','J_pers')]
 sc=lambda k:min(k['J_w8'],k['J_w8a8'])
 rob=lambda k: k['J_f32']<sc(k)/4 and all(k.get(s,1e9)<sc(k)/2 for s in sysk)
@@ -17,7 +18,7 @@ for k in cand:
     if per.get(k['row'],0)>=2: continue
     r=rows[k['row']]
     msgs=[{'role':'user','content':r['prompt']}]
-    pre=tok.apply_chat_template(msgs,tokenize=False,add_generation_prompt=True)
+    pre=tok.apply_chat_template(msgs,tokenize=False,add_generation_prompt=True,date_string='21 Nov 2026')
     n0=len(tok(pre,add_special_tokens=False)['input_ids'])
     ids=tok(pre+r['response'],add_special_tokens=False)['input_ids']
     rt=ids[n0:n0+k['pos']]

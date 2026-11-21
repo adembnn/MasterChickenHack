@@ -12,7 +12,7 @@ L=collections.defaultdict(float); N=collections.Counter(); miss=collections.Coun
 for r in map(json.loads,open(a.journal)):
     if not r.get('response') and r.get('response')!='': continue
     e=r['endpoint']; T=Tm.get(e,0.75); u,asst=r['messages'][0]['content'],r['messages'][1]['content']
-    pre=tok.apply_chat_template([{'role':'user','content':u}],tokenize=False,add_generation_prompt=True)+asst
+    pre=tok.apply_chat_template([{'role':'user','content':u}],tokenize=False,add_generation_prompt=True,date_string='21 Nov 2026')+asst
     ip=tok(pre,add_special_tokens=False)['input_ids']; ia=tok(pre+r['response'],add_special_tokens=False)['input_ids']
     if ia[:len(ip)]!=ip or len(ia)<=len(ip): miss[e]+=1; continue
     x=ia[len(ip)]   # premier token rendu
