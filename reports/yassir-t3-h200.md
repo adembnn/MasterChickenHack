@@ -105,3 +105,11 @@ faire perdre beaucoup de fidélité au modèle d'origine. Le prochain candidat
 d'équipe est le modèle à cibles par quantiles `S1_A85_l30.pt` d'Adem.
 Les soumissions T3 suivent la file unique de l'équipe et le délai indiqué
 par le serveur, observé autour de dix minutes.
+
+La soumission **1197** d'Adem a ensuite porté le score public de l'équipe
+à **0,0114**. Elle utilise `S1_A85_l30.pt`, quatre derniers blocs ajustés
+vers des cibles par quantiles et ancrage de rétention λ=30. Sur ses
+diagnostics locaux, la loss exacte vaut 0,087, 1,9 % des classes changent
+et le KL sur les mélanges vaut 0,04. La répartition de probabilité entre
+classes est une piste plus utile que le recalibrage global de la tête.
+[Résultat 1197 et file des prochains dépôts](https://github.com/adembnn/EAC/issues/5#issuecomment-7066480494).

@@ -72,6 +72,15 @@ image. Il entraîne et calibre hors des 34 images réservées par méthode.
 Le gain limité à StegaStamp ne justifie pas de changer le pipeline. Cet
 essai utilise le CPU de la VM et les cartes déjà produites par Hermes.
 
+## Résidu TrustMark-Q sur H200
+
+`tracks/t1-watermark/experiments/t1_trustmark_residual.py` calcule une carte
+d'écart de la reconstruction TrustMark-Q, puis teste une fusion avec le
+canevas sur 136 images de calibration et 34 images réservées par méthode.
+Sur la réserve TrustMark, le résidu seul atteint **0,2644 mIoU**. Le canevas
+atteint **0,4750**. Le poids retenu pour le résidu est **0**. L'essai ne
+justifie pas de changer la soumission 1190.
+
 ## Ce que je ferais ensuite, dans l'ordre
 
 1. Segmentateur supervisé sur les 510 masques connus, en prenant l'image et la carte de décodage en
