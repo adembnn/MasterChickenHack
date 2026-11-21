@@ -37,7 +37,7 @@ def to_tensor(img_uint8):
 def agreement(logits, msg):
     """logits B x nbits, msg nbits. Rend B, taux d'accord dans [0, 1], 0.5 = hasard."""
     m = torch.from_numpy(np.asarray(msg)).float() * 2 - 1        # -1 / +1
-    m = m[None, :]
+    m = m[None, :].to(logits.device)
     return (0.5 + 0.5 * torch.sign(logits) * m).mean(dim=1)
 
 
