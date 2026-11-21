@@ -62,6 +62,9 @@ def main():
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--z_out", type=float, default=3.0)
     ap.add_argument("--no_lora", action="store_true")
+    ap.add_argument("--t_fp8", type=float, default=None, help="seuil absolu sur z (sinon t_eff*sqrt(n))")
+    ap.add_argument("--t_lora", type=float, default=None)
+    ap.add_argument("--t_eff", type=float, default=0.51, help="seuil en z/sqrt(n prompts) ; 0,51 = 2,5 à n=24 (ref)")
     ap.add_argument("--out", default="results_ep_readers.json")
     a = ap.parse_args()
 
@@ -69,6 +72,10 @@ def main():
     fams = (json.load(open(a.families)) if a.families.endswith(".json")
             else dict(x.split(":") for x in a.families.split(",")))
     exclude_ref = set(filter(None, a.exclude_ref.split(",")))
+    if "families" in fams:  # format de la session v4 : {"families": {...}, "T_star_ge_1": [...]}
+        exclude_ref |= set(fams.get("T_star_ge_1", []))
+        fams = fams["families"]
+    print("exclus de la référence :", sorted(exclude_ref), flush=True)
     lora_train = dict(x.split(":") for x in a.lora_train.split(",")) if a.lora_train else {}
     scales = [float(x) for x in a.scales.split(",")]
     res = {"config": vars(a), "families": {}}
@@ -132,8 +139,36 @@ def main():
                 key = f"lora_x{k}"
                 out["z"][key], out["ref_used"][key] = robust_z(Sk[k], test_eps, exclude_ref, a.z_out)
                 print(key, "(entraîné sur", tr, ")", out["z"][key], flush=True)
+        # 3. étiquettes (règle fixée avant de voir les ep) : LoRA si score LoRA > t_lora et > score fp8 ; sinon fp8 si > t_fp8 ;
+        # sinon base. Copies base = un modèle ; endpoints fp8 = un modèle ; chaque endpoint LoRA = son propre modèle
+        # (forces différentes, comme dans le corrigé ref) ; l'endpoint d'entraînement LoRA est LoRA par construction.
+        sc_fp8 = {e: max((out["z"][r].get(e) or -99) for r in ["e4m3_tensor", "w8a8_tensor"]) for e in eps}
+        lkeys = [k for k in out["z"] if k.startswith("lora_x")]
+        sc_lora = {e: max([(out["z"][k].get(e) or -99) for k in lkeys] or [-99]) for e in eps}
+        labels, thr = {}, {}
+        for e in eps:
+            # seuil en taille d'effet : z/sqrt(n) >= t_eff (calé sur les ref : 2,5 à n=24), sauf seuils absolus fournis
+            n_e = len({p for p, _ in by_ep[e]})
+            t_f = a.t_fp8 if a.t_fp8 is not None else a.t_eff * math.sqrt(n_e)
+            t_l = a.t_lora if a.t_lora is not None else a.t_eff * math.sqrt(n_e)
+            thr[e] = round(t_f, 2)
+            if e == out.get("lora_train_endpoint") or (sc_lora[e] > t_l and sc_lora[e] > sc_fp8[e]):
+                labels[e] = f"{fam}_lora_{e}"
+            elif sc_fp8[e] > t_f:
+                labels[e] = f"{fam}_fp8"
+            else:
+                labels[e] = f"{fam}_base"
+        out["score_fp8"], out["score_lora"], out["labels"], out["threshold"] = sc_fp8, sc_lora, labels, thr
+        print("étiquettes:", json.dumps(labels), flush=True)
         res["families"][fam] = out
         json.dump(res, open(a.out, "w"), indent=1)
+        json.dump({e: lab for o2 in res["families"].values() for e, lab in o2["labels"].items()},
+                  open(a.out.replace(".json", "_labels.json"), "w"), indent=1)
+        with open(a.out.replace(".json", "_labels.csv"), "w") as fcsv:
+            fcsv.write("endpoint,family,model,score_fp8,score_lora\n")
+            for f2, o2 in res["families"].items():
+                for e in o2["endpoints"]:
+                    fcsv.write(f"{e},{f2},{o2['labels'][e]},{o2['score_fp8'][e]},{o2['score_lora'][e]}\n")
     print("FIN ->", a.out, flush=True)
 
 
