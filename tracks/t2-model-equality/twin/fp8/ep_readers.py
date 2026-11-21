@@ -15,11 +15,39 @@ import argparse, collections, json, math, statistics
 import torch
 import fp8_llr as F
 from fp8_bank import make
-from lora_distill import train_lora, set_scale, fold_of, seq_logprob as _seq_logprob
+from lora_distill import train_lora, set_scale, fold_of, batch_tensors
+
+READ = {"rep": 1.0, "temp": 1.0}  # règle de décodage supposée du serveur, appliquée À L'IDENTIQUE à la base et aux lecteurs
 
 
-def seq_logprob(m, tok, items):
-    return _seq_logprob(m, tok, items, bs=4)  # grand vocabulaire (Qwen 151k) sur GPU partagé
+@torch.no_grad()
+def seq_logprob(model, tok, items, bs=4, rep=None, temp=None):
+    """log p(réponse) sous la règle du serveur : pénalité de répétition style vLLM/HF (tokens déjà vus dans prompt+réponse :
+    logit>0 divisé par rep, sinon multiplié) puis température. bs=4 : grand vocabulaire (Qwen 151k) sur GPU partagé."""
+    rep = READ["rep"] if rep is None else rep
+    temp = READ["temp"] if temp is None else temp
+    out = []
+    for i in range(0, len(items), bs):
+        ids, att, lab, plens, lens = batch_tensors(tok, items[i:i + bs], model.device)
+        logits = model(input_ids=ids, attention_mask=att).logits.float()
+        for j in range(len(lens)):
+            a, b = plens[j] - 1, lens[j] - 2  # positions qui prédisent les tokens de réponse (sans l'EOS ajouté)
+            lg = logits[j, a:b]
+            tgt = ids[j, a + 1:b + 1]
+            if rep != 1.0:
+                V = lg.shape[-1]
+                seen = torch.zeros((b - a, V), dtype=torch.bool, device=lg.device)
+                hist = ids[j, :b + 1]
+                first = torch.zeros(V, dtype=torch.bool, device=lg.device)
+                first[hist[:a + 1]] = True
+                onehot = torch.zeros((b - a, V), dtype=torch.bool, device=lg.device)
+                onehot[torch.arange(b - a, device=lg.device), hist[a + 1:b + 1]] = True
+                seen = torch.cumsum(onehot.to(torch.int16), 0) > 0
+                seen = torch.cat([first[None], seen[:-1]], 0) | first[None]
+                lg = torch.where(seen, torch.where(lg > 0, lg / rep, lg * rep), lg)
+            lp = torch.log_softmax(lg / temp, dim=-1)
+            out.append(lp.gather(-1, tgt[:, None]).sum().item())
+    return out
 
 BASES = {"qwen3b": "Qwen/Qwen2.5-3B-Instruct", "qwen1.5b": "Qwen/Qwen2.5-1.5B-Instruct",
          "llama1b": "unsloth/Llama-3.2-1B-Instruct", "smol360m": "HuggingFaceTB/SmolLM2-360M-Instruct"}
@@ -62,6 +90,8 @@ def main():
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--z_out", type=float, default=3.0)
     ap.add_argument("--no_lora", action="store_true")
+    ap.add_argument("--rep", default="auto", help="pénalité de répétition de relecture : auto (meilleur ajustement) ou valeur")
+    ap.add_argument("--read_temp", type=float, default=1.0)
     ap.add_argument("--t_fp8", type=float, default=None, help="seuil absolu sur z (sinon t_eff*sqrt(n))")
     ap.add_argument("--t_lora", type=float, default=None)
     ap.add_argument("--t_eff", type=float, default=0.51, help="seuil en z/sqrt(n prompts) ; 0,51 = 2,5 à n=24 (ref)")
@@ -97,6 +127,17 @@ def main():
         out = {"base": F.MODEL, "endpoints": eps, "z": {}, "ref_used": {}}
 
         base = F.load(torch.bfloat16)
+        READ["temp"] = a.read_temp
+        if a.rep == "auto":  # garde la pénalité qui explique le mieux les réponses (NLL/token minimale sous la base)
+            sample = [it for e in [e for e in eps if e not in exclude_ref][:4] for it in by_ep[e][:30]]
+            ntk = sum(max(1, len(tok(r, add_special_tokens=False)["input_ids"][:160])) for _, r in sample)
+            fit = {p: -sum(seq_logprob(base, tok, sample, rep=p)) / ntk for p in [1.0, 1.05, 1.1]}
+            READ["rep"] = min(fit, key=fit.get)
+            out["rep_fit_nll_per_token"] = {str(k): round(v, 4) for k, v in fit.items()}
+        else:
+            READ["rep"] = float(a.rep)
+        out["read_rule"] = dict(READ)
+        print("règle de relecture :", READ, out.get("rep_fit_nll_per_token"), flush=True)
         lp_base = {ep: seq_logprob(base, tok, by_ep[ep]) for ep in eps}
         ntok = {ep: [max(1, len(tok(r, add_special_tokens=False)["input_ids"][:160])) for _, r in by_ep[ep]] for ep in eps}
         out["nll_per_token_base"] = {ep: round(-sum(lp_base[ep]) / sum(ntok[ep]), 4) for ep in eps}
