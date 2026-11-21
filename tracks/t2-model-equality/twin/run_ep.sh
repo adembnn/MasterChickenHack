@@ -21,7 +21,7 @@ for m in $($P -c "import json;print(' '.join(sorted(set(json.load(open('$D/assig
   ( $P method_v4.py from_journal --journal "$J" --endpoints $mem --model $m --out $D/raw_$t.json --answers practice_answers.csv > $D/from_$t.log 2>&1 \
     && $P method_v4.py reread --raw $D/raw_$t.json --out $D/reread_$t.json > $D/reread_$t.log 2>&1 \
     && $P method_v4.py decide --raw $D/raw_$t.json --reread $D/reread_$t.json --submission $D/sub_$t.csv --score_dir . $pool \
-         --log $D/decide_$t.log > /dev/null 2>&1 ) &
+         --log $D/decide_$t.log --dump $D/dump_$t.json > /dev/null 2>&1 ) &
 done
 wait
 $P method_v4.py merge_ep --assign $D/assign.json --dir $D --out $D/submission_ep.csv

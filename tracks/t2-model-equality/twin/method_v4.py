@@ -870,8 +870,10 @@ def cmd_decide(a):
 
     P("\nLecture locale par endpoint :")
     labels, variants = {}, []
+    dump = {}
     for n in names:
         c, r = best[n]
+        dump[n] = {"sampling": E[n]["sampling"], "ctx": c, **{kk: v for kk, v in r.items() if isinstance(v, (int, float))}}
         if E[n]["sampling"]:
             same = r["ece_at_T_star"] <= a.ece_mult * ece_ref
             llr_txt = ""
@@ -892,6 +894,7 @@ def cmd_decide(a):
                     lt = llr_t(mine, r["T_star"])
                     fired = [vn for vn, t in lt.items() if t >= a.t_crit]
                 llr_txt = " LLR t=" + "/".join(f"{t:.1f}" for t in lt.values()) + (f" -> déclenche {fired}" if fired else "")
+                dump[n]["llr_t"] = {vn: round(t, 3) for vn, t in lt.items()}
                 same = same and not fired
             txt = (f"échantillonne ; ctx={c} T*={r['T_star']} ece={r['ece_at_T_star']:.4f} gap={r['gap_at_T_star']:+.4f} "
                    f"(≤ {a.ece_mult}×{ece_ref:.4f} ?){llr_txt} -> " + ("S" if same else "variante"))
@@ -905,6 +908,7 @@ def cmd_decide(a):
             txt = (f"glouton ; ctx={c:6s} hors-argmax={r['mis_rate']:.4f} dur={r['hard_rate']:.4f} "
                    f"p99={r['p99_margin']:.2f} -> " + (f"S ({why})" if same else f"variante ({why})"))
         P(f"  {n}: {txt}")
+        dump[n]["same_as_S"] = bool(same)
         if same:
             labels[n] = "S"
         else:
@@ -938,6 +942,10 @@ def cmd_decide(a):
         f.write("endpoint,family,model\n")
         for n in names:
             f.write(f"{n},P,{labels[n]}\n")
+    if a.dump:
+        for n in names:
+            dump[n]["label"] = labels[n]
+        json.dump(dump, open(a.dump, "w"), indent=1)
     sp = Path(a.score_dir)
     res = subprocess.run([sys.executable, str(sp / "score_practice.py"), a.submission, str(sp / "practice_answers.csv")],
                          capture_output=True, text=True)
@@ -1000,6 +1008,7 @@ def main():
     d.add_argument("--reread", default="reread_v4.json")
     d.add_argument("--cross", default=None, help="sortie de crossread (jumeau d'un autre modèle)")
     d.add_argument("--no_guard", action="store_true", help="désactive la garde jumeau (pour montrer l'échec silencieux)")
+    d.add_argument("--dump", default=None, help="JSON des statistiques par endpoint (rapport de validation)")
     d.add_argument("--pool_ref", action="store_true", help="LLR : référence = autres endpoints du pool (bilatéral) au lieu du plancher local")
     d.add_argument("--near_tie", type=float, default=0.5, help="marge (nats) sous laquelle un écart est une quasi-égalité")
     d.add_argument("--t_crit", type=float, default=3.0, help="Welch t (par prompt) au-delà duquel on rejette « même modèle »")

@@ -13,7 +13,7 @@ for m in $CANDS; do
   ( $P method_v4.py from_journal --journal "$J" --model $m --out real_$TAG/raw_$t.json --answers practice_answers.csv > real_$TAG/from_$t.log 2>&1 \
     && $P method_v4.py reread --raw real_$TAG/raw_$t.json --out real_$TAG/reread_$t.json > real_$TAG/reread_$t.log 2>&1 \
     && $P method_v4.py decide --raw real_$TAG/raw_$t.json --reread real_$TAG/reread_$t.json --submission real_$TAG/sub_$t.csv \
-         --score_dir . ${K:+--k_bc $K} --log real_$TAG/decide_$t.log > /dev/null 2>&1 ) &
+         --score_dir . ${K:+--k_bc $K} --log real_$TAG/decide_$t.log --dump real_$TAG/dump_$t.json > /dev/null 2>&1 ) &
 done
 wait
 echo "=== sélection du jumeau par la garde (t le plus bas = jumeau retenu) ==="
