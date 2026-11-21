@@ -44,8 +44,24 @@ haut veut dire que la carte est franche : peu de cellules hésitent entre propre
 du test présents une fois, format conforme. Part de cellules à 1 : 0,497 PixelSeal, 0,360 TrustMark,
 0,390 StegaStamp.
 
-Elle n'est pas envoyée : il manque la clé API. Dès qu'elle est là, `submission_template.py` avec
-`SUBMIT = True` fait l'envoi, ou un simple appel `submit(path)`.
+La soumission 1103 d'Adem mène le classement public à 0,634988. Garder la
+baseline canevas comme diagnostic et conserver la soumission 1103.
+
+## Test de calibration contextuelle sur la réserve
+
+Le script `tracks/t1-watermark/experiments/t1_map_context.py` apprend à
+combiner les cartes canevas, leur lissage local et leurs statistiques par
+image. Il entraîne et calibre hors des 34 images réservées par méthode.
+
+| Filigrane | Seuil canevas | Calibration contextuelle |
+|---|---:|---:|
+| PixelSeal | 0,4794 | 0,4763 |
+| StegaStamp | 0,4316 | 0,4461 |
+| TrustMark | 0,4770 | 0,4477 |
+| Moyenne sur 102 images | 0,4627 | 0,4567 |
+
+Le gain limité à StegaStamp ne justifie pas de changer le pipeline. Cet
+essai utilise le CPU de la VM et les cartes déjà produites par Hermes.
 
 ## Ce que je ferais ensuite, dans l'ordre
 
