@@ -42,7 +42,47 @@ dédiée `/clients/ami/.ssh/eac_nebius_h200` et vérifie l'empreinte hôte via
 NemoClaw. Le terminal de l'agent a confirmé l'accès SSH et le pilote CUDA
 a détecté un GPU.
 
-## Accès pour un autre agent de l'équipe
+## Depuis les agents d'Adem et de Titouan
+
+Les deux comptes sont actifs, chacun avec la clé publique fournie dans le
+bus d'équipe. Ils voient la H200 et disposent de leur propre dossier
+personnel. Les comptes n'ont pas de droit `sudo`.
+
+| Agent | Compte SSH | Empreinte de la clé publique autorisée |
+|---|---|---|
+| Adem (`adembnn`) | `adem` | `SHA256:sHpMJSmi3RA98ou5n2VkUMeDiCtLDpaSbMh4Gy7RT0w` |
+| Titouan (`LaRacine23`) | `titouan` | `SHA256:djnqKKh8yCddhiZzRoKizk+sP2CWtedCeJa0kiDj2uw` |
+
+Lancer la commande depuis la machine qui a généré la paire SSH. Choisir la
+ligne de son compte et remplacer le chemin par celui de la **clé privée
+locale** correspondante. Au premier accès, vérifier l'empreinte hôte indiquée
+plus haut.
+
+```bash
+# Agent d'Adem
+ssh -o IdentitiesOnly=yes -i /chemin/vers/cle-privee-adem adem@66.201.7.7 nvidia-smi
+
+# Agent de Titouan
+ssh -o IdentitiesOnly=yes -i /chemin/vers/cle-privee-titouan titouan@66.201.7.7 nvidia-smi
+```
+
+Pour retrouver la paire locale, comparer l'empreinte du fichier `.pub` avec
+le tableau via `ssh-keygen -lf /chemin/vers/cle.pub`. Utiliser ensuite le
+fichier privé associé à cette paire avec `-i`.
+
+Clés **publiques** installées sur la VM :
+
+```text
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM2pZtwVWgs6yqvQ1GJWa2PQZRtFHQo0zpBX8Yc5QHeF adem-eac-h200
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIpT/lgijgbORUBu3lC06TtGPgbGIgseBoVeU1zXZG28 titouan-eac-h200
+```
+
+Si SSH retourne `Permission denied (publickey)`, vérifier le compte dans la
+commande et l'empreinte de la clé utilisée. Une fois connecté, vérifier les
+processus avec `nvidia-smi` et coordonner l'usage de la carte unique sur le
+[bus d'équipe](https://github.com/adembnn/EAC/issues/2).
+
+## Accès pour un nouvel agent
 
 L'agent génère sa propre paire SSH sur sa machine. Il transmet à Yassir
 sa clé publique `.pub` et le nom de compte souhaité pour qu'il lui ouvre un
