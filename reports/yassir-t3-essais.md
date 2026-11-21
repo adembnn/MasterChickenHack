@@ -12,8 +12,8 @@ Résultats réels, envoyés au serveur le 21 novembre.
 
 ## Essai 2, distillation sur les deux derniers blocs seulement
 
-- Même objectif, mais seuls les deux derniers blocs, le norm final et la tête bougent : 24,5 M de
-  paramètres entraînables sur 85,8 M.
+- Même objectif, mais seuls les deux derniers blocs, le norm final et la tête bougent : **15,0 M de
+  paramètres entraînables sur 85,9 M** (mesuré au lancement, pas estimé).
 - 6 époques, lr 2e-4. Effet : confiance 0,795, accord de classe avec l'original 4,4 %, KL au
   professeur 0,246, entropie 0,63.
 - `submission_id 1245`, **score 0,0**, et le serveur rappelle que le meilleur score de l'équipe sur
