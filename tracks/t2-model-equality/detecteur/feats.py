@@ -10,7 +10,7 @@ Colonnes (par réponse) :
   {q}_d_T, {q}_Ep_T, {q}_Vp_T, {q}_Eq_T                    lecteur q : somme d = log q_T - log p_T, son espérance et sa
                                                            variance sous p_T, son espérance sous q_T
 """
-import argparse, json, os
+import argparse, json, os, time
 import numpy as np
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -50,18 +50,17 @@ def main():
     ap.add_argument("--inp", required=True)
     ap.add_argument("--out", default="feats")
     ap.add_argument("--lora_dir", default="loras")
-    ap.add_argument("--tok_budget", type=int, default=2000)
+    ap.add_argument("--tok_budget", type=int, default=5000)
     a = ap.parse_args()
     torch.cuda.set_per_process_memory_fraction(0.15)   # GPU partagée : ne jamais dépasser ~21 Go
     fam = a.family
     tok = AutoTokenizer.from_pretrained(FAMILIES[fam])
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
-    end_id = tok.convert_tokens_to_ids("<|im_end|>")
+    end_id = tok.convert_tokens_to_ids("<|im_end|>") if "<|im_end|>" in tok.get_vocab() else tok.eos_token_id
     prompts = [s["prompt"] for s in probes_v4.plan()]
     guichets = [json.loads(l) for l in open(a.inp)]
     base = load_variant(fam, "base", a.lora_dir)
-    readers = [load_variant(fam, q, a.lora_dir) for q in READERS]
     seqs = []  # (gidx, slot, ids, start)
     for gi, g in enumerate(guichets):
         for ri, resp in enumerate(g["responses"]):
@@ -79,11 +78,35 @@ def main():
     cols = colnames(); C = len(cols); ci = {c: i for i, c in enumerate(cols)}
     out = np.zeros((len(seqs), C), dtype=np.float64)
     order = sorted(range(len(seqs)), key=lambda k: len(seqs[k][2]))
+    big = sum(p.numel() for p in base.parameters()) > 1e9
+    passes = [[q] for q in READERS] if big else [READERS]   # gros modèles : un lecteur chargé à la fois
+    for pi_, rq in enumerate(passes):
+        readers = [load_variant(fam, q, a.lora_dir) for q in rq]
+        run_pass(a, tok, base, readers, rq, seqs, order, out, ci, C, base_stats=(pi_ == 0))
+        del readers; torch.cuda.empty_cache()
+    _save(a, out, seqs, cols, guichets)
+
+
+@torch.no_grad()
+def run_pass(a, tok, base, readers, rq, seqs, order, out, ci, C, base_stats):
     k = 0
+    shrink = 1
     while k < len(order):
         L = len(seqs[order[min(k + 1, len(order) - 1)]][2])
-        bs = max(1, int(a.tok_budget * 49152 / base.config.vocab_size) // L)   # mémoire ~ tokens x vocabulaire
-        idx = order[k:k + bs]; k += bs
+        bs = max(1, int(a.tok_budget * 49152 / base.config.vocab_size) // L // shrink)   # mémoire ~ tokens x vocabulaire
+        idx = order[k:k + bs]
+        try:
+            out[idx] += _batch(a, tok, base, readers, rq, seqs, idx, ci, C, base_stats)
+            k += len(idx); shrink = max(1, shrink // 2)
+        except (torch.OutOfMemoryError, RuntimeError) as e:   # GPU partagée : on réduit et on réessaie
+            if "out of memory" not in str(e).lower() and "ALLOC" not in str(e):
+                raise
+            torch.cuda.empty_cache(); time.sleep(10); shrink *= 2
+            print("mémoire pleine, lot divisé par", shrink, flush=True)
+
+
+def _batch(a, tok, base, readers, rq, seqs, idx, ci, C, base_stats):
+    if True:
         Lm = max(len(seqs[i][2]) for i in idx)
         ids = torch.full((len(idx), Lm), tok.pad_token_id, dtype=torch.long)
         att = torch.zeros((len(idx), Lm), dtype=torch.long)
@@ -98,8 +121,9 @@ def main():
         tgt = torch.tensor(tgt, device="cuda"); owner = torch.tensor(owner, device="cuda")
         B = len(idx)
         acc = torch.zeros((B, C), dtype=torch.float64, device="cuda")
-        def add(col, vals):
-            acc[:, ci[col]].index_add_(0, owner, vals.double())
+        def add(col, vals, force=False):
+            if base_stats or force:
+                acc[:, ci[col]].index_add_(0, owner, vals.double())
         zb = hidden_logits(base, ids, att, sel)
         lp1 = torch.log_softmax(zb, -1)
         tl = lp1.gather(1, tgt[:, None])[:, 0]
@@ -119,20 +143,23 @@ def main():
                     m = (bins == b).float()
                     add(f"b{b}_r_{T}", (x + H) * m); add(f"b{b}_V_{T}", V * m); add(f"b{b}_n_{T}", m)
             del l, p
-        for q, rd in zip(READERS, readers):
+        for q, rd in zip(rq, readers):
             qn = q.split(":")[-1].split("@")[0]
             zq = hidden_logits(rd, ids, att, sel)
             for T in QT:
                 l, p = lpT[T]
                 lq = torch.log_softmax(zq / T, -1)
                 d = lq - l
-                add(f"{qn}_d_{T}", d.gather(1, tgt[:, None])[:, 0])
-                Ep = (p * d).sum(1); add(f"{qn}_Ep_{T}", Ep); add(f"{qn}_Vp_{T}", (p * d * d).sum(1) - Ep * Ep)
-                add(f"{qn}_Eq_{T}", (lq.exp() * d).sum(1))
+                add(f"{qn}_d_{T}", d.gather(1, tgt[:, None])[:, 0], True)
+                Ep = (p * d).sum(1); add(f"{qn}_Ep_{T}", Ep, True); add(f"{qn}_Vp_{T}", (p * d * d).sum(1) - Ep * Ep, True)
+                add(f"{qn}_Eq_{T}", (lq.exp() * d).sum(1), True)
                 del lq, d
             del zq
         del zb, lp1, lpT
-        out[idx] = acc.cpu().numpy()
+        return acc.cpu().numpy()
+
+
+def _save(a, out, seqs, cols, guichets):
     os.makedirs(a.out, exist_ok=True)
     name = os.path.basename(a.inp).replace(".jsonl", "")
     np.savez_compressed(os.path.join(a.out, f"{name}.npz"), X=out, gi=np.array([s[0] for s in seqs]), ri=np.array([s[1] for s in seqs]),

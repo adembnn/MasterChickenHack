@@ -138,13 +138,25 @@ def _corr(da, db):
     return float(np.corrcoef(x, y)[0, 1])
 
 
-def pair_features(fa, fb, aa, ab, names):
-    va = np.array([fa[n] for n in names]); vb = np.array([fb[n] for n in names])
+def cross_features(aa, ab):
     cross = [_js(aa["words"], ab["words"]), _corr(aa["n"], ab["n"]), _corr(aa["z"], ab["z"])]
     ks = set(aa["wsets"]) & set(ab["wsets"])
     jac = [len(aa["wsets"][s] & ab["wsets"][s]) / max(len(aa["wsets"][s] | ab["wsets"][s]), 1) for s in ks]
     cross.append(float(np.mean(jac)) if jac else 0.0)
+    return np.array(cross)
+
+
+def pair_features(fa, fb, aa, ab, names, cross=None):
+    va = np.array([fa[n] for n in names]); vb = np.array([fb[n] for n in names])
+    if cross is None:
+        cross = cross_features(aa, ab)
     return np.concatenate([np.abs(va - vb), (va + vb) / 2, np.minimum(va, vb), np.maximum(va, vb), cross])
+
+
+def set_relative(F, idx, names):
+    """Ajoute rel_<n> = f - médiane du lot (les guichets idx), pour retirer les décalages famille / température serveur."""
+    med = {n: float(np.median([F[i][n] for i in idx])) for n in names}
+    return {i: dict(F[i], **{"rel_" + n: F[i][n] - med[n] for n in names}) for i in idx}
 
 
 def pair_names(names):

@@ -110,7 +110,7 @@ def run_guichets(model, tok, guichets, prompts, max_new=256, tok_budget=None):
     k = 0
     while k < len(order):
         L = len(enc[order[min(k + 1, len(order) - 1)]])
-        bs = max(8, min(1024, tok_budget // (L + max_new)))
+        bs = max(8, min(1024, int(40e6 // tok.vocab_size), tok_budget // (L + max_new)))   # hachage KGW : B x V entiers
         idx = order[k:k + bs]; k += bs
         Lm = max(len(enc[i]) for i in idx)
         ids = torch.full((len(idx), Lm), tok.pad_token_id, dtype=torch.long)

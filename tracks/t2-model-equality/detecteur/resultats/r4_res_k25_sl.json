@@ -1,0 +1,350 @@
+{
+ "k": 25,
+ "n_train_pairs": 8905,
+ "n_pos": 3305,
+ "thr_sweep_val": {
+  "0.1": 0.623,
+  "0.15": 0.608,
+  "0.2": 0.598,
+  "0.25": 0.608,
+  "0.3": 0.605,
+  "0.4": 0.591,
+  "0.5": 0.589,
+  "0.6": 0.595
+ },
+ "thr": 0.1,
+ "val_smol360_val_s101": {
+  "mcc_practice_like": 0.641,
+  "mcc_ep_like11": 0.619
+ },
+ "val_llama1b_val_s101": {
+  "mcc_practice_like": 0.583,
+  "mcc_ep_like11": 0.6
+ },
+ "val_mcc_mean": 0.612,
+ "val_mcc_ep_like_mean": 0.609,
+ "val_errors_top": [
+  [
+   "base:persona / base:watermark (dit diff\u00e9rent)",
+   183
+  ],
+  [
+   "base:persona / base:system (dit diff\u00e9rent)",
+   159
+  ],
+  [
+   "base:persona / base:plain (dit diff\u00e9rent)",
+   148
+  ],
+  [
+   "base:persona / base:temp1.0 (dit diff\u00e9rent)",
+   148
+  ],
+  [
+   "base:plain / lora@0.3:watermark (dit pareil)",
+   140
+  ],
+  [
+   "base:temp1.0 / lora@0.3:watermark (dit pareil)",
+   140
+  ],
+  [
+   "base:system / lora@0.3:watermark (dit pareil)",
+   138
+  ],
+  [
+   "base:watermark / lora@0.3:watermark (dit pareil)",
+   127
+  ],
+  [
+   "base:plain / lora@0.3:plain (dit pareil)",
+   101
+  ],
+  [
+   "base:temp1.0 / lora@0.3:plain (dit pareil)",
+   101
+  ],
+  [
+   "base:system / lora@0.3:plain (dit pareil)",
+   90
+  ],
+  [
+   "base:system / base:watermark (dit diff\u00e9rent)",
+   82
+  ]
+ ],
+ "top_features": [
+  [
+   "max_lam_stories_r32_0.8",
+   29537
+  ],
+  [
+   "max_lam_stories_r32_1.0",
+   15594
+  ],
+  [
+   "max_lam_fp8_1.0",
+   8036
+  ],
+  [
+   "max_lam_alpaca_r16_1.0",
+   5999
+  ],
+  [
+   "max_zq_stories_r32_1.0",
+   4334
+  ],
+  [
+   "max_zq_nf4_0.8",
+   3631
+  ],
+  [
+   "min_lowp",
+   3489
+  ],
+  [
+   "max_lam_alpaca_r16_0.8",
+   2484
+  ],
+  [
+   "max_lam_fp8_0.8",
+   2351
+  ],
+  [
+   "max_lam_gsm_r16_0.8",
+   2158
+  ],
+  [
+   "max_zq_fp8_1.0",
+   2117
+  ],
+  [
+   "max_zq_stories_r32_0.8",
+   1756
+  ],
+  [
+   "min_c_colon",
+   1541
+  ],
+  [
+   "max_c_colon",
+   1434
+  ],
+  [
+   "max_c_bold",
+   1262
+  ],
+  [
+   "max_zq_gsm_r16_1.0",
+   1241
+  ],
+  [
+   "min_c_dash",
+   1226
+  ],
+  [
+   "max_w_i",
+   1174
+  ],
+  [
+   "min_tok_per_resp",
+   1060
+  ],
+  [
+   "max_lam_nf4_0.8",
+   1050
+  ]
+ ],
+ "ref_P": [
+  [
+   1.0,
+   0.0,
+   0.7,
+   0.0,
+   1.0,
+   0.99,
+   0.0,
+   1.0,
+   0.17
+  ],
+  [
+   0.0,
+   1.0,
+   0.01,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.01,
+   0.0
+  ],
+  [
+   0.7,
+   0.01,
+   1.0,
+   0.0,
+   0.77,
+   0.7,
+   0.0,
+   0.75,
+   0.08
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   1.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.01
+  ],
+  [
+   1.0,
+   0.0,
+   0.77,
+   0.0,
+   1.0,
+   1.0,
+   0.0,
+   1.0,
+   0.19
+  ],
+  [
+   0.99,
+   0.0,
+   0.7,
+   0.0,
+   1.0,
+   1.0,
+   0.0,
+   1.0,
+   0.2
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   1.0,
+   0.0,
+   0.0
+  ],
+  [
+   1.0,
+   0.01,
+   0.75,
+   0.0,
+   1.0,
+   1.0,
+   0.0,
+   1.0,
+   0.02
+  ],
+  [
+   0.17,
+   0.0,
+   0.08,
+   0.01,
+   0.19,
+   0.2,
+   0.0,
+   0.02,
+   1.0
+  ]
+ ],
+ "ref_labels": [
+  0,
+  2,
+  0,
+  3,
+  0,
+  0,
+  4,
+  0,
+  1
+ ],
+ "ref_score": "Practice score (MCC over 36 pairs, same model or not): 1.000\nRight: 36 pairs, wrong: 0 (0 wrongly called the same, 0 wrongly called different)\n",
+ "feature_names": [
+  "H_1.0",
+  "c_bold",
+  "c_code",
+  "c_colon",
+  "c_dash",
+  "c_excl",
+  "c_hash",
+  "c_list",
+  "c_nl",
+  "c_nonascii",
+  "c_paren",
+  "c_q",
+  "c_quote",
+  "frac_length",
+  "lam_alpaca_r16_0.8",
+  "lam_alpaca_r16_1.0",
+  "lam_fp8_0.8",
+  "lam_fp8_1.0",
+  "lam_gsm_r16_0.8",
+  "lam_gsm_r16_1.0",
+  "lam_int8_0.8",
+  "lam_int8_1.0",
+  "lam_nf4_0.8",
+  "lam_nf4_1.0",
+  "lam_stories_r32_0.8",
+  "lam_stories_r32_1.0",
+  "lowp",
+  "lp_0.6",
+  "lp_0.7",
+  "lp_0.8",
+  "lp_0.9",
+  "lp_1.0",
+  "lp_1.2",
+  "n_extract",
+  "n_identity",
+  "rank10",
+  "rep3",
+  "tok_per_resp",
+  "top1",
+  "tstar",
+  "ttr",
+  "w_i",
+  "w_smollm",
+  "w_sorry",
+  "w_we",
+  "w_you",
+  "words_per_resp",
+  "z_0.6",
+  "z_0.7",
+  "z_0.8",
+  "z_0.9",
+  "z_1.0",
+  "z_1.2",
+  "z_extract",
+  "z_identity",
+  "zb0_0.8",
+  "zb0_1.0",
+  "zb1_0.8",
+  "zb1_1.0",
+  "zb2_0.8",
+  "zb2_1.0",
+  "zq_alpaca_r16_0.8",
+  "zq_alpaca_r16_1.0",
+  "zq_fp8_0.8",
+  "zq_fp8_1.0",
+  "zq_gsm_r16_0.8",
+  "zq_gsm_r16_1.0",
+  "zq_int8_0.8",
+  "zq_int8_1.0",
+  "zq_nf4_0.8",
+  "zq_nf4_1.0",
+  "zq_stories_r32_0.8",
+  "zq_stories_r32_1.0",
+  "zresp_fracneg",
+  "zresp_min",
+  "zresp_std"
+ ],
+ "setrel": false
+}

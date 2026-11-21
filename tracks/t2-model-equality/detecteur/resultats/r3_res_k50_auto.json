@@ -1,0 +1,149 @@
+{
+ "k": 50,
+ "n_train_pairs": 6330,
+ "n_pos": 2578,
+ "thr_sweep_val": {
+  "0.1": 0.604,
+  "0.15": 0.634,
+  "0.2": 0.663,
+  "0.25": 0.657,
+  "0.3": 0.657,
+  "0.4": 0.689,
+  "0.5": 0.714,
+  "0.6": 0.717
+ },
+ "thr": 0.6,
+ "val_smol360_val_s101": {
+  "auc": 0.9637,
+  "mcc_practice_like": 0.744
+ },
+ "val_mcc_mean": 0.744,
+ "val_errors_top": [
+  [
+   "base:persona / base:system (dit diff\u00e9rent)",
+   143
+  ],
+  [
+   "base:persona / base:plain (dit diff\u00e9rent)",
+   129
+  ],
+  [
+   "base:persona / base:watermark (dit diff\u00e9rent)",
+   129
+  ],
+  [
+   "base:persona / base:temp1.0 (dit diff\u00e9rent)",
+   129
+  ],
+  [
+   "base:plain / base:system (dit diff\u00e9rent)",
+   53
+  ],
+  [
+   "base:system / base:watermark (dit diff\u00e9rent)",
+   53
+  ],
+  [
+   "base:system / base:temp1.0 (dit diff\u00e9rent)",
+   53
+  ],
+  [
+   "base:persona / lora@0.3:watermark (dit pareil)",
+   12
+  ],
+  [
+   "base:plain / lora@0.3:watermark (dit pareil)",
+   5
+  ],
+  [
+   "base:watermark / lora@0.3:watermark (dit pareil)",
+   5
+  ],
+  [
+   "base:temp1.0 / lora@0.3:watermark (dit pareil)",
+   5
+  ]
+ ],
+ "top_features": [
+  [
+   "max_lam_stories_r32_1.0",
+   41667
+  ],
+  [
+   "max_w_we",
+   6400
+  ],
+  [
+   "max_zq_stories_r32_1.0",
+   5143
+  ],
+  [
+   "min_c_code",
+   1990
+  ],
+  [
+   "max_lam_stories_r32_0.8",
+   1861
+  ],
+  [
+   "mean_lam_fp8_0.8",
+   1476
+  ],
+  [
+   "max_lam_fp8_0.8",
+   1204
+  ],
+  [
+   "mean_lam_alpaca_r16_1.0",
+   1187
+  ],
+  [
+   "min_c_list",
+   1146
+  ],
+  [
+   "max_lam_alpaca_r16_1.0",
+   1138
+  ],
+  [
+   "mean_lam_gsm_r16_0.8",
+   1081
+  ],
+  [
+   "max_lam_gsm_r16_1.0",
+   963
+  ],
+  [
+   "mean_lam_stories_r32_1.0",
+   954
+  ],
+  [
+   "absdiff_lam_fp8_0.8",
+   932
+  ],
+  [
+   "max_c_list",
+   772
+  ],
+  [
+   "max_zq_fp8_0.8",
+   656
+  ],
+  [
+   "max_lam_alpaca_r16_0.8",
+   647
+  ],
+  [
+   "max_zq_alpaca_r16_1.0",
+   630
+  ],
+  [
+   "mean_lam_gsm_r16_1.0",
+   570
+  ],
+  [
+   "absdiff_zq_fp8_0.8",
+   520
+  ]
+ ]
+}

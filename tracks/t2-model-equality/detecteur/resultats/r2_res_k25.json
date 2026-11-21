@@ -1,0 +1,266 @@
+{
+ "k": 25,
+ "n_train_pairs": 4560,
+ "n_pos": 808,
+ "thr_sweep_val": {
+  "0.1": 0.647,
+  "0.15": 0.622,
+  "0.2": 0.622,
+  "0.25": 0.622,
+  "0.3": 0.622,
+  "0.4": 0.602,
+  "0.5": 0.602,
+  "0.6": 0.579
+ },
+ "thr": 0.1,
+ "val_smol360_val_s101": {
+  "auc": 0.9356,
+  "mcc_practice_like": 0.668
+ },
+ "val_mcc_mean": 0.668,
+ "val_errors_top": [
+  [
+   "base:persona / base:system (dit diff\u00e9rent)",
+   151
+  ],
+  [
+   "base:persona / base:plain (dit diff\u00e9rent)",
+   114
+  ],
+  [
+   "base:persona / base:watermark (dit diff\u00e9rent)",
+   114
+  ],
+  [
+   "base:persona / base:temp1.0 (dit diff\u00e9rent)",
+   114
+  ],
+  [
+   "base:plain / base:system (dit diff\u00e9rent)",
+   94
+  ],
+  [
+   "base:system / base:watermark (dit diff\u00e9rent)",
+   94
+  ],
+  [
+   "base:system / base:temp1.0 (dit diff\u00e9rent)",
+   94
+  ],
+  [
+   "base:plain / lora@0.3:plain (dit pareil)",
+   34
+  ],
+  [
+   "base:watermark / lora@0.3:plain (dit pareil)",
+   34
+  ],
+  [
+   "base:temp1.0 / lora@0.3:plain (dit pareil)",
+   34
+  ],
+  [
+   "base:system / lora@0.3:plain (dit pareil)",
+   16
+  ],
+  [
+   "base:persona / lora@0.3:plain (dit pareil)",
+   16
+  ]
+ ],
+ "top_features": [
+  [
+   "max_lam_stories_r32_0.8",
+   25482
+  ],
+  [
+   "max_zq_stories_r32_1.0",
+   6652
+  ],
+  [
+   "max_lam_nf4_1.0",
+   5320
+  ],
+  [
+   "max_lam_stories_r32_1.0",
+   4351
+  ],
+  [
+   "max_zq_stories_r32_0.8",
+   3861
+  ],
+  [
+   "max_lam_fp8_0.8",
+   3687
+  ],
+  [
+   "min_lowp",
+   2177
+  ],
+  [
+   "min_lam_fp8_0.8",
+   2060
+  ],
+  [
+   "max_lam_alpaca_r16_0.8",
+   1900
+  ],
+  [
+   "max_zq_nf4_1.0",
+   1148
+  ],
+  [
+   "min_lam_fp8_1.0",
+   1129
+  ],
+  [
+   "absdiff_zq_gsm_r16_1.0",
+   672
+  ],
+  [
+   "max_w_you",
+   640
+  ],
+  [
+   "max_lp_1.2",
+   635
+  ],
+  [
+   "max_lam_alpaca_r16_1.0",
+   593
+  ],
+  [
+   "min_rank10",
+   505
+  ],
+  [
+   "mean_zq_fp8_1.0",
+   492
+  ],
+  [
+   "max_zb0_0.8",
+   464
+  ],
+  [
+   "absdiff_tstar",
+   461
+  ],
+  [
+   "absdiff_lam_gsm_r16_1.0",
+   458
+  ]
+ ],
+ "ref_P": [
+  [
+   1.0,
+   0.0,
+   0.33,
+   0.0,
+   0.95,
+   0.99,
+   0.0,
+   0.99,
+   0.24
+  ],
+  [
+   0.0,
+   1.0,
+   0.01,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.02
+  ],
+  [
+   0.33,
+   0.01,
+   1.0,
+   0.0,
+   0.15,
+   0.46,
+   0.0,
+   0.12,
+   0.02
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   1.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   0.95,
+   0.0,
+   0.15,
+   0.0,
+   1.0,
+   0.97,
+   0.0,
+   0.96,
+   0.18
+  ],
+  [
+   0.99,
+   0.0,
+   0.46,
+   0.0,
+   0.97,
+   1.0,
+   0.0,
+   1.0,
+   0.28
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   1.0,
+   0.0,
+   0.0
+  ],
+  [
+   0.99,
+   0.0,
+   0.12,
+   0.0,
+   0.96,
+   1.0,
+   0.0,
+   1.0,
+   0.02
+  ],
+  [
+   0.24,
+   0.02,
+   0.02,
+   0.0,
+   0.18,
+   0.28,
+   0.0,
+   0.02,
+   1.0
+  ]
+ ],
+ "ref_labels": [
+  0,
+  1,
+  0,
+  3,
+  0,
+  0,
+  4,
+  0,
+  2
+ ],
+ "ref_score": "Practice score (MCC over 36 pairs, same model or not): 1.000\nRight: 36 pairs, wrong: 0 (0 wrongly called the same, 0 wrongly called different)\n"
+}

@@ -1,0 +1,231 @@
+{
+ "k": 25,
+ "n_train_pairs": 6330,
+ "n_pos": 2578,
+ "thr_sweep_val": {
+  "0.1": 0.715,
+  "0.15": 0.705,
+  "0.2": 0.719,
+  "0.25": 0.696,
+  "0.3": 0.696,
+  "0.4": 0.64,
+  "0.5": 0.643,
+  "0.6": 0.628
+ },
+ "thr": 0.2,
+ "val_smol360_val_s101": {
+  "auc": 0.9469,
+  "mcc_practice_like": 0.74
+ },
+ "val_mcc_mean": 0.74,
+ "val_errors_top": [
+  [
+   "base:plain / lora@0.3:plain (dit pareil)",
+   61
+  ],
+  [
+   "base:temp1.0 / lora@0.3:plain (dit pareil)",
+   61
+  ],
+  [
+   "base:system / base:watermark (dit diff\u00e9rent)",
+   59
+  ],
+  [
+   "base:persona / base:watermark (dit diff\u00e9rent)",
+   59
+  ],
+  [
+   "base:watermark / lora@0.3:plain (dit pareil)",
+   58
+  ],
+  [
+   "base:system / lora@0.3:plain (dit pareil)",
+   53
+  ],
+  [
+   "base:persona / base:system (dit diff\u00e9rent)",
+   48
+  ],
+  [
+   "base:persona / lora@0.3:plain (dit pareil)",
+   44
+  ],
+  [
+   "base:plain / base:system (dit diff\u00e9rent)",
+   34
+  ],
+  [
+   "base:system / base:temp1.0 (dit diff\u00e9rent)",
+   34
+  ],
+  [
+   "base:plain / base:watermark (dit diff\u00e9rent)",
+   30
+  ],
+  [
+   "base:temp1.0 / base:watermark (dit diff\u00e9rent)",
+   30
+  ]
+ ],
+ "top_features": [
+  [
+   "max_lam_stories_r32_0.8",
+   24493
+  ],
+  [
+   "max_lam_stories_r32_1.0",
+   10559
+  ],
+  [
+   "max_lam_nf4_0.8",
+   5123
+  ],
+  [
+   "max_lam_alpaca_r16_1.0",
+   4444
+  ],
+  [
+   "max_lam_gsm_r16_1.0",
+   3970
+  ],
+  [
+   "max_lam_fp8_0.8",
+   3760
+  ],
+  [
+   "max_zq_gsm_r16_1.0",
+   2232
+  ],
+  [
+   "max_zq_stories_r32_1.0",
+   2144
+  ],
+  [
+   "min_lowp",
+   2098
+  ],
+  [
+   "max_lam_alpaca_r16_0.8",
+   1996
+  ],
+  [
+   "max_lam_fp8_1.0",
+   1524
+  ],
+  [
+   "min_zq_fp8_0.8",
+   1372
+  ],
+  [
+   "min_c_bold",
+   993
+  ],
+  [
+   "min_lam_nf4_0.8",
+   792
+  ],
+  [
+   "min_lam_int8_1.0",
+   762
+  ],
+  [
+   "min_lam_nf4_1.0",
+   752
+  ],
+  [
+   "max_z_extract",
+   690
+  ],
+  [
+   "max_c_list",
+   637
+  ],
+  [
+   "min_n_extract",
+   619
+  ],
+  [
+   "mean_lam_stories_r32_1.0",
+   593
+  ]
+ ],
+ "feature_names": [
+  "H_1.0",
+  "c_bold",
+  "c_code",
+  "c_colon",
+  "c_dash",
+  "c_excl",
+  "c_hash",
+  "c_list",
+  "c_nl",
+  "c_nonascii",
+  "c_paren",
+  "c_q",
+  "c_quote",
+  "frac_length",
+  "lam_alpaca_r16_0.8",
+  "lam_alpaca_r16_1.0",
+  "lam_fp8_0.8",
+  "lam_fp8_1.0",
+  "lam_gsm_r16_0.8",
+  "lam_gsm_r16_1.0",
+  "lam_int8_0.8",
+  "lam_int8_1.0",
+  "lam_nf4_0.8",
+  "lam_nf4_1.0",
+  "lam_stories_r32_0.8",
+  "lam_stories_r32_1.0",
+  "lowp",
+  "lp_0.6",
+  "lp_0.7",
+  "lp_0.8",
+  "lp_0.9",
+  "lp_1.0",
+  "lp_1.2",
+  "n_extract",
+  "n_identity",
+  "rank10",
+  "rep3",
+  "tok_per_resp",
+  "top1",
+  "tstar",
+  "ttr",
+  "w_i",
+  "w_smollm",
+  "w_sorry",
+  "w_we",
+  "w_you",
+  "words_per_resp",
+  "z_0.6",
+  "z_0.7",
+  "z_0.8",
+  "z_0.9",
+  "z_1.0",
+  "z_1.2",
+  "z_extract",
+  "z_identity",
+  "zb0_0.8",
+  "zb0_1.0",
+  "zb1_0.8",
+  "zb1_1.0",
+  "zb2_0.8",
+  "zb2_1.0",
+  "zq_alpaca_r16_0.8",
+  "zq_alpaca_r16_1.0",
+  "zq_fp8_0.8",
+  "zq_fp8_1.0",
+  "zq_gsm_r16_0.8",
+  "zq_gsm_r16_1.0",
+  "zq_int8_0.8",
+  "zq_int8_1.0",
+  "zq_nf4_0.8",
+  "zq_nf4_1.0",
+  "zq_stories_r32_0.8",
+  "zq_stories_r32_1.0",
+  "zresp_fracneg",
+  "zresp_min",
+  "zresp_std"
+ ]
+}

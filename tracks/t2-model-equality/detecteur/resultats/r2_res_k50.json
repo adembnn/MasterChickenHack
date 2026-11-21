@@ -1,0 +1,153 @@
+{
+ "k": 50,
+ "n_train_pairs": 4560,
+ "n_pos": 808,
+ "thr_sweep_val": {
+  "0.1": 0.713,
+  "0.15": 0.718,
+  "0.2": 0.718,
+  "0.25": 0.718,
+  "0.3": 0.718,
+  "0.4": 0.718,
+  "0.5": 0.718,
+  "0.6": 0.718
+ },
+ "thr": 0.15,
+ "val_smol360_val_s101": {
+  "auc": 0.9479,
+  "mcc_practice_like": 0.739
+ },
+ "val_mcc_mean": 0.739,
+ "val_errors_top": [
+  [
+   "base:persona / base:system (dit diff\u00e9rent)",
+   143
+  ],
+  [
+   "base:persona / base:plain (dit diff\u00e9rent)",
+   132
+  ],
+  [
+   "base:persona / base:watermark (dit diff\u00e9rent)",
+   132
+  ],
+  [
+   "base:persona / base:temp1.0 (dit diff\u00e9rent)",
+   132
+  ],
+  [
+   "base:system / base:watermark (dit diff\u00e9rent)",
+   54
+  ],
+  [
+   "base:system / base:temp1.0 (dit diff\u00e9rent)",
+   54
+  ],
+  [
+   "base:plain / base:system (dit diff\u00e9rent)",
+   51
+  ],
+  [
+   "base:watermark / lora@0.3:watermark (dit pareil)",
+   8
+  ],
+  [
+   "base:temp1.0 / lora@0.3:watermark (dit pareil)",
+   8
+  ],
+  [
+   "base:plain / lora@0.3:watermark (dit pareil)",
+   5
+  ],
+  [
+   "base:plain / base:watermark (dit diff\u00e9rent)",
+   3
+  ],
+  [
+   "base:plain / base:temp1.0 (dit diff\u00e9rent)",
+   3
+  ]
+ ],
+ "top_features": [
+  [
+   "max_lam_stories_r32_1.0",
+   38956
+  ],
+  [
+   "max_lam_stories_r32_0.8",
+   4101
+  ],
+  [
+   "max_lam_fp8_0.8",
+   3147
+  ],
+  [
+   "max_w_we",
+   2029
+  ],
+  [
+   "max_zq_stories_r32_0.8",
+   1813
+  ],
+  [
+   "min_c_code",
+   1620
+  ],
+  [
+   "mean_w_we",
+   1424
+  ],
+  [
+   "absdiff_zq_stories_r32_1.0",
+   1207
+  ],
+  [
+   "absdiff_lam_gsm_r16_0.8",
+   941
+  ],
+  [
+   "max_zq_fp8_0.8",
+   842
+  ],
+  [
+   "max_c_quote",
+   792
+  ],
+  [
+   "absdiff_zq_fp8_0.8",
+   710
+  ],
+  [
+   "max_lam_alpaca_r16_1.0",
+   662
+  ],
+  [
+   "min_H_1.0",
+   659
+  ],
+  [
+   "absdiff_lam_gsm_r16_1.0",
+   644
+  ],
+  [
+   "mean_lam_fp8_1.0",
+   591
+  ],
+  [
+   "absdiff_zq_gsm_r16_1.0",
+   553
+  ],
+  [
+   "min_zresp_std",
+   505
+  ],
+  [
+   "absdiff_lam_alpaca_r16_1.0",
+   490
+  ],
+  [
+   "mean_lam_stories_r32_1.0",
+   487
+  ]
+ ]
+}

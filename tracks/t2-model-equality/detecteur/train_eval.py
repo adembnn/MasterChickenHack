@@ -69,22 +69,53 @@ def practice_like(world, rnd):
     return pick
 
 
-def score_sets(world, F, A, names, model, rnd, n_sets=200, thr=0.5, errs=None):
-    cache = {}
-    def p(i, j):
-        key = (min(i, j), max(i, j))
-        if key not in cache:
-            x = P.pair_features(F[key[0]], F[key[1]], A[key[0]], A[key[1]], names)
-            cache[key] = model.predict(x[None, :])[0]
-        return cache[key]
+def random_set(world, rnd, size=11):
+    """Lot de type ep : 4 à 6 copies de la base (déguisements variés), le reste en variantes distinctes."""
+    base = [i for i, g in enumerate(world) if g["variant"] == "base"]
+    other = {}
+    for i, g in enumerate(world):
+        if g["variant"] != "base":
+            other.setdefault(g["variant"], []).append(i)
+    nb = min(len(base), rnd.randint(4, 6))
+    vs = rnd.sample(sorted(other), min(len(other), size - nb))
+    return rnd.sample(base, nb) + [rnd.choice(other[v]) for v in vs]
+
+
+SETREL = [False]
+CROSS = {}
+
+
+def set_pairs(world, wid, F, A, names, pick):
+    """Caractéristiques de paires dans un lot ; relatives à la médiane du lot si SETREL."""
+    if SETREL[0]:
+        Fs = P.set_relative(F, pick, names)
+        nm = names + ["rel_" + n for n in names]
+    else:
+        Fs, nm = F, names
+    X, keys = [], []
+    for a, b in itertools.combinations(range(len(pick)), 2):
+        i, j = pick[a], pick[b]
+        ck = (wid, min(i, j), max(i, j))
+        if ck not in CROSS:
+            CROSS[ck] = P.cross_features(A[i], A[j])
+        X.append(P.pair_features(Fs[i], Fs[j], None, None, nm, cross=CROSS[ck]))
+        keys.append((a, b))
+    return np.array(X), keys
+
+
+def score_sets(world, F, A, names, model, rnd, n_sets=200, thr=0.5, errs=None, sampler=None, wid=None):
+    sampler = sampler or practice_like
+    wid = wid if wid is not None else id(world)
     mccs = []
     for _ in range(n_sets):
-        pick = practice_like(world, rnd)
+        pick = sampler(world, rnd)
         if pick is None:
             break
         n = len(pick); M = np.eye(n)
-        for a, b in itertools.combinations(range(n), 2):
-            M[a, b] = M[b, a] = p(pick[a], pick[b])
+        X, keys = set_pairs(world, wid, F, A, names, pick)
+        pr = model.predict(X)
+        for (a, b), v in zip(keys, pr):
+            M[a, b] = M[b, a] = v
         lab = P.complete_linkage(M, thr)
         truth = [world[i]["variant"] for i in pick]
         mccs.append(P.mcc_pairs(truth, lab))
@@ -110,6 +141,8 @@ def main():
     ap.add_argument("--out", default="out")
     ap.add_argument("--answers", default="practice_answers.csv")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--setrel", action="store_true", help="caractéristiques relatives à la médiane du lot")
+    ap.add_argument("--n_train_sets", type=int, default=300)
     ap.add_argument("--drop", default="", help="préfixes de caractéristiques retirées, séparés par des virgules")
     a = ap.parse_args()
     DROP.extend([d for d in a.drop.split(",") if d])
@@ -117,13 +150,20 @@ def main():
     rnd = random.Random(0)
     names = None
     Xtr, ytr = [], []
+    SETREL[0] = a.setrel
     for st in a.train:
         w = P.load_world(*world_files(st, a.jdir))
         F, A, names = build(w, a.k, names)
-        X, y, _ = pairs_of(w, F, A, names)
-        Xtr.append(X); ytr.append(y)
+        if a.setrel:   # paires tirées dans des lots comme au test (corrigé-like et ep-like)
+            for t in range(a.n_train_sets):
+                pick = (practice_like(w, rnd) if t % 2 == 0 else None) or random_set(w, rnd)
+                X, keys = set_pairs(w, st, F, A, names, pick)
+                Xtr.append(X); ytr.append(np.array([int(w[pick[i]]["variant"] == w[pick[j]]["variant"]) for i, j in keys]))
+        else:
+            X, y, _ = pairs_of(w, F, A, names)
+            Xtr.append(X); ytr.append(y)
     Xtr, ytr = np.concatenate(Xtr), np.concatenate(ytr)
-    pn = P.pair_names(names)
+    pn = P.pair_names(names + (["rel_" + n for n in names] if a.setrel else []))
     wpos = (len(ytr) - ytr.sum()) / max(ytr.sum(), 1)
     model = lgb.train({"objective": "binary", "learning_rate": 0.05, "num_leaves": 31, "min_data_in_leaf": 40,
                        "feature_fraction": 0.7, "bagging_fraction": 0.8, "bagging_freq": 1, "lambda_l2": 1.0,
@@ -131,7 +171,7 @@ def main():
                       lgb.Dataset(Xtr, ytr, feature_name=pn), num_boost_round=400)
     res = {"k": a.k, "n_train_pairs": int(len(ytr)), "n_pos": int(ytr.sum())}
     errs = Counter()
-    vm = []
+    vm, vm2 = [], []
     vworlds = []
     for st in a.val:
         w = P.load_world(*world_files(st, a.jdir))
@@ -140,20 +180,21 @@ def main():
     if a.thr == "auto":
         sweep = {}
         for t in (0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6):
-            sweep[t] = float(np.mean([score_sets(w, F, A, names, model, random.Random(1), n_sets=100, thr=t) for w, F, A in vworlds]))
+            sweep[t] = float(np.mean([score_sets(w, F, A, names, model, random.Random(1), n_sets=100, thr=t, wid=f"v{vi}")
+                                      for vi, (w, F, A) in enumerate(vworlds)] +
+                                     [score_sets(w, F, A, names, model, random.Random(2), n_sets=100, thr=t, sampler=random_set,
+                                                 wid=f"v{vi}") for vi, (w, F, A) in enumerate(vworlds)]))
         res["thr_sweep_val"] = {str(t): round(v, 3) for t, v in sweep.items()}
         a.thr = max(sweep, key=sweep.get)
     a.thr = float(a.thr); res["thr"] = a.thr
-    for st in a.val:
-        w = P.load_world(*world_files(st, a.jdir))
-        F, A, _ = build(w, a.k, names)
-        X, y, _ = pairs_of(w, F, A, names)
-        pr = model.predict(X)
-        auc = roc_auc_score(y, pr)
-        m = score_sets(w, F, A, names, model, rnd, errs=errs, thr=a.thr)
-        res[f"val_{os.path.basename(st)}"] = {"auc": round(auc, 4), "mcc_practice_like": round(m, 3)}
-        vm.append(m)
+    for vi, st in enumerate(a.val):
+        w, F, A = vworlds[vi]
+        m = score_sets(w, F, A, names, model, random.Random(3), errs=errs, thr=a.thr, wid=f"v{vi}")
+        m2 = score_sets(w, F, A, names, model, random.Random(4), thr=a.thr, sampler=random_set, wid=f"v{vi}")
+        res[f"val_{os.path.basename(st)}"] = {"mcc_practice_like": round(m, 3), "mcc_ep_like11": round(m2, 3)}
+        vm.append(m); vm2.append(m2)
     res["val_mcc_mean"] = round(float(np.mean(vm)), 3)
+    res["val_mcc_ep_like_mean"] = round(float(np.mean(vm2)), 3)
     res["val_errors_top"] = errs.most_common(12)
     imp = sorted(zip(pn, model.feature_importance("gain")), key=lambda t: -t[1])[:20]
     res["top_features"] = [(n, round(float(v))) for n, v in imp]
@@ -161,8 +202,9 @@ def main():
         w = P.load_world(a.ref + ".npz", a.ref_jsonl or None)
         F, A, _ = build(w, a.k, names)
         n = len(w); M = np.eye(n)
-        for i, j in itertools.combinations(range(n), 2):
-            M[i, j] = M[j, i] = model.predict(P.pair_features(F[i], F[j], A[i], A[j], names)[None, :])[0]
+        X, keys = set_pairs(w, "ref", F, A, names, list(range(n)))
+        for (i, j), v in zip(keys, model.predict(X)):
+            M[i, j] = M[j, i] = v
         lab = P.complete_linkage(M, a.thr)
         csv = os.path.join(a.out, f"ref_k{a.k}{a.tag}.csv")
         with open(csv, "w") as f:
@@ -173,6 +215,8 @@ def main():
         res["ref_labels"] = lab
         if os.path.exists(a.answers):
             res["ref_score"] = subprocess.run(["python3", "score_practice.py", csv, a.answers], capture_output=True, text=True).stdout
+    res["feature_names"] = names
+    res["setrel"] = a.setrel
     model.save_model(os.path.join(a.out, f"model_k{a.k}{a.tag}.txt"))
     json.dump(res, open(os.path.join(a.out, f"res_k{a.k}{a.tag}.json"), "w"), indent=1)
     print(json.dumps({k: v for k, v in res.items() if k != "ref_P"}, indent=1, ensure_ascii=False))

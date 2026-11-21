@@ -1,0 +1,153 @@
+{
+ "k": 100,
+ "n_train_pairs": 4560,
+ "n_pos": 808,
+ "thr_sweep_val": {
+  "0.1": 0.554,
+  "0.15": 0.564,
+  "0.2": 0.562,
+  "0.25": 0.562,
+  "0.3": 0.575,
+  "0.4": 0.582,
+  "0.5": 0.587,
+  "0.6": 0.589
+ },
+ "thr": 0.6,
+ "val_smol360_val_s101": {
+  "auc": 0.9539,
+  "mcc_practice_like": 0.604
+ },
+ "val_mcc_mean": 0.604,
+ "val_errors_top": [
+  [
+   "base:persona / base:watermark (dit diff\u00e9rent)",
+   163
+  ],
+  [
+   "base:persona / base:plain (dit diff\u00e9rent)",
+   134
+  ],
+  [
+   "base:persona / base:temp1.0 (dit diff\u00e9rent)",
+   132
+  ],
+  [
+   "base:system / base:watermark (dit diff\u00e9rent)",
+   126
+  ],
+  [
+   "base:persona / base:system (dit diff\u00e9rent)",
+   126
+  ],
+  [
+   "base:plain / base:watermark (dit diff\u00e9rent)",
+   108
+  ],
+  [
+   "base:temp1.0 / base:watermark (dit diff\u00e9rent)",
+   105
+  ],
+  [
+   "base:system / base:temp1.0 (dit diff\u00e9rent)",
+   56
+  ],
+  [
+   "base:plain / base:system (dit diff\u00e9rent)",
+   53
+  ],
+  [
+   "base:temp1.0 / lora@0.3:watermark (dit pareil)",
+   19
+  ],
+  [
+   "base:plain / lora@0.3:watermark (dit pareil)",
+   12
+  ],
+  [
+   "base:watermark / lora@0.3:watermark (dit pareil)",
+   9
+  ]
+ ],
+ "top_features": [
+  [
+   "max_lam_stories_r32_1.0",
+   33975
+  ],
+  [
+   "max_zq_stories_r32_1.0",
+   3934
+  ],
+  [
+   "max_lam_stories_r32_0.8",
+   3182
+  ],
+  [
+   "absdiff_zq_fp8_0.8",
+   3039
+  ],
+  [
+   "max_zq_alpaca_r16_1.0",
+   1960
+  ],
+  [
+   "min_c_code",
+   1925
+  ],
+  [
+   "max_w_i",
+   1781
+  ],
+  [
+   "max_lam_alpaca_r16_1.0",
+   1716
+  ],
+  [
+   "absdiff_lam_fp8_1.0",
+   1283
+  ],
+  [
+   "max_zq_stories_r32_0.8",
+   1142
+  ],
+  [
+   "absdiff_zq_gsm_r16_1.0",
+   1034
+  ],
+  [
+   "absdiff_lam_gsm_r16_1.0",
+   951
+  ],
+  [
+   "absdiff_lam_stories_r32_1.0",
+   878
+  ],
+  [
+   "min_c_list",
+   861
+  ],
+  [
+   "min_c_excl",
+   671
+  ],
+  [
+   "min_c_dash",
+   659
+  ],
+  [
+   "mean_lam_stories_r32_1.0",
+   657
+  ],
+  [
+   "absdiff_zq_fp8_1.0",
+   657
+  ],
+  [
+   "absdiff_zq_stories_r32_0.8",
+   653
+  ],
+  [
+   "absdiff_c_code",
+   647
+  ]
+ ]
+}
