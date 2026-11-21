@@ -149,6 +149,22 @@ la base :
   NLL de 0,92 est au milieu des copies, 0,89-0,99.)
 - **Les fp8 ne sont pas touchés** : la statistique fp8 compare deux lecteurs tirés de la même base, donc la température s'annule.
 
+### 5c. Détecteur LoRA corrigé : apprentissage et lecture à température égale (`ep_readers_t.py`)
+
+La LoRA est apprise comme (base+LoRA)/T*_corpus, et chaque guichet est relu à son T* (estimé par la session v4) ; le corpus est le
+guichet de NLL maximale **à son T***. corr(z, NLL) passe de −0,9 à **+0,14 (ref) / −0,2 à −0,4 (ep)**, et le guichet T=1 ne tombe
+plus à −7.
+
+- **Ref** (corpus ref-07) : ref-04 z 5,8-6,1 ; ref-09 2,65-2,82 ; copies −0,6 à 1,9 ; AUC LoRA {04, 09} contre copies = 1,0
+  (marge de ref-09 étroite). MCC : 1,000 si le corpus est compté LoRA, 0,734 s'il est compté base. Les ref ne testent pas
+  l'artefact (toutes les copies sont à T*=0,8) : l'ancien détecteur y donnait aussi 1,000.
+- **Ep** : fp8 inchangés à T* (ep-05 3,5 / 2,7 ; ep-15 2,6 / 2,9 ; ep-22 6,6 / 4,9). Aucune LoRA en llama1b ni en qwen1.5b.
+  **qwen3b : ep-02 (z 2,9-3,9), ep-17 (3,4-4,2), ep-18 (2,7-3,6)**, reconnus par le lecteur appris sur ep-23. Leurs z sont semblables,
+  donc probablement une seule LoRA déguisée ; ep-04 (artefact froid) disparaît. CSV candidats validés (A : fp8 + {02, 17, 18} ;
+  B : + ep-23 ; C : ep-02 seul). « fp8 seul » a obtenu 0,40 au public.
+- Observation non exploitée : en llama1b et qwen1.5b, le lecteur appris sur le corpus (ep-16, ep-07) s'allume sur un fp8 de la
+  famille (ep-15, ep-22).
+
 ## 6. Recommandation
 
 1. **fp8 est détectable en boîte noire, à trois conditions** : (a) avoir le checkpoint de base exact ; (b) utiliser des lecteurs

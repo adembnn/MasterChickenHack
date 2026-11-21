@@ -63,7 +63,7 @@ def seq_logprob(model, tok, items, bs=16):
     return out
 
 
-def train_lora(a, tok, base, train, seed):
+def train_lora(a, tok, base, train, seed, temp=1.0):
     cfg = LoraConfig(r=a.r, lora_alpha=2 * a.r, lora_dropout=0.0, task_type="CAUSAL_LM",
                      target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"])
     pm = get_peft_model(base, cfg)
@@ -80,7 +80,12 @@ def train_lora(a, tok, base, train, seed):
                 sub = [(p, r) for p, r, s in chunk if s == scale]
                 set_scale(pm, scale, store)
                 ids, att, lab, _, _ = batch_tensors(tok, sub, pm.device)
-                loss = pm(input_ids=ids, attention_mask=att, labels=lab).loss
+                if temp == 1.0:
+                    loss = pm(input_ids=ids, attention_mask=att, labels=lab).loss
+                else:  # modèle du corpus = (base+LoRA)/T : la LoRA n'absorbe pas la température d'échantillonnage
+                    lg = pm(input_ids=ids, attention_mask=att).logits[:, :-1].float() / temp
+                    loss = torch.nn.functional.cross_entropy(lg.reshape(-1, lg.shape[-1]), lab[:, 1:].reshape(-1),
+                                                             ignore_index=-100)
                 loss.backward()
                 tot += loss.item()
             opt.step()
