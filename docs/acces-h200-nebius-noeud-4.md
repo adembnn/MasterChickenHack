@@ -22,7 +22,8 @@ Réseau : `default-network` / `default-subnet-eqxzbx6y`. Ping nœud 1 → nœud 
 
 Autres guides : [`acces-h200-nebius.md`](acces-h200-nebius.md),
 [`acces-h200-nebius-noeud-2.md`](acces-h200-nebius-noeud-2.md),
-[`acces-h200-nebius-noeud-3.md`](acces-h200-nebius-noeud-3.md).
+[`acces-h200-nebius-noeud-3.md`](acces-h200-nebius-noeud-3.md),
+[`acces-h200-nebius-noeud-5.md`](acces-h200-nebius-noeud-5.md).
 
 ## Accès SSH (obligatoire via saut)
 

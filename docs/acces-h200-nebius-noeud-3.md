@@ -28,6 +28,7 @@ Guides des autres nœuds :
 - Nœud 1 : [`acces-h200-nebius.md`](acces-h200-nebius.md)
 - Nœud 2 : [`acces-h200-nebius-noeud-2.md`](acces-h200-nebius-noeud-2.md)
 - Nœud 4 (privé seul) : [`acces-h200-nebius-noeud-4.md`](acces-h200-nebius-noeud-4.md)
+- Nœud 5 (privé seul) : [`acces-h200-nebius-noeud-5.md`](acces-h200-nebius-noeud-5.md)
 
 ## Comptes
 
