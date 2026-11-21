@@ -11,7 +11,10 @@ vraies réponses déjà collectées, `lora_distill.py` LoRA estimée). Résultat
 **Décision débloquée** : faut-il dépenser du budget pour séparer fp8 (le dernier point manquant entre MCC 0,734 et 1,000 sur le corrigé) ?
 **Réponse courte** : oui, **mais seulement si on dispose localement du checkpoint de base exact** des endpoints. Avec lui, un test
 de vraisemblance contrastée détecte fp8 avec 20 à 50 réponses par endpoint, y compris sous déguisement. Sans lui (modèle inconnu),
-fp8 reste hors de portée : aucune statistique texte seul ne sépare fp8 du bruit de service. <!-- BANK_VERDICT -->
+fp8 reste hors de portée : aucune statistique texte seul ne sépare fp8 du bruit de service.
+Sur le serveur réel, les bases ont été identifiées (ref = SmolLM2-360M ; ep = Qwen2.5-3B / Qwen2.5-1.5B / Llama-3.2-1B), le test
+est donc applicable : avec 25 réponses par endpoint, la règle a donné **MCC 1,000 sur le corrigé ref**. Elle a étiqueté 3 fp8 et
+5 LoRA parmi les 33 ep pour la soumission du 21/11 à 23 h 09 (§5). Le seuil a été calé sur ces mêmes ref : le score réel tranchera.
 
 ## 1. Ce qui ne marche pas (et pourquoi les anciens chiffres optimistes étaient faux)
 
@@ -103,7 +106,9 @@ contre la médiane des copies (endpoint testé exclu, ref-08 T=1,0 exclu du plan
 - Correction par la surprise du lecteur base (régression de s sur −log p_base) : pente ≈ 0, aucun effet.
 - La sonde d'extraction ne rend pas proprement le system prompt à T=0,8 sur ce 360M : impossible de relire ref-03 avec son contexte.
 
-<!-- REAL100_SECTION -->
+Règle complète (`ep_readers.py`, §5) sur ces mêmes réponses ref : **MCC 1,000** avec `score_practice.py` (ref-02 fp8 ; 04/07/09
+LoRA ; le reste base). Seuil z/√n ≥ 0,51 calé sur ces 24 prompts (in-sample) ; à seuil absolu 4,0, on tombe à 0,524. Les 100
+réponses par ref (blocs 1-3) n'étaient pas arrivées à la fin de cette session : la confirmation hors échantillon reste à faire.
 
 ## 4b. Bonus demandé par la session principale : LoRA faible (0,3) par LoRA distillée
 
@@ -112,13 +117,38 @@ prompt (2 plis). Lecteur s = log p_{base+LoRA·k} − log p_base. Sur le bloc 0 
 01/03/05/06 ≤ 1,2, fp8 ref-02 −0,6 ; ref-04 3,7-5,0. ref-08 (T=1,0) tombe à −4 à −7 et doit sortir du plancher.
 Adaptateur partagé avec la session v4 : `h200c:/tmp/eac-t2-real/lora_est/`. Généralisé aux 3 bases des ep dans `ep_readers.py`.
 
-## 5. Recommandation
+## 5. Les 33 ep (bloc 0 : 25 réponses par endpoint, 23 prompts communs) — étiquettes de la soumission de 23 h 09
 
-<!-- RECO -->
+`ep_readers.py`, familles confirmées par deux sessions indépendantes, guichets T=1,0 (ep-30/31/33) exclus de la référence.
+Pénalité de répétition auto : 1,0 dans les 3 familles (NLL/token nettement plus basse sans pénalité). Seuil : z ≥ 0,51·√n ≈ 2,5.
+
+| Famille | fp8 (max z e4m3 / W8A8 per-tensor) | Corpus LoRA (auto) | LoRA faibles détectées | base |
+|---|---|---|---|---|
+| llama1b | **ep-05** (3,4 / 2,6), **ep-15** (2,4 / 2,8, limite) | ep-16 | aucune (max 1,9) | 8 |
+| qwen1.5b | **ep-22** (6,4 / 4,3, net) | ep-07 | aucune (max 1,3) | 9 |
+| qwen3b | aucun (max 2,3 / 1,6) | ep-23 (NLL 0,827, ep-14 juste derrière à 0,809) | **ep-04** (2,7), **ep-17** (2,5), limites | 7 |
+
+Lecture : un fp8 net (ep-22), deux probables. Rien sur Qwen-3B, ce qui est attendu (plus le modèle est gros, plus la perturbation
+fp8 est faible). Les LoRA faibles de qwen3b sont tout juste au seuil. Les guichets T*=0,9 sont mal expliqués par « simple copie à
+température plus haute » : sous un lecteur entraîné sur l'un d'eux, les autres de la même famille tombent à −4,5 / −5,8, comme les
+T=1,0. Le choix du corpus LoRA par NLL maximale est fragile en qwen3b (écart de 0,02 nat).
+
+## 6. Recommandation
+
+1. **fp8 est détectable en boîte noire, à trois conditions** : (a) avoir le checkpoint de base exact ; (b) utiliser des lecteurs
+   fp8 du même groupe de schéma que le serveur, ici **per-tensor** (e4m3 poids seuls ou W8A8), un lecteur per-canal ne voit rien ;
+   (c) calibrer contre des copies du même modèle via une médiane robuste, en excluant les guichets T≥1, jamais contre 0.
+2. **Budget** : 25 réponses suffisent pour un fp8 sur un petit modèle (360M-1,5B) en clair ; il en faut ~50 sous déguisement
+   (system prompt + filigrane). Sur un 3B, 25 ne suffisent pas.
+3. **Après le score de 23 h 09** : si les fp8/LoRA limites (ep-15, ep-04, ep-17) coûtent, monter le seuil à 3,0. Avec les 100
+   réponses par endpoint, refaire la règle hors échantillon et vérifier que ref-02 reste au-dessus de ref-03.
+4. Le reste de mes pistes de départ (texte identique, sondes numériques, variabilité, NLL croisée entre lecteurs) **ne sert à rien
+   pour fp8** : ne pas y dépenser de requêtes.
 
 ## Limites
 - Tout repose sur un **jumeau** (OLMo-2-1B, fausse quantification des poids des Linear). La fp8 réelle des organisateurs (vLLM,
   `compressed-tensors`, FP8 natif H100) peut différer de tous les schémas de la banque.
-- Le corrigé dit que les `ref-*` sont « un modèle séparé, petit » : sans identifier ce checkpoint, rien de ce rapport ne s'applique.
+- Les ref (SmolLM2-360M) et les ep (Qwen/Llama) n'ont pas la même base : le seuil calé sur les ref est transposé aux ep par la
+  taille d'effet z/√n, ce qui suppose des effets fp8/LoRA de taille comparable d'une base à l'autre (non vérifié).
 - Un filigrane KGW **fort** (δ=8) ou un prompt système très long n'ont pas été testés ici (δ=4 seulement).
 - Le budget réel est de 100 réponses par endpoint, partagé avec les autres sondes : 45 réponses pour fp8 déguisée, c'est presque la moitié.
