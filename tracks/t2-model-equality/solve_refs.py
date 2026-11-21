@@ -1,6 +1,6 @@
 """Tache 2, egalite de modeles : calibrer sur les endpoints de reference, puis classer les 33.
 
-Trouvaille importante : ref-01 a ref-09 ne sont jamais notes et ne consomment aucun budget.
+Trouvaille importante : ref-01 a ref-09 ne sont jamais notes dans le classement.
 Ils portent exactement la meme question, avec la reponse connue (practice_answers.csv) :
   meme modele   : ref-01, ref-03 (system prompt), ref-05 (persona), ref-06 (watermark),
                   ref-08 (temperature 1.0)
@@ -13,7 +13,19 @@ Usage :
   python t2_solve.py --query          # interroge les 33 endpoints, 100 prompts chacun
   python t2_solve.py --solve          # ecrit submission.csv
 Le meme prompts.txt sert aux deux, la comparaison se fait prompt par prompt.
+
+ATTENTION : le budget est incremente meme sur les ref. Mesure faite par l'agent de Titouan le
+21/11 : ref-01 est passe a used=1/100 apres une seule requete. Donc lancer ce script brule un
+budget irreversible.
 """
+# ---------------------------------------------------------------------------
+# T2 GELEE. Ne pas executer, ne pas fusionner tel quel dans main.
+# La tache 2 est tenue par Titouan et son agent, tout en local, zero requete sur l'API.
+# Discussion et chiffres : issue #4.
+# Ce fichier reste comme piece de reflexion, pas comme code a executer.
+# ---------------------------------------------------------------------------
+raise SystemExit("T2 gelee : voir issue #4. Ne pas lancer ce script.")
+
 import argparse
 import csv
 import difflib
