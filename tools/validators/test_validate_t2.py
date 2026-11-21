@@ -23,7 +23,7 @@ def make_rows(models_by_endpoint: dict) -> str:
 
 
 def all_different() -> str:
-    return "".join(f"ep-{i:02d},F{i},M{i}\n" for i in range(1, 34))
+    return "".join(f"ep-{i:02d},F{i},F{i}m\n" for i in range(1, 34))
 
 
 def all_same_family_distinct_models(n_models: int = 3) -> str:
@@ -57,7 +57,7 @@ class ValidSubmissions(unittest.TestCase):
         self.assertEqual(result.errors, [])
 
     def test_labels_can_be_any_text_without_commas(self):
-        rows = {f"ep-{i:02d}": ("Famille Un", f"Modele #{i}") for i in range(1, 34)}
+        rows = {f"ep-{i:02d}": ("Famille Un", f"Famille Un #{i}") for i in range(1, 34)}
         result = parse_submission(make_rows(rows).encode("utf-8"))
         self.assertEqual(result.errors, [])
 
@@ -114,6 +114,28 @@ class StructuralErrors(unittest.TestCase):
         csv_text = HEADER + "ep-01,A,shared\nep-02,B,shared\n" + "".join(f"ep-{i:02d},C,C{i}\n" for i in range(3, 34))
         result = parse_submission(csv_text.encode("utf-8"))
         self.assertTrue(any("plusieurs familles" in e for e in result.errors))
+
+    def test_discord_example_same_model_label_X_in_families_A_and_B_is_rejected(self):
+        # cas exact de l'annonce Discord du 21/11 : ep-01,A,X et ep-02,B,X
+        csv_text = HEADER + "ep-01,A,X\nep-02,B,X\n" + "".join(f"ep-{i:02d},C,C{i}\n" for i in range(3, 34))
+        result = parse_submission(csv_text.encode("utf-8"))
+        self.assertTrue(any("'X' apparait dans plusieurs familles" in e for e in result.errors))
+
+    def test_model_label_in_two_families_is_caught_even_when_prefix_matches_one(self):
+        # A1 commence bien par A, mais est aussi utilise dans la famille B
+        csv_text = HEADER + "ep-01,A,A1\nep-02,B,A1\n" + "".join(f"ep-{i:02d},C,C{i}\n" for i in range(3, 34))
+        result = parse_submission(csv_text.encode("utf-8"))
+        self.assertTrue(any("'A1' apparait dans plusieurs familles" in e for e in result.errors))
+
+    def test_model_not_prefixed_by_family_is_an_error(self):
+        csv_text = HEADER + "ep-01,A,B1\n" + "".join(f"ep-{i:02d},A,A{i}\n" for i in range(2, 34))
+        result = parse_submission(csv_text.encode("utf-8"))
+        self.assertTrue(any("ne commence pas par sa famille" in e for e in result.errors))
+
+    def test_multi_letter_family_prefix_is_accepted(self):
+        rows = {f"ep-{i:02d}": ("AA", f"AA{i % 4 + 1}") for i in range(1, 34)}
+        result = parse_submission(make_rows(rows).encode("utf-8"))
+        self.assertEqual(result.errors, [])
 
     def test_bom_is_an_error(self):
         csv_text = all_same_family_distinct_models()

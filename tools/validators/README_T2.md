@@ -8,7 +8,7 @@ Tout ce qui est ici tourne en Python standard, **sans aucun appel réseau**. La 
 | Fichier | Rôle |
 |---|---|
 | `validate_t2.py` | Validateur du CSV. CLI + API Python (`parse_submission`, `changed_pairs`). |
-| `test_validate_t2.py` | 22 tests unitaires (stdlib `unittest`), CSV valides et invalides fabriqués à la main. |
+| `test_validate_t2.py` | 26 tests unitaires (stdlib `unittest`), CSV valides et invalides fabriqués à la main. |
 | `dryrun_submit_t2.py` | Reconstruit la requête HTTP exacte de `submission.py` sans l'envoyer (socket désactivée). |
 
 ```bash
@@ -39,10 +39,23 @@ Ce sont les règles dont la violation entraîne un **rejet** ou un **score faux*
 | R5 | Une ligne par endpoint `ep-01` … `ep-33`, chacun **une seule fois** | `NUM_ENDPOINTS = 33` | endpoint manquant ou en double → 528 paires scorées fausses |
 | R6 | Pas d'endpoint `ref-*` (jamais scorés) | `Model_Equality_Testing.txt` | rejet serveur |
 | R7 | **Pas de virgule** dans une étiquette, même entre guillemets | « Labels are any text you like (no commas) » | décalage de colonnes ; on ignore si le serveur gère le quoting, donc on refuse systématiquement |
-| R8 | Même étiquette `model` ⇒ même étiquette `family` | « they must also share the family label » | rejet serveur |
+| R8 | **Une étiquette `model` n'appartient qu'à une seule famille** : `ep-01,A,X` + `ep-02,B,X` est rejeté | « they must also share the family label » + annonce Discord du 21/11 19h01 | rejet serveur |
+| R12 | **L'étiquette `model` commence par l'étiquette de sa famille** : famille `A` → `A1`, `A2`… ; famille `AA` → `AA1`… | annonce Discord des organisateurs, 21/11 19h01-19h02 (voir ci-dessous) | rejet serveur |
 | R9 | Étiquettes non vides | prudence (une étiquette vide ferait un cluster fantôme) | ERREUR |
 | R10 | UTF-8 **sans BOM** | prudence (`ï»¿ep-01` ≠ `ep-01`) | endpoint `ep-01` inconnu → rejet |
 | R11 | Fichier UTF-8 décodable | prudence | ERREUR |
+
+### Annonce Discord du 21/11 (R8 renforcée, R12 nouvelle)
+
+Salon `task-2-model-equality`, 19h01-19h02, Maitri Shah et Adam Dziedzic (relayé par la session principale, pas de
+copie dans `reports/discord/`, absent des scripts officiels) : le format est strict. Le modèle porte la lettre de sa
+famille (A → A1, A2 ; B → B1, B2) et une étiquette de modèle ne peut appartenir qu'à une seule famille.
+Le validateur vérifie `model.startswith(family)`, ce qui accepte aussi les familles à plusieurs lettres (`AA` → `AA1`),
+comme celles que produit `letters()` dans `task_template.py`. Le cas exact `ep-01,A,X` / `ep-02,B,X` a son test.
+Les sorties de `solve()` et `make_random_submission()` (`A`, `A1`) respectent déjà ces deux règles.
+
+Même annonce, 16h37 (Maitri Shah) : le plafond de 100 réponses sur les `ref-*` est **retiré**. Les endpoints de
+référence sont illimités comme prévu au départ ; le budget de 100 par endpoint ne concerne que les `ep-*`.
 
 ### Avertissements (pas forcément rejetés, mais un signal qu'on s'est trompé de fichier)
 
@@ -93,7 +106,8 @@ POST http://34.147.229.55/33-model-equality/v1/chat/completions
 - 4 requêtes en parallèle max par équipe ; `429` + `Retry-After` = occupé, `429` sans = **budget épuisé**
 - Les messages `system` sont **rejetés** ; `temperature` et `seed` sont ignorés
 - Requête invalide = pas décomptée du budget
-- **Budget : 100 réponses par endpoint pour toute la compétition, irréversible.** Aucune requête `ep-*` sans plan posté sur l'issue #4.
+- **Budget : 100 réponses par endpoint `ep-*` pour toute la compétition, irréversible.** Aucune requête `ep-*` sans plan posté sur l'issue #4.
+- Les `ref-01..ref-09` sont **illimités** (plafond retiré par les organisateurs le 21/11 à 16h37).
 
 ## Checklist avant soumission (à cocher dans l'ordre)
 

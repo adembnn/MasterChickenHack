@@ -11,6 +11,9 @@ Regles du serveur, lues dans submission.py / task_template.py (reports/sources/t
   - "Two endpoints serve the same model ... must also share the family label" (task_template.py) :
     deux lignes avec la meme etiquette model doivent avoir la meme etiquette family -> rejet serveur sinon
   - 528 paires scorees = C(33,2), donc la perte d'un seul endpoint ou un doublon fausse tout le score
+  - annonce Discord des organisateurs (21/11, 19h01, salon task-2-model-equality, relayee par la session principale,
+    absente des scripts officiels) : l'etiquette model commence par l'etiquette de sa famille (A -> A1, A2) et une
+    etiquette model n'appartient qu'a une seule famille (ep-01,A,X + ep-02,B,X est rejete)
 
 Controles supplementaires (prudence, pas forcement rejetes par le serveur mais signale) :
   - pas de ref-* (ce sont les endpoints d'entrainement, jamais scores)
@@ -88,6 +91,11 @@ def parse_submission(raw: bytes, filename: str = "submission.csv") -> ParseResul
             errors.append(
                 f"ligne {i}: virgule dans une etiquette ({family!r}, {model!r}) ; meme entre guillemets c'est "
                 f"interdit par la consigne ('no commas') et le serveur peut ne pas gerer le quoting CSV"
+            )
+        if family and model and not model.startswith(family):
+            errors.append(
+                f"ligne {i}: le modele '{model}' ne commence pas par sa famille '{family}' "
+                f"(regle Discord 21/11 19h01 : famille A -> modeles A1, A2...)"
             )
         rows[endpoint] = (family, model)
 
