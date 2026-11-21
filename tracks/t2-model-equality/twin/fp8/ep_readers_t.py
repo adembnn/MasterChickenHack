@@ -37,6 +37,8 @@ def main():
     ap.add_argument("--z_out", type=float, default=3.0)
     ap.add_argument("--t_eff", type=float, default=0.51)
     ap.add_argument("--t_min", type=float, default=2.0)
+    ap.add_argument("--corpus_exclude", default="", help="endpoints interdits comme corpus LoRA (déguisés)")
+    ap.add_argument("--corpus", default="", help="forcer le corpus LoRA (un endpoint)")
     ap.add_argument("--out", default="results_ep_readers_t.json")
     a = ap.parse_args()
     rows = [json.loads(l) for l in open(a.data) if l.strip()]
@@ -86,8 +88,9 @@ def main():
         fp8 = {e for e in eps if min(zf[e]) > a.t_min and max(zf[e]) > a.t_eff * math.sqrt(n_e[e])}
         out["fp8"] = sorted(fp8)
 
-        cands = [e for e in eps if e not in excl and e not in fp8]
-        tr = max(cands, key=lambda e: nllT[e])
+        bad = set(filter(None, a.corpus_exclude.split(",")))
+        cands = [e for e in eps if e not in excl and e not in fp8 and e not in bad]
+        tr = a.corpus if a.corpus in eps else max(cands, key=lambda e: nllT[e])
         out["lora_train_endpoint"], out["lora_candidates"] = tr, sorted(((round(nllT[e], 4), e) for e in cands), reverse=True)[:3]
         test = [e for e in eps if e != tr]
         Sk = {k: {e: {} for e in test} for k in scales}

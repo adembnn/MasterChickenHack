@@ -165,6 +165,26 @@ plus à −7.
 - Observation non exploitée : en llama1b et qwen1.5b, le lecteur appris sur le corpus (ep-16, ep-07) s'allume sur un fp8 de la
   famille (ep-15, ep-22).
 
+### 5d. Banc jumeau 3 familles (vérité connue) : le détecteur LoRA ne passe pas la barre de précision 0,75
+
+`twin_world.py` : prompts ep réels, 25 réponses ; copies base à T 0,7 / 0,8 / 0,8 / 0,8+system / 0,9 / 1,0 ; fp8 W8A8 à T 0,9 ; LoRA
+jumelle (imitation du style SmolLM2) à 0,3 / 0,7 / 1,5, plus la 0,7 sous system prompt. Précision / rappel LoRA (corpus exclu) :
+
+| Corpus | llama1b | qwen3b | qwen1.5b |
+|---|---|---|---|
+| auto, déguisement permis (méthode du 0,60) | 0/2 · 0/3 | 0/1 · 0/3 | 1/2 · 1/3 |
+| non déguisé + décision sur résidu NLL | **2/2 · 2/3** | — · 0/3 | 0/2 · 0/3 |
+
+- Le lecteur distillé apprend le **déguisement** du corpus : corpus sous system prompt → il allume la copie base sous le même
+  system prompt (z 5,7-6,9). Une température commune laisse aussi un effet résiduel (corpus à T 0,9 → fp8 à T 0,9 allumé), ce qui
+  explique les motifs réels ep-16 → ep-15 et ep-07 → ep-22 (l'hypothèse « corpus = fp8 déguisé » est rejetée).
+- Avec un corpus non déguisé, ça marche seulement si le corpus EST une vraie LoRA (llama) ; sinon, échec (qwen1.5b : corpus =
+  copie base à T 0,9). Précision totale 2/4 = 0,5.
+- Pourtant le groupe réel qwen3b {ep-17, ep-18} (corpus ep-23) a fait monter le public de 0,40 à **0,60** (soumission 1967) :
+  vrai gain mesuré, mais le jumeau ne permet pas de le généraliser aux autres familles.
+- Une LoRA forte allume aussi les lecteurs fp8 (qwen3b jumeau : lora15 → z 2,9 / 3,4), donc une étiquette « fp8 » peut être une
+  LoRA forte (l'isoler reste correct).
+
 ## 6. Recommandation
 
 1. **fp8 est détectable en boîte noire, à trois conditions** : (a) avoir le checkpoint de base exact ; (b) utiliser des lecteurs
