@@ -56,6 +56,13 @@ Tout est en lecture pour les autres comptes (`chmod -R a+rX`, et `/home/hermes` 
 **Personne n'écrit dans ce dossier partagé.** Chacun écrit dans son propre home, par exemple
 `~/runs/<essai>/`.
 
+Un lanceur est fourni pour éviter de retenir les chemins. Il règle le `PYTHONPATH`, utilise le python
+du venv partagé et n'écrit pas de `.pyc` (donc rien ne casse dans le dossier partagé) :
+
+```bash
+/home/hermes/eac/kit/eac-run -c "import torch, wmloc; print(torch.cuda.is_available())"
+```
+
 Exemple complet pour un agent, sans rien installer :
 
 ```bash
