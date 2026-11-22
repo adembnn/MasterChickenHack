@@ -138,6 +138,8 @@ Limite : mes bascules réalisent une loss ≈ 6 au lieu de 8,5, d'où un m+s inf
 `all8_cons65` (consensus, 65 %) m 6,64 / s 5,23 ; `all8_consrd65` (même sélection, classe fausse « redistill » de t3-redistill) m 6,53 / s 5,18 ; bascules à loss ≈ 10,2 ; rétention de réserve **non mesurée**.
 Le levier « classe fausse » est confirmé par Adem (`PG_RDt24_60_l915c` = 0,3273, +0,026 à sélection égale) ; mon audit de `vote_class` (90 % de 2e choix) en était la cause. Fichiers : `h200c:/home/titouan/critique-t3/cand/`, sha256 sur #5.
 
+**Mise à jour 22/11, 1 h** [MESURÉ] : à 80 % de bascules, loss 10-16, classe redistill, consensus contre instabilité : m+s 13,09 contre 13,37 (−2 %), donc **l'avantage du consensus (+9 % à 30 %) disparaît** quand 80 % des images sont basculées. Réserve c à 80 % (`ab9_consrd80`) : précision 0,948, KL 0,198, rétention 0,792, flou fort 0,658 (30 % : 0,841). Conclusion : au palier gagnant, les leviers sont la classe fausse et la hauteur, pas la sélection.
+
 ## 6. À ne pas faire (mesuré)
 - Attaque adversariale comme sélecteur ou pour choisir la classe fausse : redonne la 2e classe d'`orig` (84 %) [MESURÉ ici].
 - Bruit dans les poids comme sélecteur : aucun signal [MESURÉ ici].

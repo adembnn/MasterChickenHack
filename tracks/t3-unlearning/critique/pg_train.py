@@ -15,7 +15,8 @@ score = P['score'][SEL].to(dev); wrong = P['wrong'][SEL].to(dev).clone()
 bad = wrong == yhat; wrong[bad] = P['wrong']['cons'].to(dev)[bad]  # sonde juste : repli sur la classe votée
 nf = int(round(FRAC * len(fidx))); flip_idx = fidx[torch.argsort(-score[fidx])[:nf]]
 flip = torch.zeros(N, dtype=torch.bool, device=dev); flip[flip_idx] = True
-Lt = 8 + 6 * torch.rand(N, device=dev, generator=gen(123))
+LO, HI = float(os.environ.get('LO', 8)), float(os.environ.get('HI', 14))
+Lt = LO + (HI - LO) * torch.rand(N, device=dev, generator=gen(123))
 q = F.softmax(lg0, 1).clone()
 py = torch.exp(-Lt[flip]); qf = torch.zeros(int(flip.sum()), NC, device=dev)
 qf[torch.arange(len(qf)), wrong[flip]] = 1 - py; qf[torch.arange(len(qf)), yhat[flip]] += py; q[flip] = qf
