@@ -65,3 +65,7 @@
 4. **Other ideas:** WIN-U targeted head curvature and SCOPE distillation are research only for now; avoid saturating the relay with unvalidated files.
 
 **Status**: I accessed the source papers/repo READMEs and EAC issue comments through GitHub, committed the read-only diagnostic and this report. No H200 run, no EAC endpoint call, no official T3 submission; no secret in branch. This is **evidence-based test triage**, not a new leaderboard improvement. 
+
+## Essential sign convention for RAZOR adaptation
+
+RAZOR paper's forget direction is **gradient ASCENT on the original forget-recognition objective**, whereas our EAC RDq objective is **gradient DESCENT on KL(target_OOF || student)**. The original paper ranks phi=(||g_f||/||theta||)*(1-cos(g_f,g_r))^alpha with this ascent-vs-retain-descent convention. **Never substitute grad(KL_target) as g_f unchanged:** the sign reverses and high phi can select the worst-conflicting layers. If directly using the paper's formula, use g_f = **-grad(KL_target)** (the desired forget update direction under target fitting), g_r = **+grad(KL_retain)** (the retain loss gradient whose NEGATIVE is the desired retain update). Then 1-cos(g_f,g_r) = 1+cos(gradKL_target,gradKL_retain). Verify this sign with a 2D synthetic gradient test and directly compute first-order predicted ΔL_retain = dot(gradR, proposed_update) before ranking or updating. This is a customized adaptation with no proven benefit. If no proper independent proxy retain gradient, skip the ratio test entirely.
