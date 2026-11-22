@@ -4,7 +4,7 @@
 > Nouveau nœud → câbler + guide, puis ajouter dans
 > `/home/boudda/Projects/h200-dashboard/fleet.default.json` (le collector pousse le registre).
 >
-> **Sept nœuds depuis le 21 novembre ~23h55.** Ce document décrit le premier nœud
+> **Huit nœuds depuis le 22 novembre ~00h26.** Ce document décrit le premier nœud
 > (`green-starfish-instance-6`, `66.201.7.7`). Les autres :
 > - Nœud 2 `fuchsia-mosquito-instance-6` (`66.201.4.154`, privé `10.48.0.101`) :
 >   [`acces-h200-nebius-noeud-2.md`](acces-h200-nebius-noeud-2.md)
@@ -18,6 +18,8 @@
 >   [`acces-h200-nebius-noeud-6.md`](acces-h200-nebius-noeud-6.md)
 > - Nœud 7 `teal-baboon-instance-1` (`204.12.190.177`, privé `10.96.0.58`, **VPC 10.96**) :
 >   [`acces-h200-nebius-noeud-7.md`](acces-h200-nebius-noeud-7.md)
+> - Nœud 8 `olive-caterpillar-instance-6` (**pas d'IP publique**, privé `10.96.0.55`, **VPC 10.96**) :
+>   [`acces-h200-nebius-noeud-8.md`](acces-h200-nebius-noeud-8.md)
 
 Accès vérifiés le 21 novembre 2026. La VM `green-starfish-instance-6`
 (`computeinstance-e01w9a2hev5w1t9mdb`) est dans `default-project-eu-west1`.

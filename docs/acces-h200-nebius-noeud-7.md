@@ -27,7 +27,8 @@ Autres guides : [`acces-h200-nebius.md`](acces-h200-nebius.md),
 [`acces-h200-nebius-noeud-3.md`](acces-h200-nebius-noeud-3.md),
 [`acces-h200-nebius-noeud-4.md`](acces-h200-nebius-noeud-4.md),
 [`acces-h200-nebius-noeud-5.md`](acces-h200-nebius-noeud-5.md),
-[`acces-h200-nebius-noeud-6.md`](acces-h200-nebius-noeud-6.md).
+[`acces-h200-nebius-noeud-6.md`](acces-h200-nebius-noeud-6.md),
+[`acces-h200-nebius-noeud-8.md`](acces-h200-nebius-noeud-8.md).
 
 ## Accès SSH
 
