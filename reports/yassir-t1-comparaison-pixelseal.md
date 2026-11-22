@@ -17,4 +17,14 @@ Le champ `full_watermark` est réservé au train. Les coefficients par groupe du
 
 Sur H200 n2, le décodeur PixelSeal a produit 7 cartes 128 × 128 sur les 170 images en 2,0 s, soit 83,2 images/s pour le lot d'inférence et de lecture. Pic PyTorch 529,8 MiB. Les logits signés normalisés ont obtenu 0,47477 seuls, les signes binaires 0,47151, et le mauvais message normalisé 0,28292. Une correction du mélange fixe apprise sur quatre plis avec chaque carte n'a donné aucun gain sur la réserve. Le canal de confiance du décodeur donne +0,00008, IC95 [−0,00413 ; +0,00404]. GPU libéré après la sonde.
 
-Les mesures utilisent les anciennes cartes accessibles. Le candidat 35 reste la référence publique. Aucun nouveau candidat à soumettre. Adem teste déjà les paires contrefactuelles à λ = 0,1, les petits trous et les entrées passe-haut sur les modèles pleine résolution. [Suivi d’Adem](https://github.com/adembnn/EAC/issues/3#issuecomment-7072799664)
+Ces mesures utilisent les anciennes cartes accessibles. Le candidat 35 était la référence à cette étape. Aucun nouveau candidat à soumettre. Adem teste déjà les paires contrefactuelles à λ = 0,1, les petits trous et les entrées passe-haut sur les modèles pleine résolution. [Suivi d’Adem](https://github.com/adembnn/EAC/issues/3#issuecomment-7072799664)
+
+### Contrôle des remplacements SAM sur petits masques
+
+Candidat 36 est à 0,8262 hors pli contre 0,8138 pour 35, soit +0,0124 [0,0067 ; 0,0188]. Le seuil d’envoi reste +0,02. PixelSeal gagne +0,0268 en moyenne, avec deux plis négatifs. Sur la réserve, un petit rectangle perd 0,314 mIoU après remplacement par un masque SAM. [Comparaison 36–35](https://github.com/adembnn/EAC/issues/3#issuecomment-7072858473) · [Diagnostic PixelSeal](https://github.com/adembnn/EAC/issues/3#issuecomment-7072889358)
+
+Sur les cartes partagées antérieures, j’ai essayé deux contrôles réglés sur quatre plis puis appliqués au cinquième. Le premier revient à la carte d’origine si les deux petits masques divergent fortement. Le second cherche parmi les propositions SAM celle qui augmente la mIoU attendue sous trois températures des logits. Les deux contrôles conservent PixelSeal v4 dans chacun des cinq plis, à 0,67571 global et 0,63988 sur la réserve. Les archives hors pli de 35 et 36 restent nécessaires pour confirmer ce résultat sur le remplacement précis du candidat 36.
+
+### Nouveau meilleur officiel
+
+Le relais d’Adem a soumis le candidat 36 après contrôle indépendant et dérogation au seuil. Le reçu 2754 confirme **0,8130917**, soit **+0,00982** contre le candidat 35. La base de validation croisée devient **0,8262**. Les deux contrôles ci-dessus portent sur les cartes antérieures. [Reçu 2754](https://github.com/adembnn/EAC/issues/3#issuecomment-7073085003)
