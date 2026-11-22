@@ -10,7 +10,7 @@ synthetic variants*, using the two token IDs with highest base logits:
   variants_top2: [N,K,2]        logits on same token IDs for K variants
   prompts:       optional [N]  unique candidate user prompts
 
-No EAC endpoints queried. The scores favor near-ties that flip token order
+No EAC endpoints queried. Temperature is marginalized over a continuous range. The scores favor near-ties that flip token order
 under several weak LoRA/fp8 seeds and cannot be explained by a free
 temperature nuisance. top-p pruning and hidden prompts remain unmodeled.
 
@@ -46,12 +46,20 @@ def rank_border_probes(base_top2, variants_top2, temperatures=(.6, .7, .9, 1.0),
     bgap = b[:, 0] - b[:, 1]
     vgap = v[:, :, 0] - v[:, :, 1]
     T = np.array(temperatures, dtype=np.float64)
-    # Arrays of p(first-of-two) under separate nuisance temperatures.
-    pb = sigmoid(bgap[:, None] / T[None, :])       # [N,T]
-    pv = sigmoid(vgap[:, :, None] / T[None,None,:]) # [N,K,T]
-    # Independently allow each side a temperature; this is intentionally conservative.
-    delta = np.abs(pb[:, None, :, None] - pv[:, :, None, :])
-    min_delta = delta.min(axis=(-1,-2))             # [N,K]
+    tlo, thi = float(np.min(T)), float(np.max(T))
+    # Continuous nuisance optimization: the output probability of token #1
+    # under T in [tlo,thi] spans exactly [low,high]. Its distance to another
+    # model is ZERO if the two intervals overlap, even for T not on the grid.
+    # A coarse discrete grid would falsely flag *pure temperature scaling*.
+    pb_a = sigmoid(bgap / tlo)
+    pb_b = sigmoid(bgap / thi)
+    lo_b = np.minimum(pb_a, pb_b)[:, None]
+    hi_b = np.maximum(pb_a, pb_b)[:, None]
+    pv_a = sigmoid(vgap / tlo)
+    pv_b = sigmoid(vgap / thi)
+    lo_v = np.minimum(pv_a, pv_b)
+    hi_v = np.maximum(pv_a, pv_b)
+    min_delta = np.maximum(0., np.maximum(lo_b, lo_v) - np.minimum(hi_b, hi_v))
     robust = np.quantile(min_delta, quantile, axis=1)
     flipped = (vgap < 0.).mean(axis=1)
     # Border quality at T=.7: goes to 1 at an equal-probability tie,
