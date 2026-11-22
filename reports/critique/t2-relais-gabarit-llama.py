@@ -26,6 +26,12 @@ def truths(f):
     if f == "q3b": yield {e: (("v", e) if e in (17, 18) else "b") for e in FAM[f]}, "17,18"
     elif f == "q15": yield {e: (("v", e) if e in (22, 26) else "b") for e in FAM[f]}, "22,26"
     else:
+        if NV == 0:   # verite Llama LIBRE : tout sous-ensemble des 8 guichets Llama possiblement publics
+            pool = [5, 10, 13, 15, 16, 27, 29, 31]
+            for r in range(0, len(pool)):
+                for var in itertools.combinations(pool, r):
+                    yield {e: (("v", e) if e in var else "b") for e in FAM[f]}, ",".join("%02d" % v for v in var)
+            return
         for var in itertools.combinations([5, 9, 10, 11, 13, 15], NV):
             yield {e: (("v", e) if e in var else "b") for e in FAM[f]}, ",".join("%02d" % v for v in var)
 def counts(pub, t, lab):
