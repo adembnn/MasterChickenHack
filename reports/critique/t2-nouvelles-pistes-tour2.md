@@ -58,3 +58,15 @@ Pourquoi C et pas le « max sur une banque de z » : ce max est noyé par les fi
 4. Limites : jumeaux sans top-p (les ep réels ont T 1,0 + top-p 0,95, ep-07/14/27) ; Qwen-3B sans LoRA dans les mondes extraits ; train_s2 non exploité (arrêté pour libérer le GPU) ; 25 réponses seulement par guichet.
 
 Reproduire : `np2_extract.py` (extraction, `--oracle`, `--system_map`, `--sys_in_user`), `np2_feat.py` (banque de z), `np2_stats.py` / `np2_pairs.py` (statistiques globales et inter-guichets). Sorties : `h200c:~/nouvelles-pistes/o/*.pkl`.
+
+## Lecteur fp8 per-tensor sur les ep Qwen (demande de Titouan) : un seul ep passe, ep-22
+- **Règle** : somme z_e4m3 + z_W8A8 ≥ 5 (z robustes de `ep_readers.py`, 25 réponses, T ≥ 1,0 hors référence). **Qwen-1,5B : ep-22 seul (10,65)**, puis ep-06 2,06 et ep-07 0,74. **Qwen-3B : aucun**, maximum ep-12 2,27-2,43, puis ep-04 2,08, ep-18 1,59. Même résultat en lisant à la T de chaque guichet (`results_ep_readers_t.json`).
+- **Loi nulle et puissance sur jumeaux** (`np2_fp8power.py`, mondes val + train_s1, fp8 simulés, 25 réponses) :
+| | fp8 poids (e4m3 per-tensor) | fp8 + activations | fp8 toutes matrices | par canal / e5m2 / int8 / nf4 | copies base isolées |
+|---|---|---|---|---|---|
+| Qwen-3B | 3/4 (somme médiane 10,1) | 4/4 (9,7) | 4/4 (8,7) | 0/16 (médiane −5,9 à +0,7) | **2/40, les deux avec prompt système** (5,7 et 7,6) |
+| Qwen-1,5B | 4/4 (8,7) | 4/4 (5,8) | 4/4 (8,8) | 1/16 (int8, une fois) | 0/40 |
+  LoRA (Qwen-1,5B) : somme médiane −0,5, 0/24 au-dessus de 5.
+- **Lecture** : à 25 réponses la règle voit **11/12 des fp8 par tensor en Qwen-3B et 12/12 en Qwen-1,5B**. L'absence de passant en Qwen-3B est donc informative : aucun fp8 par tensor (poids ou W8A8) parmi les 11 ep Qwen-3B. Un fp8 par canal ou e5m2 serait invisible à ce lecteur (somme ≈ 0 ou négative) ; un éventuel fp8 de ce type en Qwen-3B ne se verrait pas.
+- **Réserve** : les 2 faux positifs jumeaux sont des guichets à prompt système inconnu. En Qwen-3B réel, ep-02 et ep-23 en ont : ils sont à 0,0 et −1,6 en e4m3 seul, donc pas de risque ici, mais il faut les exclure ou les relire avec leur prompt si leur somme approche 5.
+- **Aucun delta Qwen** : ni ep-12 (2,3, très loin de 5), ni un autre guichet Qwen-3B ne passe.
