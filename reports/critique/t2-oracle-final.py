@@ -67,6 +67,7 @@ pvthr = [e for i, e in enumerate(E) if pv[i] > 0.5 and e not in ("17", "18")]
 FILES["isoler P(var)>0,5"] = pvthr
 pvthr4 = [e for i, e in enumerate(E) if pv[i] > 0.4 and e not in ("17", "18")]
 FILES["isoler P(var)>0,4"] = pvthr4
+FILES["1967 + {03,28}"] = ["05","15","22","03","28"]
 print("\nfichier                                   E[cache]  E[tout]  E[public]  (17 et 18 groupes)")
 res = {}
 for nm, iso in FILES.items():
@@ -74,7 +75,7 @@ for nm, iso in FILES.items():
     p = file_pred(iso)
     h = score_on(p, hidden).mean(); al = score_on(p, np.ones_like(hidden)).mean(); pu = score_on(p, ~hidden).mean()
     res[nm] = (h, al, pu); print(f"{nm:40s}  {h:.3f}    {al:.3f}    {pu:.3f}")
-p = file_pred(FILES["isoler P(var)>0,5"], ()); print(f"{'meme, 17 | 18 separes':40s}  {score_on(p, hidden).mean():.3f}    {score_on(p, np.ones_like(hidden)).mean():.3f}")
+p = file_pred(FILES["isoler P(var)>0,5"] + ["17", "18"], ()); print(f"{'meme, 17 | 18 separes':40s}  {score_on(p, hidden).mean():.3f}    {score_on(p, np.ones_like(hidden)).mean():.3f}")
 # glouton : partir de 1967, ajouter / retirer un guichet tant que E[cache] monte
 cur = list(FILES["1967"]); best = score_on(file_pred(cur), hidden).mean(); log = []
 while True:

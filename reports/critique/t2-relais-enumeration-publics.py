@@ -28,11 +28,10 @@ def plus(*iso):
     s = set(iso)
     return lambda e: ("v%d" % e if e in s else lab_1967(e))
 
-SUBS = [("1882", lab_1882, 0.40), ("1967", lab_1967, 0.60), ("split17|18", lab_split, 0.60), ("H", lab_H, 0.30)]
-CAND = [("+21", plus(21)), ("+10,13", plus(10, 13)), ("+26", plus(26)), ("+29", plus(29)), ("+04", plus(4)),
-        ("+32", plus(32)), ("+25", plus(25)), ("+02", plus(2)), ("+33", plus(33)), ("+06", plus(6)),
-        ("17->base", lambda e: "b" if e == 17 else ("v18" if e == 18 else lab_1967(e))),
-        ("18->base", lambda e: "b" if e == 18 else ("v17" if e == 17 else lab_1967(e)))]
+SUBS = [("1882", lab_1882, 0.40), ("1967", lab_1967, 0.60), ("split17|18", lab_split, 0.60), ("H", lab_H, 0.30), ("+26", plus(26), 0.80)]
+CAND = [("+25", plus(26, 25)), ("+10", plus(26, 10)), ("+13", plus(26, 13)), ("+10,13", plus(26, 10, 13)), ("+06", plus(26, 6)),
+        ("+29", plus(26, 29)), ("+33", plus(26, 33)), ("+02", plus(26, 2)),
+        ("33=17", lambda e: "x17" if e in (17, 33) else ("v18" if e == 18 else plus(26)(e)))]
 ALL = SUBS + [(n, f, None) for n, f in CAND]
 
 def partitions(items):
@@ -105,7 +104,7 @@ for i in range(len(A)):
     for b, c in zip(jb, jc):
         ww = w["q3b"][i] * w["q15"][b] * w["lla"][c]
         tot += ww; ok_triples += 1
-        base = sc[b, c, 1]
+        base = sc[b, c, 4]
         d = sc[b, c, ns:] - base
         cand_up += ww * (d > 0.0249); cand_dn += ww * (d < -0.0249); cand_gain += ww * np.where(d > 0.0249, d, 0)
         for f, idx in (("q3b", i), ("q15", b), ("lla", c)):
@@ -120,6 +119,6 @@ if tot > 0:
     print("\nguichet : P(public) | P(variante sachant public)")
     for f, eps in FAM.items():
         print(" ", f, " ".join("%02d:%.2f|%s" % (e, pub_w[e] / tot, ("%.2f" % (var_w[e] / pub_w[e]) if pub_w[e] > 0 and PRIOR != "part" else "-")) for e in eps if e not in HORS))
-    print("\nenvoi candidat (base 1967) : P(hausse) | P(baisse) | gain moyen si hausse")
+    print("\nenvoi candidat (base 1967 + ep-26, 0,80) : P(hausse) | P(baisse) | gain moyen si hausse")
     for j, (n, _) in enumerate(CAND):
         print("  %-10s %.2f | %.2f | %+.3f" % (n, cand_up[j] / tot, cand_dn[j] / tot, (cand_gain[j] / cand_up[j]) if cand_up[j] > 0 else 0))
