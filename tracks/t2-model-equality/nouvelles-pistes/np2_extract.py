@@ -100,6 +100,7 @@ def main():
     ap.add_argument("--oracle", action="store_true", help="lit avec le VRAI prompt système du guichet (simule une extraction parfaite) ; saute les guichets sans prompt système")
     ap.add_argument("--system_map", default="", help="JSON {endpoint: prompt système extrait} pour les guichets réels (lecture avec le prompt extrait)")
     ap.add_argument("--sys_in_user", action="store_true")
+    ap.add_argument("--keep", default="", help="mondes : variantes gardées, ex. base,lora0.3,fp8 (base = déguisements plain/temp_other/temp1.0 seulement)")
     ap.add_argument("--n", type=int, default=25); ap.add_argument("--max_g", type=int, default=0)
     a = ap.parse_args()
     G = {}  # gid -> (meta, [(prompt, response)])
@@ -107,8 +108,16 @@ def main():
         sys.path.insert(0, a.plan_dir)
         import probes_v4
         prompts = [s["prompt"] for s in probes_v4.plan()][:100]
+        keep = set(filter(None, a.keep.split(",")))
+        def ok(g):
+            if not keep: return True
+            v, kd = g["variant"], g["disguise"]["kind"]
+            if v == "base": return "base" in keep and kd in ("plain", "temp_other", "temp1.0")
+            if v.startswith("lora:"): return ("lora" + v.split("@")[1]) in keep
+            return v in keep
         for l in open(a.world):
             g = json.loads(l)
+            if not ok(g): continue
             G[g["gid"]] = ({"variant": g["variant"], "kind": g["disguise"]["kind"], "T": g["disguise"]["T"],
                             "wm": g["disguise"]["wm"], "system": bool(g["disguise"]["system"]), "system_text": g["disguise"]["system"]},
                            list(zip(prompts, g["responses"])))

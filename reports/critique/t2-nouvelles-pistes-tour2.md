@@ -38,6 +38,19 @@ Pourquoi C et pas le « max sur une banque de z » : ce max est noyé par les fi
 - **Pourquoi ep-16 et ep-23 ne se réparent pas** : leurs réponses commencent par des voix différentes d'une requête à l'autre (ep-16 : « A most…fascinating task » en majordome, puis « Little sis… As your coach » ; ep-23 : « **Warning** »). Hypothèse la plus simple (non vérifiée par une requête) : le prompt ajouté par le fournisseur est **tiré au hasard à chaque requête** dans une liste ; le prompt unique de la sonde extract n'en décrit qu'un. ep-16, ep-23 et très probablement ep-02 sont des **copies déguisées**, pas des LoRA.
 - **Aucun guichet sans prompt système ne dépasse 4** : maximum ep-01 −3,7 et ep-32 −3,6 (ep-32 lit « You are Qwen » : prompt par défaut). **ep-17 (−0,5) et ep-18 (+0,6) ne ressortent pas.** Avec les ref, ce résultat nul est cohérent : ce score ne voit pas ces LoRA.
 
+## Piste A (demande de Titouan) : test de rang par vraisemblance exacte, corrigé de la température : **échec du critère fixé d'avance**
+- **Test** (`np2_rank.py`, RUT adapté) : par réponse, `z = Σ(log p − E log p)/√ΣVar` au décodeur ajusté (T, top-p par maximum de vraisemblance sur les 100 réponses du guichet), `p = Φ(z)` uniforme sous « copie de la base », Cramér-von Mises sur 25 réponses, **200 répétitions** de sous-échantillons de 25 parmi 100, seuil à 5 % de faux positifs calé sur les copies base du train, appliqué à val. Jumeaux : base sans système (plain, T de 0,7 à 1,2), **LoRA 0,3**, fp8 ; Llama-1B et Qwen-1,5B (Qwen-3B n'a pas de LoRA dans les mondes).
+- **Courbe puissance / faux positifs** (LoRA 0,3, 16 guichets contre 26 copies) :
+| réponses | AUC train / val | puissance au seuil | faux positifs |
+|---|---|---|---|
+| 25 | 0,52 / 0,58 | 3 % / 7 % | 5 % / 7 % |
+| 90 | 0,62 / 0,70 | 0 % / 0 % | 5 % / 9 % |
+  fp8 : AUC 0,46-0,64, puissance ≤ 4 %. Les copies chaudes posent problème : faux positifs 32 % à T ajustée 1,2 et 11 % à 1,1 (contrôle négatif température non passé).
+- **Le résidu des 5 premiers tokens ne rattrape pas** la LoRA 0,3 des jumeaux : AUC 0,74-0,76 sur train (rappel à |z| ≥ 4 de 0,18 à 0,27, même avec 100 réponses) ; val 0,92-1,00 mais sur 3 guichets seulement.
+- **Ref frais** (`collecte_v4_ref_bloc0_redraw3`, 75 réponses par ref, jamais vus) : LoRA 0,7 / 1,5 / 0,3 : CvM 0,11 / 1,54 / 0,25 contre un seuil 95 % à 1,9 (n = 75) ; zm@5 +0,6 / −2,3 / +0,2. **0/3 détectées.** La persona ref-05 sort (zm@5 −4,2), comme attendu.
+- **33 ep réels** : seuls ep-27 (CvM 1,54, > 99 %) et ep-23 (1,07, > 95 %) dépassent le seuil 95 %, soit 2 sur 33 contre 1,7 attendu par hasard. ep-11 : 0,30 ; ep-17 : 0,03 ; ep-18 : 0,33 ; ep-02 : 0,38 ; ep-16 : 0,49. Rien à isoler.
+- **Verdict : aucun delta « ep-XX isolé »**, le seuil (précision ≥ 0,75 sur jumeaux) n'est pas atteint (puissance 3-7 % pour la LoRA 0,3). Cela confirme que l'écart d'une LoRA faible n'est pas visible dans la vraisemblance de la base à 25 réponses, même corrigée de T.
+
 ## Ce qu'il faut en faire
 1. **Ne pas isoler ep-02, ep-16, ep-23** sur la base de signaux de poids : leur anomalie est expliquée par un prompt fournisseur variable. À garder dans la base de leur famille (ep-02 : voir aussi son NF4 3,03 du tour 1, probablement de même origine).
 2. Le score C est un **détecteur de persona / prompt système** fiable (jumeaux et ep concordent) : utile comme garde-fou contre les fausses LoRA, pas pour en trouver.
