@@ -14,3 +14,6 @@ wandb/
 *.ckpt
 *.bin
 reports/discord/
+
+# Préparation orale du jury : reste en local, jamais sur GitHub (Adem, 22/11)
+reports/*jury*
