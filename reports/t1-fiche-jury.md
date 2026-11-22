@@ -1,112 +1,138 @@
-# T1 · fiche jury : localisation de filigrane
+# T1 · guide oral : comprendre, présenter, répondre
 
-État au 22/11, 10 h 45. Décision débloquée : ce qu'Adem dit du track 1 au pitch et comment il répond aux questions.
-Sources : issue #3, `reports/t1-tableau.md`, `reports/t1-t1-reel.md`, `reports/t1-t1-assemblage.md`, `reports/t1-t1-residus.md`, leaderboard lu à 10 h 40.
+État au 22/11, 11 h. Décision débloquée : ce qu'Adem dit du track 1 devant le jury, et comment il répond.
+Diapos concernées dans `Présentation_AI.pptx` : 3 (Public score 0.823), 4 (pipeline), 5 (progression et plafond).
+Sources : issue #3, `reports/t1-tableau.md`, `reports/t1-t1-reel.md`, `reports/t1-t1-assemblage.md`, `reports/t1-t1-residus.md`, leaderboard relu à 10 h 55.
 
-## 0. Les chiffres à retenir
-- **Public : 0,8230** (candidat 38, soumission 2910, 4 h 32). **1er du track 1** au tableau (affiché 0,82, à égalité d'arrondi avec Incoming PhD ; Murmell 0,81).
-- Départ : 0,635 (21/11, 17 h 25). Douze envois retenus, +0,19 en onze heures.
-- Par filigrane (réserve du candidat 38) : **StegaStamp 0,930 · TrustMark 0,809 · PixelSeal 0,709**.
-- Repères : masque constant (tout propre ou tout filigrané) = 0,25 ; rectangle englobant parfait (donné par la vérité) = 0,66.
+## Partie 1 · Comprendre, depuis zéro
 
-## 1. Ce qu'on demande
-**Filigrane** : signal invisible ajouté aux pixels d'une image, qui code un message de bits (une suite de 0 et de 1). Un **décodeur** relit ce message depuis l'image.
-Trois filigranes publics : **PixelSeal** (Meta, 2025), **TrustMark** (Adobe, ICCV 2025), **StegaStamp** (Berkeley, CVPR 2020). Ils sont faits pour relire *un* message sur *toute* l'image, pas pour dire *où* il se trouve.
+**Image.** Une image de la tâche fait 512 × 512 pixels. Un pixel = trois nombres de 0 à 255 (rouge, vert, bleu).
 
-Les images ont ensuite été retouchées :
-- **Outpainting** : l'image filigranée est agrandie ; le filigrane n'occupe plus qu'un rectangle.
-- **Retrait ou ajout d'objet** : un objet est effacé ou collé ; il reste un **trou** sans filigrane.
-- **Greffe d'objet** : un objet filigrané est collé dans une image propre ; seul l'objet porte le filigrane.
+**Bit et message.** Un bit vaut 0 ou 1. Le message caché est une suite de bits, par exemple 100 bits. On connaît le message de chaque image : il est donné.
 
-On rend, pour 1 020 images de test 512 × 512 pixels, un **masque** de 128 × 128 cases (une case = 4 × 4 pixels) : 1 = filigrané, 0 = propre. On connaît pour chaque image le filigrane utilisé et le message caché. Train : 510 images (170 par filigrane) avec leur vrai masque.
+**Filigrane.** L'outil de filigrane (l'« embedder ») modifie très légèrement les pixels, de quelques unités sur 255, pour y écrire le message. L'œil ne voit rien. Trois outils : PixelSeal, TrustMark, StegaStamp.
 
-**Score (mIoU)**. IoU d'une classe = cases où prédiction et vérité disent toutes deux cette classe, divisé par les cases où au moins l'une des deux la dit. Exemple : 100 cases vraiment filigranées, on en prédit 120 dont 90 justes → IoU = 90 / (100 + 120 − 90) = 0,69. On fait la moyenne de l'IoU « propre » et de l'IoU « filigrané » sur chaque image, puis la moyenne sur les images. Chaque image compte autant, quelle que soit la taille de la retouche.
+**Décodeur.** Réseau fourni avec chaque outil. On lui donne une image, il rend pour chaque bit un score : positif = « je lis 1 », négatif = « je lis 0 ». Sur une image propre, il tombe juste une fois sur deux (50 %, le hasard). Il est fait pour lire *un* message sur *toute* l'image, pas pour dire *où* le message se trouve. C'est tout le défi.
 
-**Pourquoi c'est un vrai problème** : sans localisation, un contenu ajouté après coup est attribué au propriétaire du filigrane. On peut lui faire porter une image qu'il n'a pas produite.
+**Masque.** On rend une grille de 128 × 128 cases. Une case couvre 4 × 4 pixels. Chaque case vaut 1 (filigrané) ou 0 (propre).
 
-## 2. Ce qu'on a fait, dans l'ordre
-### Étape 0 : mesurer le signal (21/11 après-midi, A100 de Jülich)
-- Dans la vraie zone filigranée, le décodeur relit 81 à 85 % des bits justes ; dehors, 50 % (le hasard). Le signal existe.
-- Mais la carte native du décodeur fait 8 × 8 cases (64 × 64 pixels chacune) : 0,35. Trop grossière.
-- Découverte qui oriente tout : **la moitié des images sont « pleines »** (filigrane partout sauf un trou). Le rectangle parfait y vaut l'image entière, d'où le plafond de 0,66. Le score se joue sur **la forme des trous**.
-- Fermé par la mesure : filtre adapté (comparer l'image au filigrane recalculé, 0,28 à 0,36) ; cartes par occlusion (masquer des morceaux et regarder ce que perd le décodeur, 0,48 à 0,51) ; gradients.
+**IoU et mIoU, avec des chiffres.** Sur une image, 100 cases sont vraiment filigranées. On en prédit 120, dont 90 justes.
+- IoU de la classe filigranée = cases communes / cases couvertes par l'un ou l'autre = 90 / (100 + 120 − 90) = 90 / 130 = **0,69**.
+- IoU de la classe propre : presque toutes les autres cases sont justes, environ **0,998**.
+- mIoU de l'image = moyenne des deux = **0,84**. Puis on fait la moyenne sur les 1 020 images.
+Ce qu'il faut en retenir : la petite zone est celle qui coûte. Rater une petite zone fait tomber l'image à environ 0,5.
 
-### Étape 1 : un segmenteur appris (0,635 → 0,706)
-**Segmenteur** = réseau qui prédit une classe par case. On a pris un **U-Net** (encodeur qui résume l'image, décodeur qui redonne une carte à pleine taille) sur un tronc ResNet-34.
-- v1, entraîné sur 6 000 images COCO filigranées par nos soins : TrustMark 0,59, StegaStamp 0,63, PixelSeal 0,29 (n'apprend pas). Écart entre exemples fabriqués et vraies images.
-- v2 : tronc = le décodeur du filigrane lui-même, vraies images du train mêlées aux lots → **0,635 public**.
-- v3 à v6 (session t1-reel) : exemples **fabriqués à partir des images du hackathon**, avec les **vraies formes de masques** → 0,674, 0,697, 0,701, **0,706**.
+**Les deux familles d'images.**
+- **Pleine** : l'image est filigranée partout, puis on a effacé ou collé un objet. Il reste un **trou** propre. Il faut dessiner le trou.
+- **Partielle** : l'image est propre, sauf un **rectangle** (outpainting : l'image filigranée a été agrandie, le filigrane n'est que dans l'ancienne image) ou un **objet** filigrané collé.
+Environ une image sur deux est pleine. C'est pour ça que même le rectangle parfait ne fait que 0,66 : sur une pleine, le rectangle, c'est l'image entière, et le trou est raté.
 
-### Étape 2 : trois découvertes sur les vraies images (0,706 → 0,7935)
-1. **La toile** : le filigrane réel n'a pas été calculé sur le cadre 512, mais sur une toile plus grande (512 + 32 pixels en médiane, rognée de façon décentrée). En la reproduisant, un réseau entraîné sans aucune vraie image passe de 0,658 à 0,820 sur StegaStamp.
-2. **Première couche en pleine résolution** : le réseau lit chaque pixel au lieu d'un pixel sur deux. C'est le levier principal : PixelSeal se met enfin à apprendre (0,612).
-3. **Recette** : long pré-entraînement sur exemples fabriqués (8 000 pas), puis affinage sur les vraies images, **5 plis** (5 modèles qui ont chacun vu 4/5 des images), moyennés.
+**Segmenteur, U-Net.** Un réseau de neurones qui prend l'image et rend un score par case (positif = filigrané). Le U-Net a deux moitiés : un encodeur qui résume l'image en caractéristiques de plus en plus grossières, un décodeur qui remonte à la pleine taille pour donner une carte. Notre encodeur est un ResNet-34, un réseau public déjà entraîné sur des millions de photos.
 
-### Étape 3 : l'assemblage, qui corrige les formes (session t1-assemblage)
-1. **Aiguillage** : le taux de bits justes sur l'image entière dit si elle est « pleine » ou « partielle » (juste à 100 % sur la réserve PixelSeal et TrustMark, 94 % StegaStamp).
-2. **Partielles, objets** : **SAM** (Segment Anything, Meta) découpe l'image en objets sans connaître la tâche ; chaque région prend le vote majoritaire de la carte du réseau. Les contours deviennent ceux des vrais objets.
-3. **Partielles, rectangles** : on cherche parmi ~13 000 rognages celui où le décodeur relit le message le mieux (score **z** = écart au hasard en écarts-types), puis on cale le cadre au pixel en refiltrant l'image avec le vrai message (**re-tamponnage**). Rectangles TrustMark : 0,886 → 0,943.
-4. **Pleines** : seuil réglé, plancher de cases propres (0,5 à 4 %).
-5. Tous les réglages sont faits sur des images que le modèle n'a pas vues (**hors-pli**).
-Résultats : candidat 5 **0,7384** ; candidat 22 **0,7695** (1er du track pour la première fois) ; candidat 27 **0,7935**.
+**Entraîner, affiner, plis.**
+- On n'a que 170 vraies images annotées par filigrane. C'est peu. Alors on **fabrique** des exemples : on prend des images, on les filigrane nous-mêmes avec l'outil officiel et le bon message, puis on colle des morceaux propres aux formes des vrais trous. On connaît donc la vérité exacte.
+- Le réseau apprend 8 000 pas sur ces exemples fabriqués, puis on l'**affine** (courte fin d'entraînement) sur les vraies images.
+- **5 plis** : on coupe les vraies images en 5 groupes. On entraîne 5 modèles, chacun sans un groupe. Chaque image est ainsi prédite par un modèle qui ne l'a jamais vue. Au test, on moyenne les 5 modèles.
 
-### Étape 4 : moyennes de modèles et PixelSeal (0,7935 → 0,8230)
-Moyennes de 3 à 9 modèles par filigrane, canaux passe-haut (le réseau reçoit aussi les détails fins de l'image, là où vit le filigrane), modèle StegaStamp et PixelSeal pleine résolution.
-Candidat 35 **0,8033** → candidat 36 **0,8131** → candidat 38 **0,8230**.
+**SAM (Segment Anything, Meta).** Réseau public qui découpe une photo en objets (une personne, une chaise, un pan de ciel), sans rien savoir des filigranes.
 
-## 3. Comment on a mesuré (le point fort à dire au jury)
-- **Réserve** : 102 images du train (indice multiple de 5) jamais utilisées pour apprendre ni régler.
-- **Validation croisée 5 plis sur les 510 images** : chaque image est prédite par un modèle qui ne l'a pas vue, toute la chaîne (aiguillage, seuils, choix de source) refaite à chaque pli.
-- **Écart apparié et intervalle de confiance à 95 %** : on compare deux fichiers image par image, on rééchantillonne 10 000 fois ; un fichier part seulement si l'intervalle exclut 0.
-- **Maker-checker** : la session qui produit un fichier n'est jamais celle qui le valide ; un vérificateur recalcule tout.
-- **Prévu contre obtenu** : du candidat 5 au 35, prévu +0,065, obtenu au public +0,065.
-- **Sondes** : on a envoyé le candidat 35 avec un seul filigrane remplacé, pour savoir lequel avait vraiment gagné au public. Résultat : PixelSeal transfère (+0,0082 pour +0,0096 prévu), TrustMark non (−0,0002 pour +0,011 prévu). On a donc cessé de croire les gains TrustMark hors réserve.
+**Score z.** On découpe un morceau de l'image, on le donne au décodeur, on compare ce qu'il lit au vrai message. z dit à combien d'écarts-types on est au-dessus du hasard. Hasard : z ≈ 0 (± 1). Morceau bien filigrané : z ≈ 10 (le maximum pour 100 bits). On garde un rectangle si z > 6,5.
 
-## 4. Où on a bloqué, pourquoi on plafonne
-Perte restante du candidat 38 en validation croisée : 1 − 0,835 = 0,165.
-- **57 % de la perte = le trou des images pleines PixelSeal et TrustMark.** StegaStamp y fait 0,944 ; PixelSeal 0,73 ; TrustMark 0,76.
-- **Petits rectangles PixelSeal** (moins de 32 pixels de côté, bandes de 102 × 9 pixels par exemple) : souvent manqués. Le décodeur n'y relit rien (z médian 0,8, donc le hasard), alors que 43 % des pixels y ont été modifiés.
-- **Bords** : 32 % (PixelSeal), 40 % (TrustMark), 76 % (StegaStamp) des cases fausses sont à 8 pixels ou moins de la vraie frontière.
+**Intervalle de confiance à 95 %.** On compare deux fichiers sur les mêmes images, image par image. On tire 10 000 fois des images au hasard parmi elles et on recalcule l'écart. Si 95 % des tirages donnent un écart du même signe (l'intervalle n'inclut pas 0), le gain est réel et pas dû à la chance.
 
-Pourquoi :
-1. **Limite du signal.** Ces filigranes étalent le message sur toute l'image pour résister aux retouches. Sur une zone de quelques cases, il y a trop peu de signal pour trancher. Mesure : même sur des rectangles fabriqués déjà vus à l'entraînement, IoU 0,095 sous 32 pixels, 0,25 de 32 à 64, 0,50 de 64 à 128, 0,79 au-delà.
-2. **PixelSeal est le plus discret** : appris de façon adversariale (un second réseau cherche à le repérer pendant son entraînement), son résidu est faible et diffus.
-3. **Peu de vraies données** : 170 images par filigrane. Bruit de la réserve ±0,03 ; bruit du public (306 images) écart-type 0,011.
-4. **Les gains ne s'additionnent plus.** Depuis le 38, chaque nouvelle carte gagne seule environ +0,018 en réserve, mais 70 à 85 % du gain disparaît après le vote SAM et les rectangles : elle corrige ce que l'assemblage corrigeait déjà. Meilleur cumul (candidat 49) : +0,0048, intervalle [−0,0012 ; +0,011], non envoyé.
-5. **L'erreur est dans la forme du trou dessinée par le réseau, pas dans le seuil.** Plafond d'un seuil choisi par image avec la vérité : +0,005 seulement.
+## Partie 2 · Le fil, en trois idées
+Si tu ne retiens que ça, tu tiens tout l'oral :
+1. **Le signal existe mais il est flou.** Dans la zone filigranée, le décodeur lit 85 % des bits justes ; dehors, 50 %. Mais sa carte native fait 8 × 8 cases : beaucoup trop grossière.
+2. **On apprend la localisation, puis on corrige les formes.** Un U-Net entraîné sur des exemples fabriqués *fidèlement* (deux découvertes : la toile et la pleine résolution), puis SAM et le décodeur pour donner des bords nets.
+3. **On mesure avant d'envoyer, et ça a tenu.** Chaque envoi avait une prévision écrite. Le plafond restant est une limite du signal : les tout petits trous.
 
-Pistes mesurées et fermées (à citer si on demande « vous avez essayé X ? ») : seuil fin et morphologie (dilatation, érosion : neutres ou négatives) ; inférence zoomée ; adaptation au test image par image (−0,02, le modèle grossit la zone) ; modèles spécialistes des pleines ou des trous (avance de +0,058 sur le trou TrustMark qui disparaît à l'affinage) ; perte contrefactuelle par paires ; pseudo-étiquetage du test ; dégradations JPEG, flou, rotation (ce n'était pas la cause de l'écart, c'était la toile) ; recherche des images d'origine dans COCO val2017 (aucune).
+## Partie 3 · Ce que tu dis, diapo par diapo
+Temps visé : 2 minutes pour le track 1 (environ 40 s par diapo). Si le temps manque, dis seulement les phrases en **gras**.
 
-## 5. Questions probables du jury
-**1. Pourquoi pas Watermark Anything, conçu pour localiser ?**
-Il localise son propre filigrane, pas PixelSeal, TrustMark ou StegaStamp. La tâche demande de localiser des filigranes existants. On s'est servi de leurs décodeurs comme tronc et comme source de signal (score z), puis on a appris la localisation par-dessus.
+### Diapo 3 · « Public score: 0.823 · 1st on Task 1 » (40 s)
+Montre la boîte HYPOTHESIS, puis la colonne TEST, puis le grand 0.823.
+> **"Task 1: each test image carries an invisible watermark, partly erased or partly added by an edit. We return a 128 by 128 mask saying where the watermark still is."**
+> "These watermarks are built to read one message from the whole image, not to say where it is. But we measured that the decoder reads 85% of the bits correctly inside the watermarked zone, and 50%, pure chance, outside. So the signal is there."
+> **"We turned that signal into a pixel map: a segmentation network, then shape correction, and every submission tested before sending. We went from 0.635 to 0.823, first on this task."**
+> (en montrant la ligne du bas) "One thing to know: a perfect bounding box only gets 0.66. The score is decided by the shape of the holes."
 
-**2. Vous n'avez pas sur-appris le tableau public ?**
-Non, pour trois raisons : aucun réglage n'utilise le public ; chaque envoi a une prévision écrite avant (prévu +0,065, obtenu +0,065 du candidat 5 au 35) ; on a refusé d'envoyer des fichiers dont l'intervalle touchait 0, y compris le candidat 49 qui semblait meilleur.
+### Diapo 4 · « Route, segment, snap to shapes, threshold » (45 s)
+Suis les cartes de gauche à droite avec la main.
+> **"Four stages."**
+> "One: routing. The decoder's bit accuracy on the whole image tells us if the image is fully watermarked with a hole, or clean with a watermarked patch. It's right on 100% of our held-out PixelSeal and TrustMark images."
+> **"Two: a U-Net, trained on edits we fabricate ourselves with the official watermarking tools, then fine-tuned on the real images, five folds, several models averaged."**
+> **"Three: snap to real shapes. For objects, SAM cuts the image into objects and each object takes the majority vote of our map. For rectangles, we search thirteen thousand crops for the one where the decoder reads the message best, then align it to the pixel."**
+> "Four: thresholds, tuned only on images the model never saw."
+> (en bas) "Result per watermark: StegaStamp 0.93, TrustMark 0.81, PixelSeal 0.71. Three watermarks, three behaviours."
 
-**3. Pourquoi StegaStamp va si bien et PixelSeal si mal ?**
-StegaStamp a un résidu fort et structuré : le réseau le voit case par case (0,93). PixelSeal a été entraîné pour être indétectable par un réseau adverse : son résidu est faible, et sur une petite zone le décodeur ne lit plus rien (z au niveau du hasard). TrustMark est entre les deux.
+### Diapo 5 · « Two discoveries, then a signal limit » (40 s)
+Montre le graphique de gauche à droite, puis la boîte claire, puis la boîte bleue.
+> **"Two discoveries moved the score."**
+> "First, the canvas: the organisers watermarked a canvas about 32 pixels larger than the image, then cropped it. Once our fabricated examples did the same, StegaStamp went from 0.66 to 0.82 without seeing a single real image."
+> "Second, the network's first layer reads every pixel instead of one in two. That's when PixelSeal finally started to learn."
+> **"Where we cap: 57% of the remaining error is the hole in fully watermarked PixelSeal and TrustMark images. Under 32 pixels, the decoder itself reads chance. That's a limit of the signal, not of our post-processing."**
+> Transition : "And that's the method we used on every task: measure first, then decide." (puis passe au track 2.)
 
-**4. Quelle a été l'idée décisive ?**
-La toile agrandie et la première couche en pleine résolution. Sans elles, les exemples fabriqués ne ressemblaient pas aux vraies images et les réseaux n'apprenaient pas PixelSeal. StegaStamp : 0,658 → 0,820 sans aucune vraie image, juste en fabriquant correctement.
+### Ce qu'il ne faut pas dire
+- « On n'a jamais utilisé les vraies images. » Faux : on affine sur les vraies images.
+- « On a mesuré le temps de calcul. » Jamais mesuré.
+- « On est clairement devant Incoming PhD. » Pas établi : 0,82 contre 0,82, bruit du classement ± 0,01.
+- « On a inventé un nouveau modèle. » Non : U-Net et SAM sont publics. Ce qui est à nous : la fabrication fidèle, l'assemblage, la discipline de mesure.
 
-**5. Vous utilisez des données externes ?**
-Les modèles finaux sont fabriqués à partir des images du hackathon (fonds pris parmi les images des deux autres filigranes, formes prises parmi les vrais masques) et des outils de filigrane fournis dans le kit. COCO n'a servi qu'à la première version. Les troncs (ResNet) et SAM sont des poids publics pré-entraînés.
+## Partie 4 · Répondre aux questions
+Méthode pour chaque réponse : **une phrase de réponse, un chiffre, stop.** S'ils veulent plus, ils relancent. Une réponse courte avec un chiffre montre que tu as compris ; une longue réponse floue montre l'inverse.
 
-**6. Pourquoi l'aiguillage pleine / partielle ?**
-Les deux cas n'ont pas le même problème : sur une pleine on dessine un trou, sur une partielle on trouve une zone. Le taux de bits justes sur l'image entière les sépare sans erreur sur la réserve PixelSeal et TrustMark. Chaque population a ensuite son seuil et son post-traitement.
+Si tu ne sais pas : ne devine pas. Dis ce qu'on a mesuré à côté, puis passe la main.
+> "I don't have that number in mind. What we measured is [chiffre proche]. Titouan or Yassir can complete." / "We didn't measure that, so I won't guess."
+Un jury respecte plus « on ne l'a pas mesuré » qu'une invention qu'il démonte en une question.
 
-**7. Qu'est-ce qui vous ferait gagner +0,03 ?**
-Ramener le trou des pleines PixelSeal et TrustMark au niveau de StegaStamp (de 0,73 et 0,76 à 0,85) vaudrait +0,035 sur la moyenne. Il faudrait une perte calculée directement sur l'IoU du trou et plus de vraies images ; nos deux essais de modèles dédiés aux trous n'ont pas tenu après affinage.
+**Q1. Why not Watermark Anything, which is built for localization?**
+> "It localizes its own watermark. Here the watermarks are fixed: PixelSeal, TrustMark, StegaStamp. So we used their own decoders as the signal, and learned the localization on top."
 
-**8. Combien coûte une prédiction ? Est-ce utilisable en vrai ?**
-Non mesuré en production. La chaîne lance plusieurs U-Net, SAM ViT-H et une recherche de rectangle (~13 000 rognages par image partielle) : c'est une chaîne de compétition, à alléger avant usage. Ce qui reste utile hors compétition : on sait dire avec un score z si une zone porte le message, ce qui suffit à contester une attribution.
+**Q2. How do you know you didn't overfit the public leaderboard?**
+> "Nothing was tuned on the public score. We kept 102 training images aside, used five-fold cross-validation, and wrote a prediction before each submission. From our fifth to our 35th candidate, we predicted plus 0.065 and got exactly plus 0.065."
 
-**9. Votre 0,82 est-il vraiment devant Incoming PhD (0,82) ?**
-Pas établi : le public porte sur 306 images, écart-type 0,011. La note finale vient des 70 % cachés ; notre réserve et notre validation croisée prévoient bien le public, donc on s'attend à garder le même niveau.
+**Q3. Why is PixelSeal so much harder?**
+> "PixelSeal was trained against a network that tries to detect it, so its trace is weak and spread out. StegaStamp leaves a strong pattern: 0.93 against 0.71."
 
-**10. Comment vous êtes-vous organisés ?**
-Plusieurs sessions d'agents en parallèle, chacune sur un lot (cartes du réseau, assemblage, rectangles, PixelSeal), sur des GPU H200. Boucle mesurer, critiquer, corriger : chaque idée devient une mesure, un agent critique séparé cherche la faille, un vérificateur recalcule avant tout envoi. Une seule session envoie, pour ne pas gâcher les créneaux de 10 minutes.
+**Q4. What was the key idea?**
+> "Making our fabricated training data faithful. The real watermark was computed on a larger canvas. Reproducing that took StegaStamp from 0.66 to 0.82 with zero real images."
 
-## 6. Pitch en 40 secondes
-« Les filigranes PixelSeal, TrustMark et StegaStamp sont faits pour relire un message sur toute l'image, pas pour dire où il est. On a d'abord mesuré que le décodeur relit 85 % des bits dans la zone filigranée et 50 % dehors : le signal existe, mais en cases de 64 pixels. On a appris un segmenteur sur des exemples fabriqués avec les vrais outils, après avoir trouvé que le filigrane réel était calculé sur une toile plus grande que l'image. Puis on corrige les formes : SAM pour les objets, le décodeur pour caler les rectangles au pixel. 0,635 au départ, 0,823 aujourd'hui, premiers du track. Chaque envoi a été prévu avant d'être envoyé, et la prévision a tenu. Ce qui reste : les tout petits trous, où il n'y a presque plus de signal. »
+**Q5. What is the routing exactly?**
+> "We run the decoder on the whole image. A fully watermarked image gives most bits right, a partial one far fewer. One threshold, around 75% correct bits, splits them: no error on our held-out PixelSeal and TrustMark images, 94% on StegaStamp."
+
+**Q6. How do you find the rectangles?**
+> "We try about thirteen thousand crops and keep the one where the decoder's reading is furthest above chance, a z-score above 6.5. Then we adjust each edge to the pixel by re-watermarking: inside the true frame, the tool adds less, because the message is already there. On TrustMark rectangles, that went from 0.89 to 0.94."
+
+**Q7. Did you use external data?**
+> "Only public pretrained weights: ResNet and SAM. Our training examples are built from the hackathon images and the official watermarking tools. COCO was only used in the very first version."
+
+**Q8. What would give you plus 0.03?**
+> "Drawing the holes of fully watermarked PixelSeal and TrustMark images as well as StegaStamp: from 0.73 and 0.76 up to 0.85 would be worth plus 0.035. We tried hole-specialist models; their advantage vanished after fine-tuning."
+
+**Q9. What did you try that failed?**
+> "Training-free maps from the decoder, at 0.5 at best. Morphology and finer thresholds: neutral. Adapting the model on each test image: minus 0.02, it just inflates the zone. Every idea had a number before we kept or dropped it."
+
+**Q10. Is it usable in the real world? How fast is it?**
+> "We didn't measure speed, it's a competition pipeline with several networks. What transfers directly: with the decoder's z-score, you can prove whether a given region carries the owner's message. That's what you need to contest a false attribution."
+
+**Q11. Why does it matter?**
+> "If you can't localize the watermark, anything added to a watermarked image gets attributed to the watermark owner. Someone can frame them with content they never made."
+
+**Q12. How did you organise the work?**
+> "Several AI agent sessions in parallel on GPUs, each on one part. One rule: whoever builds a file never validates it. A separate checker recomputes everything, and one single session submits."
+
+## Partie 5 · Les chiffres à avoir en tête
+| Chiffre | Ce qu'il veut dire |
+|---|---|
+| 0,823 | notre meilleur score public, 1er du track 1 |
+| 0,635 | notre premier envoi, samedi 17 h 25 |
+| 85 % / 50 % | bits justes du décodeur dans la zone / dehors |
+| 0,25 / 0,66 | masque constant / rectangle parfait |
+| 0,93 · 0,81 · 0,71 | StegaStamp · TrustMark · PixelSeal |
+| 0,66 → 0,82 | StegaStamp avant / après la correction de toile, sans vraie image |
+| 57 % | part de l'erreur restante due aux trous des pleines PixelSeal et TrustMark |
+| 32 px | taille sous laquelle le décodeur ne lit plus que le hasard |
+| +0,065 / +0,065 | gain prévu / gain obtenu, du candidat 5 au 35 |
+| 102 | images de réserve, jamais utilisées pour apprendre ni régler |
+| 3e, 0,96 | classement général (Murmell 0,99, teambuilders 0,97) |
