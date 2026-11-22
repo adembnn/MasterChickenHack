@@ -106,3 +106,24 @@ Jumeau Qwen2.5-3B : 8 nulls (base) contre 8 fp8 (4 e4m3 poids par tenseur + 4 W8
   z_e4m3 + z_W8A8 ≥ 5 (jumeau optimiste : lecteur aligné ; vrai fp8 ref-02 = 3,4 / 2,8).
 - Vrais ep qwen3b : ep-12 = +3,1 / +0,4 (somme 3,5, profil non fp8, dans la zone des nulls) ; tous les autres ≤ 1,3 / 1,5.
   Avec la règle : ep-22 (11,1), ep-15 (6,9) passent, ep-05 au seuil (5,0), ep-12 non.
+
+## 11. Piste B : test MMD façon MET (Gao, Liang, Guestrin 2024) — NON retenu (`twin/met_mmd.py`, 0 requête)
+Jumeau Qwen2.5-1.5B. Banque locale de la base : 500 réponses par prompt, 25 prompts, 6 températures (0,5 à 1,0), 48 tokens.
+13 jumeaux masqués × 30 réplicats de 25 réponses (une par prompt). Test par permutation (échange prompt par prompt),
+p = max sur la grille de T, seuil α/33. Critère fixé avant l'exécution : précision « variante » ≥ 0,75, au moins une variante
+détectée, aucune copie isolée (≥ 10 % de réplicats rejetés).
+| jumeau (taux de rejet à α/33) | Hamming | vraisemblance | combiné |
+|---|---|---|---|
+| copies : base T 0,5 / 0,7 / 0,75 / 1,0, fp16, + prompt système | 0 | 0 | 0 |
+| copie + persona | 0,80 | 0,50 | 0,73 |
+| copie + filigrane KGW | 1,00 | 1,00 | 1,00 |
+| fp8 e4m3, W8A8, LoRA 0,3 | 0 | 0 | 0 |
+| LoRA 0,7 | 0,93 | 0 | 0 |
+| LoRA 1,5 | 1,00 | 1,00 | 1,00 |
+| **précision (principal / banque avec prompt caché / sans copies cachées)** | 0,52 / 0,66 / 0,66 | 0,40 / 0,50 / 0,50 | 0,37 / 0,50 / 0,50 |
+Verdict : critère non atteint par aucun des 3 noyaux, dans aucun scénario. Le test est bien calibré (0 faux positif sur les copies
+« pures », même à T hors grille) mais (1) fp8, W8A8 et LoRA 0,3 sont invisibles à 25 réponses (médiane de p ≈ 0,8, comme les copies) ;
+(2) la persona et le filigrane sont isolés comme des variantes ; (3) seule une LoRA ≥ 0,7 sort, et uniquement au noyau Hamming
+pour 0,7, ce que les lecteurs de vraisemblance voient déjà. Le prompt système ne bouge pas la distribution de ce modèle. Non
+appliqué aux guichets réels (pas de banque Llama / Qwen-3B construite) ; aucun delta « ep-XX isolé ».
+Réserve : un seul jumeau (Qwen2.5-1.5B), un seul tirage de LoRA locale, décodage par température pure (sans top-p / top-k).
