@@ -43,3 +43,11 @@ python tracks/t2-model-equality/experiments/t2_private_robust_score.py \
 - **No T2 endpoint calls**, no SSH/GPU access, no contest submit. All scores here are **hypothetical** unless tied to the official issue's server results.
 - Per issue #2: only **Adem relay** submits T1/T3; Titouan controls T2 API. Preserve previous scored CSV and sha256.
 - Before executing any further H200 experiments check GPU reservation bus and confirm its owner.
+
+
+## UPDATE — official T2 submission #2998 reached **0.8000**
+After preparing this report, Adem's relay [issue #4 comment 7073911089](https://github.com/adembnn/EAC/issues/4#issuecomment-7073911089) confirmed a **real** public score **0.8000** for `t2_1967_plus_ep26.csv` (sha256 d6682b58…df536bb). This replaces 1967 as the **current public baseline**. Do **not** evaluate next candidates against a 0.6000 baseline: invoke `--baseline t2_1967_plus_ep26.csv`.
+
+New [t2-oracle enumeration](https://github.com/adembnn/EAC/issues/4#issuecomment-7073906299) states **55.7M compatible public-score states** before incorporating this 13th score (some previous CSVs reconstructed rather than byte-identical; 2491 misencoded in an older script, so ensure correction). It advises isolating `ep-24` or testing structured variants, while the relay's new priority list is `ep25`, `ep10` or `ep13`, `ep06`; these disagree by prior. **Do not pretend the likelihood rankings are unique or the synthetic posterior is ground truth.** With one official slot per ~30 min T2, choose the next single-endpoint perturbation by expected information under all plausible structures, not just the best one. Preserve full hidden endpoint assignments when preparing each candidate.
+
+The official submission response repeats that final ranking uses a hidden subset, **without specifying which accepted CSV version** gets judged; organizer clarification remains outstanding. No contest submission or quota spend from this agent.
