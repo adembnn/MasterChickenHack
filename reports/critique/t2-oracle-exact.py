@@ -18,7 +18,9 @@ FP8 = ["05","15","22"]; G = [["17","18"]]
 SUBS = [("1803", ["14","23","07","28","16"], [], .10), ("1882", FP8, [], .40), ("1967", FP8, G, .60), ("2052", FP8 + ["17","18"], [], .60),
         ("2176", FP8 + ["11"], G, .60), ("2383", FP8 + ["11","19"], G, .60), ("2491", FP8 + ["11","28","03"], G, .60),
         ("2595", FP8 + ["09","11"], G, .60), ("2707", FP8 + ["12","24"] + (["11"] if a.alt2707 else []), G, .60),
-        ("2795", FP8 + ["17","18","04","12","03","21","32","09","11"], [], .30), ("2899", FP8 + ["01"], G, .60)]
+        ("2795", FP8 + ["17","18","04","12","03","21","32","09","11"], [], .30), ("2899", FP8 + ["01"], G, .60),
+        ("2998", FP8 + ["26"], G, .80), ("3102", FP8 + ["26","10","13"], G, .60),
+        ("3200", FP8 + ["26","24"], G, .80)]
 K = len(SUBS); NM = [s[0] for s in SUBS]; K0 = NM.index("1967"); OBS = np.array([s[3] for s in SUBS])
 IA, IB = map(np.array, zip(*itertools.combinations(range(11), 2)))
 def predpairs(f, iso, groups):
@@ -129,7 +131,7 @@ for ci, cnt in zip(*np.unique(pick, return_counts=True)):
         uk, ww, inv, st = agg[f]
         for r, j in zip(rows, jj):
             cand = st[inv == j]; pw = FAMD[f]["w"][cand]; SAMP[r, f * 11:(f + 1) * 11] = X[rng.choice(cand, p=pw / pw.sum())]
-tag = f"{a.poids.replace(':', '_').replace(',', '-')}_{a.taille}" + ("_alt2707" if a.alt2707 else "")
+tag = "15s_" + f"{a.poids.replace(':', '_').replace(',', '-')}_{a.taille}" + ("_alt2707" if a.alt2707 else "")
 np.save(f"E:/EAC-lab/t2/reel/oracle/exact_{tag}.npy", SAMP)
 json.dump(dict(Z=Z, marg=out, tailles={str(k): v / Z for k, v in sizeh.items()}), open(f"E:/EAC-lab/t2/reel/oracle/exact_{tag}.json", "w"), indent=1)
 print(f"{a.N} tirages exacts enregistres : exact_{tag}.npy ({time.time() - t0:.0f} s)")

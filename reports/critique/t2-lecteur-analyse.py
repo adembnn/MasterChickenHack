@@ -39,15 +39,18 @@ for path in a.fd:
     R = json.load(open(path))
     TS, TA, THS, CFG, n = R["TS"], R.get("TA", R["TS"]), R["THS"], R["CFG"], R["ntok"]
     eps = R["eps"]
-    ends = list(R["grid"]) if R["grid"] else list(R["ctxA"])
+    ends = list(R["grid"]) if R["grid"] else list(R["ctxA"]) if R["ctxA"] else list(R["base"])
     fk = [e for e in ends if e.startswith("fk-")]
     st = {}
     for e in ends:
         o = {}
         o["ctx"] = R["best_ctx"][e]
-        l_none = pmax(R["ctxA"][e]["none"], TA)[0]
-        l_ctx = pmax(R["ctxA"][e][o["ctx"]], TA)[0]
-        o["gain_ctx"] = (l_ctx - l_none) / n[e]
+        if R["ctxA"]:
+            l_none = pmax(R["ctxA"][e]["none"], TA)[0]
+            l_ctx = pmax(R["ctxA"][e][o["ctx"]], TA)[0]
+            o["gain_ctx"] = (l_ctx - l_none) / n[e]
+        else:
+            o["gain_ctx"] = 0.0
         if R["grid"]:
             G = R["grid"][e]
             best = max(((G[i][j][k][0], i, j, k) for i in range(len(THS)) for j in range(len(TS)) for k in range(len(CFG))))

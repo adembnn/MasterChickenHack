@@ -138,7 +138,7 @@ if "A" in stages and not R["ctxA"]:
         print(f"[A {s}] {time.time() - t0:.0f}s", flush=True)
     save()
 for e in ALL:
-    R["best_ctx"][e] = max(R["ctxA"][e], key=lambda s: max(R["ctxA"][e][s]))
+    R["best_ctx"][e] = max(R["ctxA"][e], key=lambda s: max(R["ctxA"][e][s])) if R["ctxA"] else "none"
 SEL = R["best_ctx"]
 
 if "B" in stages and not R["grid"]:

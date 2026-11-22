@@ -1,7 +1,7 @@
 # T1 · session `t1-reel` : segmenteur entraîné, recalé sur les vraies images (TrustMark, StegaStamp, PixelSeal)
 
-État au 22/11, vers 2 h 15 (horloge des machines). Décision débloquée : quelles cartes de localisation servent de base à la soumission T1 pour chaque filigrane.
-Scripts : `E:\EAC-lab\t1s\t1-reel\` (version courante `reel7.py`, `predict.py`), H200 `~/eac/t1/t1-reel/` (h200b, h200d, h200g), Jülich `adem/t1-reel/` (premiers jobs).
+État au 22/11, 5 h 30 (horloge du PC). Décision débloquée : quelles cartes de localisation servent de base à la soumission T1 pour chaque filigrane.
+Scripts : `E:\EAC-lab\t1s\t1-reel\` (version courante `reel11.py` ; `predict.py`, `ens.py`), H200 `~/eac/t1/t1-reel/` (h200b, h200d, h200g), Jülich `adem/t1-reel/` (premiers jobs).
 
 Mots (une fois) : **segmenteur** = réseau qui dit, pour chaque case de l'image, « filigrané » ou « propre » ; **pli** = un cinquième des images mis de
 côté pendant l'entraînement pour mesurer ; **CV** = validation croisée, score sur les 136 images hors réserve, chacune prédite par un modèle qui ne l'a
@@ -31,6 +31,9 @@ pleines, réserve partielles, réserve au seuil CV.) Fichiers : h200b `~/eac/t1/
 Vérification de `predict.py` (régénère les prédictions depuis les poids) sur TrustMark `f_s1a` : `réserve recalculée depuis les poids, mIoU seuil 0 : 0.6632`
 (tableau : 0,663), `masques identiques à 0.9999992819393382`.
 
+Vérification de `predict.py` sur un modèle final (PixelSeal `f_x2`, 22/11 5 h 27) : `réserve recalculée depuis les poids, mIoU seuil 0 : 0.6819` (tableau : 0,682) ;
+`test : 340 images, masques identiques sur 0.9999989 des cases` par rapport au fichier livré.
+
 ## 2. La recette qui a produit ces cartes
 1. **Exemples fabriqués fidèles**, vérifiés par mesure sur le réel : pleine = image filigranée en entier puis pixels propres recollés dans un trou ;
    rectangle = image source filigranée dans son propre cadre puis collée ; objet = filigrane au cadre de l'image entière gardé sur une forme. Fonds =
@@ -52,12 +55,21 @@ Vérification de `predict.py` (régénère les prédictions depuis les poids) su
 | `g_c1` : toile réelle + trous à leur vraie place | 0,678 | 0,686 | 0,529 / 0,424 |
 | `g_c4` : idem + tête d'appoint qui prédit le résidu signé (idée du critique, tour 3) | **0,707** | 0,726 | 0,549 / 0,496 |
 StegaStamp avec la recette `g_c4`, à 5000 pas : réserve 0,901, trou 0,890 hors réserve (`g_s1` finissait à 0,891 / 0,839). Les trois filigranes sont
-relancés avec cette recette sur h200g (`g_x1` puis `f_x1`, 12 000 à 16 000 pas), livrés à 2 h 50 sur h200b :
-| livré (dossier h200b `~/eac/t1/t1-reel/`) | CV | réserve | IoU du trou, hors-pli / réserve |
+relancés avec cette recette (`g_x1` / `f_x1`, 12 000 à 16 000 pas ; puis `x2` à 20 000 – 24 000 pas, autre graine). **Cartes à prendre aujourd'hui** :
+| livré (dossier h200b `~/eac/t1/t1-reel/`, sortie de `ens.py`) | CV | réserve | IoU du trou, hors-pli / réserve |
 |---|---|---|---|
-| TrustMark `tm_f_x1/` | **0,769** | 0,696 | 0,563 / 0,427 |
-| StegaStamp `ss_f_x1+f_c4/` (moyenne de deux modèles) | **0,931** | 0,923 | 0,910 / 0,846 |
-| PixelSeal `ps_f_x1+f_s1+f_deca/` (moyenne de trois) | **0,682** | 0,661 | 0,438 / 0,459 |
+| TrustMark `tm_f_x2+f_c5+f_r50b/` (moyenne de trois) | **0,785** | 0,720 | 0,582 / 0,468 |
+| StegaStamp `ss_f_x1+f_c4/` (moyenne de deux) | **0,931** | 0,923 | 0,910 / 0,846 |
+| PixelSeal `ps_pop_x2+x2b+x1+dx__st+x2/` (moyenne par population, voir ci-dessous) | **0,723** | 0,697 | 0,487 / 0,509 |
+Modèles seuls, CV / réserve : TrustMark `f_x1` 0,769 / 0,696, `f_c5` 0,775 / 0,699, `f_r50` (ResNet-50) 0,762 / 0,703, `f_x2` (24 000 pas) 0,776 / 0,729 ;
+PixelSeal `f_x1` 0,683 / 0,651, `f_x2` (20 000 pas, autre graine) 0,703 / 0,682, `f_dx` (tronc décodeur) 0,664 / 0,649.
+- **PixelSeal, moyenne par population** (`ens2.py`) : images prédites pleines (plus de la moitié des cases filigranées) = moyenne de `f_x2`, `f_x2b`,
+  `f_x1`, `f_dx` ; prédites partielles = moyenne de `f_st` et `f_x2`. Population juste sur 170 / 170 images. `f_st` = même recette avec une première couche à
+  filtres passe-haut appris (`--st 1 --hp 2`) : seul 0,694 / 0,678, mais partielles 0,719 (contre 0,701) et vrais rectangles de petit côté < 64 px lus à
+  0,289 (contre 0,202). Carte : pleines 0,721, partielles 0,725 ; petits rectangles 0,286 (carte d'avant : 0,142).
+- **TrustMark ne gagne plus avec le nombre de pas** : avant affinage, sur les 136 vraies images, 0,780 à 16 000 pas et 0,779 à 24 000 ; l'affinage sur le
+  réel n'ajoute plus rien (0,769 à 0,776 en CV). PixelSeal gagne encore à l'affinage (0,673 avant, 0,703 après).
+- **Affinage deux fois plus long** (2000 pas, 8 vraies images sur 16) : +0,005, +0,005, +0,001, +0,002 sur quatre répliques : sans effet établi.
 
 ## 4. Mission « trou propre des pleines » : ce qui est établi
 - Sur `f_s1` TrustMark, par taille de trou (hors-pli) : < 2 % de l'image 0,24 ; 2-8 % 0,48 ; 8-20 % 0,65 ; > 20 % 0,60. Le meilleur seuil par image
@@ -69,6 +81,14 @@ relancés avec cette recette sur h200g (`g_x1` puis `f_x1`, 12 000 à 16 000 pas
 - `detect.py` : la force du résidu TrustMark varie de ±76 % dans une image ; les faux trous tombent là où l'encodeur écrit peu (0,90 niveau contre 1,43).
 - Formes (`shapes.py`, `band.py`) : aucune pleine n'a une zone filigranée en rectangle plus petit que l'image ; mon décalage aléatoire supprimait les trous
   qui longent 3 ou 4 côtés (1 % contre 31 % dans le réel), corrigé (`--pshift 0.15`).
+- **Taille des vrais trous** (`trous.py`) : médiane 5,6 % de l'image (TrustMark), 5,9 % (PixelSeal) ; 25 % et 20 % sous 2 %. Les trous fabriqués suivent
+  la même loi (vraies formes des deux autres filigranes).
+- **Les petits trous sont déjà mal lus sur le fabriqué** (`bandes.py`, modèle `g_c5` entraîné sur fabriqué seul, IoU du trou fabriqué / réel) : < 1 % :
+  0,28 / 0,49 ; 1–2 % : 0,60 / 0,07 (4 images) ; 2–4 % : 0,69 / 0,45 ; 4–8 % : 0,65 / 0,59 ; 8–20 % : 0,77 / 0,73 ; > 20 % : 0,87 / 0,78.
+- **Un classifieur ne sépare pas vraies pleines et pleines fabriquées** (`disc.py`, vignettes 64 px, ResNet-34 première couche en pleine résolution, 5 plis
+  par image) : AUC 0,541 loin du trou, 0,508 au bord, 0,510 dans le trou. Rien de propre au trou ne trahit le fabriqué : pas d'inpainting génératif.
+- **Petits rectangles PixelSeal** (`p3a.py`, `rects.py`) : 74 % des vrais rectangles ont un petit côté < 64 px ; IoU de leur zone filigranée 0,20 (`f_x2`).
+  Sur des rectangles fabriqués déjà vus à l'entraînement : 0,095 sous 32 px, 0,254 de 32 à 64 px, 0,500 de 64 à 128 px, 0,789 au-delà. Limite de signal.
 
 ## 5. Ce qui a échoué, et pourquoi (tout est mesuré)
 - **Cartes tirées du message ou du décodeur**, toutes à AUC 0,49 à 0,77 contre 0,93 à 0,99 pour le réseau : corrélation avec le motif re-calculé (même dans
@@ -81,6 +101,7 @@ relancés avec cette recette sur h200g (`g_x1` puis `f_x1`, 12 000 à 16 000 pas
   réduction sur deux étages (0,614 contre 0,640) ; tige à filtres passe-haut ; « force attendue du résidu » en canal d'entrée (fabriqué 0,73, réserve 0,50 :
   ne se transfère pas au réel) ; mélange de deux vraies images ; moyenne de plusieurs variantes d'un même modèle ; greffes d'objets réalistes par masques
   SAM (partielles 0,742 contre 0,751) ; trous alignés sur des régions SAM (hypothèse réfutée : IoU 0,28 entre régions SAM et vrais trous).
+- **Pseudo-étiquetage des images de test** (4 images de test par lot, étiquetées par le modèle du même pli) : 0,763 contre 0,775 et 0,759 contre 0,762.
 - **Post-traitement** (seuils par population, petites composantes, remplissage, rectangle, « jamais vide ») : +0,00 à +0,006 en CV emboîtée.
 - **Recalage de rectangle par le décodeur** en recherche locale : IoU de boîte 0,82 → 0,86 seulement (fait mieux, en balayage complet, par t1-residus).
 - Dégradations après filigrane (JPEG, WebP, flou, bruit, redimensionnement, zoom, rotation) : aucune n'explique l'écart au réel ; c'était la toile.
@@ -99,7 +120,17 @@ prédite filigranée est la même, 0,49 à 0,50) ; que l'avance de `g_c4` à 800
 - Tour 2 (`t1-reel-tour2.md`) : test de la marge par image, calibré sur fabriqué ; reprise aux points de contrôle corrigée.
 - Tour 3 (`t1-reel-tour3.md`) : diagnostic « régions entières, pas bords » ; jeu fabriqué de contrôle rendu fixe ; tête d'appoint du résidu (retenue).
 
+- Tour PixelSeal (`t1-tour-pixelseal.md`, vérificateur) : P3b (petits rectangles sur-représentés à l'affinage) sans effet, 0,682 contre 0,683 ; P2 (perte
+  doublée près des frontières, TrustMark) 0,769 / 0,701 contre 0,762 / 0,703, non retenu ; P5 (classifieur local de vignettes 64 px, 12 000 pas) : AUC sur
+  vrais rectangles 0,738 / 0,864 / 0,894 selon le petit côté (< 32, 32–64, 64–128 px), signal présent et transférable.
+- Pistes « trous » d'Adem, à pas égal contre `g_c5` / `g_x1`, lues à 8000 pas sur le réel (mIoU hors réserve / réserve ; témoin 0,756 / 0,683) : petits
+  trous sur-représentés (`--hsmall 0.4`) 0,757 / 0,694, neutre ; trous déplacés au hasard (`--pshift 1.0`) 0,749 / 0,704, signes opposés ; canaux passe-haut
+  (`--hp 2`) 0,771 contre 0,772 à 11 000 pas, neutre ; paires contrefactuelles de Yassir (`--cf 0.1`) 0,747 / 0,686, négatif. Tableau complet sur l'issue #3.
+
+- Panne du 22/11 vers 5 h 15 : h200f, h200g, h200h ne répondent plus. Perdu : PixelSeal `x4`, les affinages de `g_r50`, `g_x1h` (PixelSeal) et `g_x1hp`
+  (TrustMark). Relancé sur h200, h200b, h200d, h200e. Sur h200 et h200b, l'environnement Python est `~/eac/t1/.venv` (celui de `hermes` n'y est pas lisible).
+
 ## 8. Pour reprendre
-`python reel7.py train --method <m> --suffix <réserves> --fold -1 --nreal 0 --s1 1 --bs 16 --aux 1.0 --pshift 0.15 --pblob 0.15 --steps 8000 --tag g`
-puis, pour f de 0 à 4 : `... --fold f --init g --nreal 6 --steps 1000 --lr 1e-4 --warm 0.1 --tag f`, puis `reel7.py agg --tag f --write 1`.
+`python reel11.py train --method <m> --suffix <réserves> --fold -1 --nreal 0 --s1 1 --bs 16 --aux 1.0 --pshift 0.15 --pblob 0.15 --steps 8000 --tag g`
+puis, pour f de 0 à 4 : `... --fold f --init g --nreal 6 --steps 1000 --lr 1e-4 --warm 0.1 --tag f`, puis `reel11.py agg --tag f --write 1`.
 Prédictions test depuis les poids : `python predict.py --method <m> --tags <variante>[+<variante>] --tta 2`.

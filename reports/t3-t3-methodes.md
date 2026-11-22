@@ -1,14 +1,14 @@
 # T3 Unlearning : rapport de la session t3-methodes
 
-État au 22/11, 2 h 00. Décision débloquée : quelle méthode et quel fichier soumettre sur le track 3.
+État au 22/11, 5 h 00. Décision débloquée : quelle méthode et quel fichier soumettre sur le track 3.
 Les chiffres viennent de commandes lancées sur la H200 (mode évaluation, fp16, comme le serveur). Tableau complet : `reports/t3-tableau.md`. Code : `tracks/t3-unlearning/t3-methodes/`. Fichiers : H200 `~/eac/t3/t3-methodes/candidates/`.
 
 ## En bref
-1. **Score** : meilleur de l'équipe à 1 h 40 le 22/11 : **0,3713**. Progression : 0,0241 → 0,0735 → 0,1487 → 0,1962 → 0,2779 → 0,3009 → 0,3273 → 0,3676 → 0,3713.
-2. **Ce qui paie, mesuré au serveur** : (a) des erreurs confiantes (loss 8 à 14) sur les seules images à oublier ; (b) une part d'images basculées élevée, jusqu'au palier de 70 à 80 % ; (c) la classe fausse choisie par des modèles réappris sans l'image (t3-redistill) plutôt que par mes vues dégradées : +0,026 à 60 %.
-3. **Ce qui ne paie pas** : adoucir toutes les images (0,0241), un adoucissement global (0,0057), l'ancre sur vues très dégradées (0,0916 contre 0,1487), mes réglages `PGh` / `PGho` (0,2701 contre 0,3009), étaler davantage les images non basculées (0,3037 contre 0,3009 : neutre).
-4. **Ce que j'ai tenté pour la rétention, et qui a perdu au serveur** : `PGh` / `PGho` (0,2701 contre 0,3009) puis la recette « RDL », entraînement plus long et ancre plus forte (0,3578 contre 0,3653 à loss égale). Diagnostic : sur les images basculées rien ne change ; ces recettes laissent les images NON basculées plus proches d'orig, donc plus sûres d'elles, alors que le gold y est moins sûr qu'orig. Rester collé à orig sur les images du jeu n'est pas ce que le serveur récompense.
-5. **Outil de décision, avec sa limite** : la réserve de 698 images et la dérive sur mélanges mesurent « proche d'orig ». Elles ont bien prédit la porte à 70 % et les effondrements de classe, mais elles se sont trompées trois fois sur le score (`PGho`, `RDL`, et `PGs70` qu'elles donnaient perdant). À garder comme garde-fou de porte, pas comme critère de choix.
+1. **Score** : meilleur de l'équipe à 5 h le 22/11 : **0,4107** (fichier de t3-redistill, entraîné avec ma recette). Progression : 0,0241 → 0,0735 → 0,1487 → 0,1962 → 0,2779 → 0,3009 → 0,3273 → 0,3713 → 0,3942 → 0,4107.
+2. **Ce qui paie, mesuré au serveur** : (a) des erreurs confiantes sur les seules images à oublier ; (b) environ 70 % d'images basculées ; (c) la source des images et de la classe fausse (modèles réappris sans l'image, t3-redistill) ; (d) le calage de la loss moyenne et de son écart-type autour de 5,1 / 4,6.
+3. **Ce qui ne paie pas** (tout cela est de moi) : adoucir toutes les images ; l'ancre sur vues très dégradées ; `PGh` / `PGho` ; la recette longue à ancre forte « RDL » ; renforcer la forme à T=2 (0,3611 contre 0,3942) ; les bascules graduées (0,3884, neutre) ; la cible consensus de plusieurs sources (0,3953, neutre).
+4. **Ce que j'apporte encore** : la chaîne d'entraînement et de mesure utilisée par toutes les sessions, et un outil gratuit, la mise à l'échelle du déplacement de poids, qui recale la loss d'un fichier sans le réentraîner et sert à cartographier le sommet autour du meilleur.
+5. **Limites reconnues** : ma réserve de 698 images et la dérive sur mélanges mesurent « proche d'orig » ; elles ont bien prédit la porte et les effondrements de classe, pas le score. Mon régulateur de loss déformait la recette (témoin à 5,44 / 5,40 au lieu de 4,87 / 4,55) : abandonné.
 
 ## 1. Relecture du code du premier agent (`scripts-t3v1/`)
 Ce qui est faux ou fragile, par ordre de gravité :

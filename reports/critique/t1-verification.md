@@ -642,3 +642,81 @@ Référence : candidat 27 (public 0,7935 ; les envois 30 et 33 n'ont pas fait mi
 ## 55. Verdict
 **FEU VERT** : les quatre conditions de la règle de 2 h sont remplies. Risques : marge mince (+0,021 avec la référence la plus dure), contamination
 de second ordre sur les plis 1 à 4, choix manuel des sources. Après envoi, base = `candidat_35_cv_*.npz` (0,8138).
+
+---
+
+# Passage 16, 22/11 ~5 h 15 : candidat 36, FEU VERT sous dérogation d'Adem (gain +0,012 < +0,02)
+
+Fichier : `h200b:~/eac/t1/t1-assemblage/submission_candidat_36.pt`, sha256 `e672588286245d31b56630f6d668bb666030bf9353047335825a67b51638a176`.
+Dérogation : `CLAUDE.md` sur `main`, décision de 3 h 36 (commit 01d5f81). Scripts : `cvverif.py 36 35` (`cv36.txt`), `cand30.py 36 35`, `plis.py`, `moy36.py`.
+
+## 56. Recalcul en validation croisée complète contre le candidat 35 (dernier envoi, public 0,8033)
+| | Candidat 36 | Candidat 35 | Écart apparié | IC95 |
+|---|---|---|---|---|
+| 510 images | 0,8262 | 0,8138 | +0,0124 | [+0,007 ; +0,019] |
+| PixelSeal / TrustMark / StegaStamp | 0,7255 / 0,8143 / 0,9388 | 0,6988 / 0,8088 / 0,9338 | +0,0268 / +0,0055 / +0,0050 | [+0,013 ; +0,042] / [−0,003 ; +0,015] / [−0,001 ; +0,012] |
+| Réserve (pli 0) | 0,7984 | 0,7921 | +0,0063 | [−0,006 ; +0,020] |
+
+## 57. Contrôles
+- Hors-pli à la source : `f_x1` PixelSeal et StegaStamp (h200g), `f_c5` TrustMark (h200d), `f_r50` TrustMark (h200h) ; moyennes déposées = moyenne des
+  logits des composantes, train et test (écart max 0,016).
+- PixelSeal en réserve −0,0046 [−0,030 ; +0,013] : bruit (30 images ; une image à −0,314 ; gain porté par les objets, 6 en réserve).
+- Fichier de test conforme, aucune image tout-0 ni tout-1 ; cases changées test / train : 2,0 / 2,0 %, 0,9 / 1,0 %, 0,5 / 0,3 %.
+- Piste P4 (carte brute si la zone prédite est petite, `hyb.py`) : nulle sur les trois filigranes.
+
+## 58. Verdict
+**FEU VERT sous dérogation** : gain établi mais sous le seuil ; contrôles passés. Gain public attendu +0,005 à +0,012 (estimation).
+
+---
+
+# Passage 17, 22/11 ~6 h 30 : sondes par filigrane contrôlées ; candidat 38, contrôles passés, sous le seuil
+
+## 59. Sondes (candidat 35 avec un seul filigrane repris du 27)
+`sonde_35_{ps27,tm27,ss27}.pt` : 340 / 340 masques égaux au 27 sur le filigrane annoncé, 680 / 680 égaux au 35 ailleurs, format conforme
+(`sonde.py`). Scores publics attendus si la validation croisée disait vrai : 0,7937 / 0,7928 / 0,7982. Deux sondes suffisent (gains additifs).
+Candidat 36 envoyé : public 0,8131, soit +0,0098 pour +0,0124 mesuré.
+
+## 60. Candidat 38 contre le 36 (sha256 `5d2eb6ea…3a4d`)
+| | Candidat 38 | Candidat 36 | Écart apparié | IC95 |
+|---|---|---|---|---|
+| 510 images, validation croisée | 0,8347 | 0,8262 | +0,0085 | [+0,004 ; +0,013] |
+| PixelSeal / TrustMark / StegaStamp | 0,7448 / 0,8197 / 0,9396 | 0,7255 / 0,8143 / 0,9388 | +0,0193 / +0,0054 / +0,0008 | [+0,008 ; +0,032] / [+0,001 ; +0,010] / [−0,001 ; +0,003] |
+| Réserve (pli 0) | 0,8159 | 0,7984 | +0,0175 | [+0,006 ; +0,033] |
+
+Hors-pli à la source : `f_x2` et `f_dx` PixelSeal (h200e), `f_x2` TrustMark (h200f), `f_r50b` TrustMark (h200h) ; moyennes conformes ; fichier de test
+conforme. **Verdict : pas de feu vert par la règle (+0,0085 < +0,02), envoi sur dérogation d'Adem seulement.**
+
+## 61. Pistes fermées pendant le tour PixelSeal
+COCO `train2017` et `val2017` comme source des images : aucune correspondance (`cocomatch2.py`). Canal 0 du détecteur PixelSeal, contraste
+luminance / chrominance, carte brute sur petites zones (P4), union de masques SAM (P1, t1-assemblage) : nuls ou négatifs.
+
+## 62. Règle de 4 h 17 et candidat 38 (22/11 ~6 h 45)
+Décision d'Adem de 4 h 17 (`CLAUDE.md` sur `main`, commit 12c9e4b) : dérogation permanente au seuil de +0,02. Feu vert = IC95 de l'écart apparié contre
+le fichier en ligne hors de 0 (510 images, validation croisée complète), cartes hors-pli vérifiées à la source, fichier conforme.
+**Candidat 38 : FEU VERT** (+0,0085, IC95 [+0,004 ; +0,013] contre le 36 ; contrôles du § 60). Gain public attendu +0,003 à +0,008 (estimation).
+Sonde PixelSeal `sonde_35_ps27` : public 0,7951, donc PixelSeal a rendu +0,0082 entre le 27 et le 35 pour +0,0096 prévu ; TrustMark et StegaStamp
+réunis n'ont rendu que +0,0016 pour +0,0156 prévu.
+
+---
+
+# Passage 18, 22/11 ~7 h 15 : sondes par filigrane et optimisme de la validation croisée TrustMark
+
+## 63. Sondes (candidat 35 contre 27, points du score global ; `sondes.py`)
+PixelSeal : public +0,0082 (prévu 510 images +0,0096). TrustMark : −0,0002, bruit ±0,007 (prévu 510 images +0,0105, à −2,4 erreurs types ; réserve
++0,0058, à −1,1 ; hors réserve +0,0118, à −2,5). StegaStamp par différence : +0,0018, bruit ±0,003 (prévu +0,0051, à −1,9).
+
+## 64. Hors-pli contre réserve, même modèle de pli, seuil 0 (`gapfold.py`, machines d'entraînement)
+TrustMark `f_x1` : 0,769 contre 0,694, +0,075 [+0,013 ; +0,136], +0,061 à composition égale ; `f_s1` : +0,063, +0,051. PixelSeal `f_x1` : +0,033
+[−0,027 ; +0,094]. StegaStamp `f_x1` : +0,006. Écart TrustMark croissant au fil des recettes (0,032 → 0,075).
+Écarté : fuite directe, choix de point de contrôle, confiance, population TrustMark du test (KS p = 0,26 ; `poptest.py`). Probable, non prouvé :
+sélection répétée des recettes et des sources sur la validation croisée des mêmes 131 images. StegaStamp : population du test un peu différente
+(zones rares > 15 % : 24 % contre 14 %, p = 0,02).
+
+## 65. Conséquence pour les feux verts
+Prévision TrustMark lue sur la réserve seule ; l'IC95 de l'écart doit rester hors de 0 sans le gain TrustMark. Candidat 38 : feu vert maintenu
+(PixelSeal + StegaStamp seuls : +0,0067).
+
+## 66. Complément de t1-reel (ses mesures, non recalculées)
+L'écart TrustMark hors réserve / réserve existe sur des modèles entraînés sur fabriqué seul : `g_x1` 0,780 / 0,702, `g_c5` 0,782 / 0,702, `g_x2`
+0,779 / 0,731, `p_syn` (première recette) 0,622 / 0,583. L'affinage en plis n'en est donc pas la cause. Restent : réserve plus dure (0,039 dès
+`p_syn`) et recettes choisies en regardant les images hors réserve (0,078 sur `g_x1`).

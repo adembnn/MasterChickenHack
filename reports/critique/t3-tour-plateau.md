@@ -91,7 +91,7 @@ les fichiers déposés : 0,723 contre 0,674 pour la base. Le gold de substitutio
 (8 partitions, en file) en est le premier test : local 0,685 contre 0,674. S'il fait ≥ 0,395, refaire avec la moyenne des 14 modèles (4, 6 et 8 blocs).
 Attendu : + 0,005 à + 0,01. À combiner avec E1 dans le même fichier dès que E1 est lu.
 
-**E4. Copies altérées.** Rien à lancer : `PG_RDt24rRV2_70_l8515c` est en file. ≥ 0,399 : garder le réglage pour E1 ; ≤ 0,384 : fermé.
+**E4. Copies altérées : fermé.** `PG_RDt24rRV2_70_l8515c` = 0,3847 (prédit 0,362 à 0,395) : tenir la loss sur les copies ne rapporte rien.
 
 **E5. Mesurer la rétention avant d'y toucher.** Aucune sonde par échange de classes ne sépare le niveau de KL du coût par image. Je n'ai pas de
 protocole qui la mesure en un envoi ; une ancre plus forte a déjà détruit les bascules (`lam` 10 : m = 1,6). Je déconseille d'y mettre des créneaux
@@ -106,3 +106,49 @@ tant que E1 n'est pas lu.
 - Le gold de substitution n'est validé que comme classement grossier ; ses gains chiffrés ne sont pas des gains réels.
 - La rétention réelle et le gold sur les copies altérées restent inconnus.
 - Le bruit entre deux graines repose sur une paire (0,3888 / 0,3942).
+
+## 7. Suite (3 h 48) : dix fichiers neufs notés en local (`pgc.py`)
+Références : `SOUPs1` 0,961 × 0,676 = 0,650 (réel 0,3942) ; `PG_RDt24rc_70_l1117c` 0,702. Aucun des dix ne les bat : `PG_RDt24r_70t10ac` 0,597, `TM_wT2_4` 0,588,
+`TM_ctl` 0,584, `65t15ac` 0,582, `TM_w1_0_T3` 0,580, `TM_H4` 0,566, `60t20bc` 0,566, `70t15bc` 0,561, `60t20ac` 0,560, `TM_w1_0` 0,423. Tous perdent sur le score
+de loss (écart-type vers 4,0 pour les bascules graduées, 5,3 à 5,4 pour `TM_ctl` et `TM_w1_0_T3`, m = 3,28 pour `TM_H4`). `TM_H4` a le meilleur score de
+prédiction local (0,738) : à réentraîner à m ≈ 4,9 / s ≈ 4,6 avant tout envoi. Prédictions réelles sur l'issue #5, commentaire 7073114300.
+
+## 8. Forme ou information ? (3 h 55, `pgab.py` sur `SOUPs1`)
+| Case (gold de substitution) | Part des images | KL moyenne | Part de la KL |
+|---|---|---|---|
+| basculée, gold faux, même classe | 35,3 % | 0,64 | 21 % |
+| basculée, gold faux, autre classe | 13,9 % | 1,64 | 21 % |
+| basculée, gold juste | 17,1 % | 2,36 | 37 % |
+| non basculée, gold faux | 5,5 % | 2,04 | 10 % |
+| non basculée, gold juste | 28,2 % | 0,40 | 10 % |
+Les 10 % d'images les plus chères portent 30,8 % de la KL. 68 % de la KL vient d'une décision différente de celle du gold : on perd par information.
+Forme : meilleure température case par case, score de prédiction 0,676 → 0,691 ; plancher de probabilité nul ou destructeur. Tête × α : 0,9 → − 9 %,
+1,1 → + 1,9 % (venu du seul groupe des copies, contredit par `RV2`), 1,2 → − 8 %. Aucun fichier sans entraînement ne passe 3 % : rien fabriqué.
+
+## 9. Rectificatif (4 h 05) : ce que vaut le gold de substitution
+`PG_RDt24rc_70_l1117c` = 0,3753 (prédit 0,375 à 0,400 ; note locale + 8 %, réel − 5 %) : E2 est un raté. `pgv.py`, 6 jeux de modèles × 4 calages contre
+26 fichiers notés : entre familles la corrélation de rang vaut 0,86 à 0,92 ; **à l'intérieur de la famille « rang redistill » (10 fichiers) elle vaut
+− 0,08 pour le gold du §3 et 0,64 au mieux** (4 blocs, partitions 3 à 7, logits bruts). Aucun gold de substitution n'est indépendant de nos sources.
+Conséquences : (1) la note locale ne sert qu'à écarter les fichiers dont m / s sort de la cible ; (2) les pourcentages du §3.2 et du §8 ne sont pas
+robustes (la case « basculée alors que le gold a juste » porte 20 à 71 % de la KL selon le gold) ; seule tient la conclusion « l'écart vient des
+décisions, pas de la forme des sorties » ; (3) le gain local de E1 est une hypothèse : un seul fichier de bande bien calé vaut un créneau.
+
+## 10. Sortie du plateau (4 h 45)
+`PG_RDq_70_l915c_s1` (`t3-redistill`) = **0,4107** : masse fausse = moyenne à température 2 de 8 partitions, loss calée à 5,09 / 4,62. `PG_RDq_70_l1016c_s1`
+(5,31 / 4,86) = 0,4028 (prédit 0,395 à 0,415). La paire sépare les deux effets : + 2,2 % pour la masse fausse (à score de loss égal à `SOUPs1`), + 2,0 % pour le
+calage de la loss. Le gold ajusté (5,1 / 4,7) tient ; durcir la base perd (`a103`, `a106` : pas de créneau).
+E1 « bande couverte » : fermée sans envoi, réalisée par `t3-redistill` ; elle n'atteint m ≈ 5 qu'en dégradant le contrôle (KL sur mélanges 0,284 → 0,393).
+E3 (masse fausse moyennée) est donc la piste qui a payé ; ma mesure locale donnait à tort un coût au resserrement. Suite demandée : masse fausse plus
+tranchée (température 1,5 puis 1), m / s tenus à 5,1 / 4,6 ; un cran qui gagne ≥ 0,005 justifie le suivant.
+Passage 18 (5 h 10) : `PG_RDq_70_l915c_s0` = 0,4042, donc bruit de graine 0,0065 sur la nouvelle base. Crans de netteté déposés : `PG_RDq15_70_l814c_s1`
+(5,24 / 4,55, probabilité max sur les bascules 0,699 contre 0,626, score de loss 0,970, prédit 0,398 à 0,418), `q15_l7513` (0,964, prédit 0,395 à 0,416),
+`q10_l713` (0,953, prédit 0,392 à 0,420). L'écart-type baisse quand la masse se concentre : égalité prédite. Demandé : le cran 1,5 avec s remonté à 4,6.
+
+## 11. Bilan à 5 h 30 et suite
+Recette `RDq` au profil de la base : 0,4107 / 0,4042 / 0,4051 / 0,4066, soit 0,4067 ± 0,003 (bruit de graine 0,0065). `PG_RDq15_70_l814c_s1` = 0,4089
+(prédit 0,398 à 0,418) : la netteté vaut environ + 2,5 %, mangés par un écart-type trop bas. Sur 10 prédictions chiffrées depuis 3 h 17 : 9 dans la
+fourchette, 1 au bord et fausse de sens (`rc`). Tableau complet : issue #5, commentaire 7074215652.
+Ce qui peut encore rendre plus de 0,01 : (A) cran 1,5 avec s remonté à 4,6 par moins de bascules à loss plus haute ; (B) baisser la KL de contrôle à
+m / s tenus (poids d'ancre 4 à 5) : toute hausse de cette KL a coûté (`RV2` − 2,4 %, `a114` − 8,4 %), personne ne l'a baissée ; (C) 16 partitions, fusionné
+avec A. Essai négatif sans envoi (`mksoup.py`) : la moyenne des poids de trois graines baisse la KL sur mélanges (0,242 → 0,220) et m / s d'autant.
+À arrêter : graines et variantes au profil de la base, série d'échelle, `CP*`, `L*`, forme à température 2, bascules graduées, bandes, 6 blocs, parts.

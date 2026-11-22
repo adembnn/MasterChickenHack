@@ -54,6 +54,33 @@ Outil : `cv5.py` refait toute la procédure (population, normalisation, choix de
   réserve 0,7922 contre 0,7627). Remis au vérificateur à 2 h 35. Bases : `tm_f_x1`, `ss_f_c4+f_s1`, `f_s1+f_deca` de t1-reel, avec le vote par
   région refait sur chacune (partielles hors-pli 0,781 → 0,811 ; 0,914 → 0,934 ; 0,652 → 0,697), les cadres calés et les boîtes.
 
+**Candidat 35 envoyé (soumission 2550) : 0,8033 public**, +0,010 contre le 27 pour +0,025 prévu. En cumul du candidat 5 au 35, la prévision
+(+0,028 +0,011 +0,025 = +0,065) égale le public (0,7384 → 0,8033 = +0,065) : le 27 avait donné 0,013 de plus que prévu, le 35 en donne 0,015 de
+moins. C'est le bruit d'un public de 306 images, sans biais visible en cumul.
+Candidat 36 (cartes `tm_f_x1+f_c5+f_r50`, `ss_f_x1+f_c4`, `ps_f_x1+f_s1+f_deca`, même assemblage) : 0,8262 en validation croisée, +0,0124 contre
+le 35 (IC95 [+0,007 ; +0,019] ; PixelSeal +0,027, TrustMark +0,006, StegaStamp +0,005). Sous le seuil de +0,02 : gardé en réserve.
+
+**Candidat 36 envoyé à 3 h 43 (dérogation d'Adem au seuil de +0,02) : 0,8131 public**, +0,0098 pour +0,0124 mesuré.
+Candidat 38 (cartes `ps_f_x2+f_x1+f_dx` et `tm_f_x2+f_c5+f_r50b` de t1-reel, même assemblage) : 0,8347 en validation croisée, +0,0085 contre
+le 36 (IC95 [+0,0045 ; +0,0129] ; PixelSeal +0,019, TrustMark +0,005, StegaStamp +0,001 ; réserve +0,0175). Remis au vérificateur à 4 h 15.
+Tour de critique PixelSeal du vérificateur, deux expériences négatives : P1 (masques SAM jugés un par un puis unis, `rank3.py`) fait moins bien
+que le vote à un masque (objets PixelSeal 0,858 contre 0,910) et abîme les rectangles ; P4 (sans plancher sur les pleines, candidat 37) : +0,0002.
+Fichiers sonde `sonde_35_{ps,tm,ss}27.pt` livrés pour savoir quel filigrane n'a pas transféré au public entre le 27 et le 35.
+
+**Candidat 38 envoyé à 4 h 32 : 0,8230 public, meilleur score**, +0,0099 pour +0,0085 mesuré. Il devient la base de comparaison.
+Règle d'envoi depuis 4 h 17 (décision d'Adem) : plus de seuil à +0,02 ; un candidat part si l'intervalle à 95 % de son gain apparié exclut 0 et
+si le vérificateur a écrit son feu vert. Les gains TrustMark ne sont comptés que sur la réserve : chaque écart est donné avec et sans TrustMark.
+
+**Candidat 39 (5 h 40) : gain non établi, non envoyé.** Seule la carte PixelSeal change (`ps_pop_x2+x2b+x1+dx__st+x2` de t1-reel : moyenne de
+modèles différente selon la population prédite). Validation croisée 0,8374, +0,0027 contre le 38, IC95 [−0,0027 ; +0,0082], identique avec et
+sans TrustMark (TrustMark et StegaStamp inchangés) ; réserve −0,0016. PixelSeal +0,0082 : partielles +0,0210 (IC95 [−0,010 ; +0,053]), pleines
+−0,0039 (IC95 [−0,008 ; −0,0003]). La carte gagne +0,018 seule, mais son gain est sur les partielles, que le vote par région et les boîtes
+rattrapaient déjà. Variante mixte (pleines du 38, partielles du 39, `mixpop.py`) : +0,0034, IC95 [−0,0020 ; +0,0088] : non établi non plus.
+Mesure d'assemblage pur (`gate.py`, PixelSeal partielles, 5 plis) : garder la carte brute ou sa boîte englobante quand son masque est
+rectangulaire, le vote sinon : −0,0010 ; plafond en choisissant par image avec la vérité : +0,0020. Fermé. Les points PixelSeal restants sont
+sur les images pleines (0,724 à 0,729 après assemblage contre 0,78 sur les partielles), où l'assemblage n'ajoute qu'un seuil.
+Scripts ajoutés : `ecart.py` (écart avec et sans TrustMark), `mixpop.py` (candidat mixte par population prédite), `gate.py`.
+
 Candidat 22 par filigrane (réserve) : PixelSeal 0,648 (inchangé depuis le candidat 5) ; TrustMark 0,764 (pleines 0,673, partielles 0,843) ; StegaStamp
 0,842. Fichier `h200b:~/eac/t1/t1-assemblage/submission_candidat_22.pt`, validé. Le saut vient des cartes TrustMark à pleine résolution de t1-reel
 (réserve brute 0,663 puis 0,678 contre 0,598) : le vote par région, refait dessus, donne 0,795 sur les partielles hors-pli (0,735 pour la carte seule).

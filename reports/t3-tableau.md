@@ -1,6 +1,6 @@
 # T3 Unlearning : tableau de bord des candidats (session t3-methodes)
 
-Mis à jour le 22/11 à 2 h 00. Décision débloquée : quel fichier soumettre ensuite, et avec quel risque.
+Mis à jour le 22/11 à 5 h 00. Décision débloquée : quel fichier soumettre ensuite, et avec quel risque.
 Tout est mesuré sur la H200, en mode évaluation et en fp16 comme le serveur (`tracks/t3-unlearning/t3-methodes/dash.py`). Seule la colonne « score réel » vient du serveur.
 
 ## Comment lire
@@ -49,6 +49,28 @@ Chemin : H200 `~/eac/t3/t3-methodes/candidates/`. Tous : chargement strict, floa
 | `NE_PAS_SOUMETTRE_PG_T48_g1.pt`, `…PG_T34_g1.pt` : toutes les images incertaines, sans bascule | 0,831 / 0,441 / 2,2 % ; 1,207 / 0,546 / 6,0 % | 0,863 / 0,546 ; 1,216 / 0,652 | 0,130 ; 0,092 | 0,829 / 0,182 ; 0,820 / 0,195 | 2322fbd3… ; 47eea542… | écartés (rétention) |
 
 Scores réels des fichiers des autres sessions, pour repère : `S1_r2_A85_l10_lr1e-4` (m 0,376, s 0,961) 0,0273 ; `NEGce_all_a2` (0,229 / 1,489) 0,0219 ; `S1_A85_l30` (0,087 / 0,638) 0,0114 ; candidat de Yassir 0,0039 ; `S0_tau3` (0,012 / 0,040) 0,0010 ; `TS_tau4` (0,401 / 0,229, tête divisée par 4, aucune bascule) 0,0057 ; `Z9_b0` (3,21 / 4,76, têtes de 9 classes à zéro) 0,0.
+
+## 00. Depuis la réouverture (3 h 20) : variantes d'entraînement autour du meilleur fichier, et cartographie du sommet
+Références : `SOUPs1` (0,3942 : 4,869 / 4,553) puis `PG_RDq_70_l915c_s1` de t3-redistill (**0,4107** : 5,087 / 4,616). Témoin `TM_ctl0` : la recette de `SOUPs1` relancée donne 4,869 / 4,553, identique.
+| Fichier | Ce qui change | m / s exactes | m / s copies légères | sha256 | Score réel |
+|---|---|---|---|---|---|
+| `TM_wT2_4_a114` | perte de forme à T=2 × 4, déplacement × 1,14 | 4,860 / 4,363 | 4,302 / 4,032 | 492f49ac… | 0,3611 (perd) |
+| `TM_t10h2` | bascules graduées (70 % à loss forte + 10 % à loss 1-3), ancienne cible | 4,859 / 4,501 | 4,303 / 4,146 | 48dd261d… | 0,3884 (neutre) |
+| `TM_H4a_a090` | cible consensus de 4 sources, déplacement × 0,90 | 5,092 / 4,913 | 4,445 / 4,478 | 60cfff68… | 0,3953 (neutre) |
+| `TM_H4a_w14` | cible consensus, terme de loss × 1,4, sans mise à l'échelle | 4,962 / 4,778 | 4,353 / 4,330 | 61ee1bd8… | en réserve |
+| `TM_b6` | 6 blocs entraînés, recalé | 5,207 / 4,378 | 4,522 / 4,042 | b8aab9bc… | non envoyé |
+| `TQ_t10a_s1` / `_s0` | bascules graduées sur la cible gagnante, 2 graines | 5,148 / 4,643 ; 5,150 / 4,665 | 4,514 / 4,264 ; 4,513 / 4,276 | 50944589… ; f1f6787d… | livrés |
+| `TQ_Hqg_s1` / `_s0` | cible consensus sur la cible gagnante, 2 graines | 5,254 / 4,600 ; 5,214 / 4,577 | 4,623 / 4,223 ; 4,586 / 4,202 | 63bb44c4… ; 38d40a36… | livrés |
+Cartographie du sommet, sans entraînement (déplacement de poids du gagnant multiplié par un facteur) :
+| Fichier | Facteur | m / s exactes | m / s copies légères | sha256 |
+|---|---|---|---|---|
+| `PG_RDq_70_l915c_s1_a095` | × 0,95 | 4,692 / 4,375 | 4,007 / 4,009 | 85788754… |
+| `PG_RDq_70_l915c_s1` | × 1,00 | 5,087 / 4,616 | 4,384 / 4,233 | (0,4107) |
+| `PG_RDq_70_l915c_s1_a103` | × 1,03 | 5,303 / 4,747 | 4,596 / 4,355 | 89419671… |
+| `PG_RDq_70_l915c_s1_a106` | × 1,06 | 5,503 / 4,867 | 4,795 / 4,468 | 3f6bde51… |
+| `PG_RDq_70_l915c_s1_a110` | × 1,10 | 5,747 / 5,012 | 5,043 / 4,606 | dd3e46ef… |
+| `SOUPs1_a105` (ancienne cible recalée) | × 1,05 | 5,202 / 4,751 | 4,571 / 4,359 | 38cd0cde… |
+Leçons : un régulateur de loss en cours d'entraînement déforme la recette (témoin régulé à 5,44 / 5,40 : abandonné) ; aucune variante d'entraînement n'a battu la recette simple ; le gain vient de la source des images et des classes, et du calage de la loss.
 
 ## 0. Recette « RDL » : même oubli, dérive réduite (cible de t3-redistill à 70 %)
 Cible `RDt24_70` : mes images (70 % basculées), classe fausse prédite par les modèles de t3-redistill. Entraînement plus long, ancre « mélanges » plus forte, loss moyenne maintenue par un régulateur. Référence : `PG_RDm3t24_70_l1016c` (0,3676 au serveur), 1 500 pas, ancre 3.

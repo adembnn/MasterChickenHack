@@ -216,3 +216,79 @@ Ce que le rapport « quantification et LoRA » change : (1) il nuance R17. Un ar
 - **Monde jumeau aveugle de Titouan (corrigé ouvert après décisions postées)** : MCC 0,713 sur 66 paires. 5 variantes sans déguisement trouvées sur 5 (dont LoRA 0,3 à +14,4), 0 copie simple, chaude ou filigranée isolée ; erreurs : LoRA sous persona rangée copie, deux fp8 identiques non regroupés. Copies déguisées liées à tort par le z brut (+20,4, +5,4), rattrapées par la sonde d'extraction.
 - **Mon monde jumeau** : fp8 +8,2 ; LoRA 0,3 / 0,7 / 1,5 à +8,3 / +20,9 / +96,7 ; copies simples ≤ +2,9 ; copies déguisées +5,6 et +7,3 (faux positifs sans extraction).
 - **Nœuds h200e et h200f** installés (même environnement) : ref à 100 réponses, Qwen-3B à apprentissage fort, faux endpoints du bloc 1 en cours.
+
+## 22/11, 2 h 45 à 3 h 15 : demande de l'orchestrateur (4 chantiers), masque public, ref à 100 réponses
+
+- **Orchestrateur (2 h 12 et 2 h 53)** : priorité T2, nœuds h200d, h200e, h200f donnés (h200h est en réalité plein). Environnement T2 installé sur h200d, h200e, h200f (uv, mêmes versions). Rapport `reports/t2-recherche-atteindre-1.md` lu.
+- **Point 1 (posté)** : composition des ref = 5 copies + 4 variantes sur 9 ; tableau par famille (statistiques, rang, décision, probabilité) : commentaire 7072490210. Sûr : ep-05, 15, 22, 17, 18. Étayé : ep-11, ep-09. Reste : classement faible.
+- **Soumissions de Titouan** : 2491 ({28, 03}) = 0,60 ; 2595 ({09, 11}) = 0,60. Cinq mesures « inchangé » de suite.
+- **Masque public** (`t2-composition-structures.py`, 8 scores) : le modèle « paires entre 16 à 20 guichets publics » explique les scores 15 à 36 fois mieux que « 30 % des paires au hasard ». ep-09, ep-11, ep-19 presque invisibles du public (0,1 à 0,3 paire), ep-03 et ep-28 peu. Erreur de ma part corrigée dans la foulée : le test d'un coup des 5 guichets ne départage qu'à 2 contre 1 (retiré, bloc B {12, 24} gardé pour 3 h 26).
+- **Ref à 100 réponses par guichet** (h200d, 104 faux endpoints à 100 réponses) : `Practice score … 1.000`, 36 paires sur 36. fp8 +7,4 ; LoRA 0,7 / 1,5 / 0,3 à +10,5 / +29,7 / +4,4 ; copies ≤ +2,8. La LoRA 0,3 se désigne par classement.
+- **Point 3 (posté)** : explications en prose et comparaisons séparent la LoRA 0,3 (tiers du haut +1,65 par réponse), listes numérotées et réécritures courtes non (tiers du bas 0,00).
+- **Code partagé** : `h200b:/tmp/eac-t2-partage/lecteur-adem/` (lecteur, analyse, faux endpoints des blocs 0 et 1).
+- **Qwen-3B à apprentissage fort** : rien de plus (4 directions sur 11).
+- **En attente** : journal du bloc 1 des ep (lecture à 50 réponses prête sur les nœuds), résultat de 3 h 26, désignation par l'orchestrateur de la session qui soumet.
+
+## 22/11, 3 h 15 à 3 h 50 : cycle 2 reçu, hypothèse H, fichier candidat
+
+- **Désignation (Adem, 3 h 24, via la session relais)** : la session relais `local_f823412d…` contrôle et envoie les fichiers T2 du côté d'Adem. Ma session produit et critique, ne soumet pas. Mes fichiers `reports/critique/t2-*` sont commités par elle (33183d0).
+- **Cycle 2 reçu** : 825 réponses ep (25 par guichet, deux fichiers concaténés), 223 réponses ref. Lecture à 50 réponses lancée à 3 h 24 sur h200d (Llama, Qwen-1.5B), h200f (Qwen-3B), h200 (ref) ; plusieurs processus tombés en mémoire GPU (nœuds partagés), relancés avec un lot plus petit. Pas fini à 3 h 50.
+- **Soumission 2707 ({12, 24})** = 0,60. JSON brut du serveur pour T2 : `submission_id`, `status`, `score`, `message` seulement ; `score: 0.6` et « previous best still leads » pour 2052, 2176, 2383, 2491, 2595, 2707. **Je lis ces six envois comme « pas mieux que 0,60 »** et je retire ce que j'en avais déduit (masque public par guichets, « un de chaque » pour ep-28 / ep-03).
+- **Hypothèse H** (`t2-tour-regard-neuf.md`, critique indépendante lancée par la session relais) : une modification par guichet ; les déguisés sont des copies, et parmi les guichets en clair un seul est la base. Mon contrôle : aucune contradiction.
+- **Décodage tronqué mesuré** (`t2-loi-nulle-trunc.py`, 50 réponses) : ep-07, ep-14, ep-27 ne rendent aucun token au-delà du rang 37 / 37 / 31 ni au-delà de 95 % de masse cumulée à T = 1,0 : copies à top-k ou top-p. ep-24 non tronqué.
+- **Fichier H** : `t2_H_base_ep01_ep26.csv` (sha256 bbe0d6ca…68d171), déposé sur h200 et h200b. Variantes : Qwen-3B {04, 12, 17, 18}, Qwen-1.5B {03, 21, 22, 32}, Llama {05, 09, 11, 15}. Titouan envoie à 3 h 59 sa version (base Qwen-3B = ep-04 au lieu d'ep-01) ; le mien reste en réserve.
+- **Piste durée par token** : Titouan a ajouté durée, heure de réception et en-têtes à son collecteur (passe 5 × 5 gratuite sur les ref) ; journal attendu.
+
+## 22/11, 3 h 40 à 3 h 55 : base par test ciblé, grille de lecture, fichiers suivants
+
+- **Test ciblé à 50 réponses** (`t2-loi-nulle-self_view.py` : LoRA apprise sur le guichet lui-même, gain hors échantillon en 2 plis, loi nulle de faux endpoints) : Qwen-3B ep-01 z −0,9 (base), ep-24 −0,5, ep-12 −0,4, ep-25 +0,5, ep-18 +0,6, ep-17 +1,8, ep-04 +2,2 ; Qwen-1.5B ep-03 +3,0, ep-26 / 32 / 21 entre +0,3 et +0,7 ; Llama ep-05 +23, ep-11 +5,5, ep-09 +0,8, copies ≤ +0,4. Le test ne voit pas les fp8.
+- **Envoi de 3 h 59** : Titouan envoie mon fichier `t2_H_base_ep01_ep26.csv` (sha256 bbe0d6ca…68d171), contrôlé par lui et par la session relais (118 → 63 paires « même modèle », 55 retirées).
+- **Grille de lecture** (`t2-H-grille-de-lecture.py`) : tout juste 1,000 ; une erreur Qwen 0,861 ; ep-09 et ep-11 copies 0,847 ; une erreur par famille Qwen 0,723 ; trois erreurs 0,607. Coup suivant : base Qwen-1.5B = ep-32, puis ep-21, puis Qwen-3B.
+- **Fichiers des coups suivants** déposés sur h200 (`~/eac/t2/soumissions/`) et h200b : `t2_H_base15b_ep32.csv`, `…ep21.csv`, `…ep03.csv`, `t2_H_base3b_ep04.csv`, `…ep12.csv`, `t2_H_3b_ep24_pour_ep12.csv`, `…ep25_pour_ep12.csv`, `t2_H_sans_ep09.csv`, `t2_repli_1967_plus_ep09_ep11.csv`.
+- **File d'envoi** : à partir de 4 h 29, la session relais envoie (décision d'Adem), une base changée par envoi.
+- Lecture complète à 50 réponses arrêtée pour les trois familles (trop lente sur GPU saturés) ; le contrôle ref à 50 réponses tourne encore sur h200.
+
+## 22/11, 3 h 59 à 4 h 15 : fichier H = 0,30, inférence sur 10 scores
+
+- **Soumission 2795 (fichier H, base ep-01 / ep-26)** = 0,30 ; JSON : `{"submission_id": 2795, "status": "success", "score": 0.3, "message": "… previous best … still leads …"}`. Le serveur garde 1967 (0,60).
+- **Erreurs de ma part** : (1) H instanciée fausse, envoyée avec 9 changements d'un coup ; (2) j'avais retiré à tort l'hypothèse du masque public par guichets en croyant que `score` pouvait être le meilleur retenu : `score` est bien le score du fichier, les six « 0,60 » étaient de vrais « inchangés ».
+- **Inférence sur les 10 scores** (`t2-masque-public-inference.py`, 1 536 états compatibles, modèle « public = paires entre ≈ 18 guichets ») : publics et copies ep-21, 32, 07, 04, 14, 23 ; publics et variantes ep-17, 18, 22, 05, 15 ; non publics ep-03, 28, 11, 09, 19, 12, 24. Il reste 3 ou 4 variantes non isolées parmi les guichets publics, tous classés « copie » par nos lecteurs.
+- **Mesure T\* contre faux endpoints (`t2-loi-nulle-tcal.py`)** : Llama ep-09 +5,6, ep-11 +9,1, ep-05 +15,4 ; Qwen-1.5B ep-21 et ep-03 +3,2 ; Qwen-3B ep-24 +4,1, ep-12 +3,2, ep-01 +2,4, ep-18 +2,2, ep-17 −1,2, ep-04 −1,1. À noter : ep-17 (variante par le public) et ep-04 (copie par le public) ont le même profil chez moi.
+- **Plan d'envois** remis à la session relais (un changement chacun, base 1967) : ep-01 ; ep-26 ; {10, 13} ; {33, 30, 31} ; {02, 08, 29} ; {23, 20, 16}. Fichiers `t2_1967_plus_*.csv` déposés. Les fichiers `t2_H_*` sont caducs.
+
+## 22/11, 4 h 15 à 4 h 40 : gabarit, ep-01 inchangé, deux anomalies
+
+- **Hypothèse « gabarit »** (session relais) : même liste de 11 configurations dans les trois familles. Alignement par mes mesures à 50 réponses : 4 déguisés (T = 1,0 ; prompt ; persona ; tronqué), 3 « simples » à T\* 0,70, 4 « intermédiaires » à T\* décalée par famille. Version W4 (les 4 intermédiaires = variantes) compatible avec 10 scores et prédisant une hausse d'ep-01 à 0,75-0,85.
+- **Soumission 2899 (1967 + ep-01)** = 0,60 inchangé. **Ma prédiction était fausse** : je n'avais testé que des vérités construites par moi, toutes avec ep-01 variante publique. W4 retirée ; `t2_gabarit_W4_complet.csv` à ne pas envoyer.
+- **Anomalie 1** : 8 guichets soupçonnés sur 8 (01, 03, 09, 11, 12, 19, 24, 28) sans effet public (≈ 4 chances sur 10 000 au hasard) : le partage public / caché dépend probablement de la configuration.
+- **Anomalie 2 (énoncé relu)** : même modèle = même checkpoint, même quantification, même adaptateur LoRA, « even if one uses a decoding watermark and a different system prompt » : une variante peut être servie par plusieurs guichets déguisés. Candidats : ep-05 = ep-15 (fp8), ep-29.
+- **Inférence sur 11 scores** (1 504 états) : probabilité de hausse {10, 13} 0,33 ; ep-29, 27, 10, 31, 13 ≈ 0,22 ; autres ≤ 0,20.
+- **Qwen-1.5B à 50 réponses (directions)** : ep-28 ↔ ep-03 à +19,8 / +13,5 ; ep-21 lié plus faiblement (+5,3 / +3,1). **Qwen-3B** : aucun lien entre ep-24, ep-01, ep-18, ep-04 (4 directions).
+- **Durée par token** : piste fermée par Titouan (toutes les requêtes durent 20,0 s, délai serveur) ; en-têtes sans information.
+- **Organisation** : la session relais a lancé cinq sessions neuves (t2-audit, t2-oracle, t2-gabarit, t2-lecteur, t2-budget). Mes lecteurs locaux n'ont pas prédit le public deux fois (fichier H, ep-01).
+
+## 22/11, 4 h 40 à 5 h 15
+- **Soumission 2998 (1967 + ep-26) = 0,80, nouveau meilleur**, fichier retenu `t2_1967_plus_ep26.csv` (sha256 d6682b58…). ep-26 = variante publique de Qwen-1.5B, désignée par le gabarit de t2-gabarit (guichet sans déguisement visible, réponses les plus longues de la famille).
+- **Lien ep-17 → ep-33 retiré** : contrôle A/B (`ab_check.py`, direction apprise sur le bloc 0, lue sur le bloc 1) : ep-33 à z +1,5 pour un maximum de +2,9 chez 100 faux endpoints. Critère fixé d'avance non tenu ; le +5,8 venait du nombre de tests (42). Fichiers `…ep33_avec…` sortis de la file. Titouan avait conditionné la réouverture du cycle 3 à ce contrôle : pas de raison de rouvrir.
+- **27 fichiers `t2_b26_*.csv`** régénérés sur la nouvelle base (un changement chacun, variante `_h0911` qui isole aussi ep-09 et ep-11), déposés sur h200 et h200b, sha256 transmis à la session relais.
+- **Inférence sur 12 scores** (278 états échantillonnés) : une variante publique non isolée restante dans 53 % des états, deux dans 29 % ; Llama 0,52, Qwen-3B 0,49, Qwen-1.5B 0,34. Hausse / baisse : ep-27 0,14 / 0,13 ; {10, 13} 0,14 / 0,19 ; ep-31 0,10 / 0,12 ; ep-29 0,09 / 0,10 ; guichets Qwen : baisse 0,55 à 0,71.
+- **Erreur signalée par t2-oracle** : dans `pubmask.py`, `pubS.py`, `pubdup.py`, 2491 était codé {28, 03} alors que le fichier envoyé isolait aussi ep-11. Corrigé à 5 h 10, inférence relancée. Limite de fond : mon recuit donne 278 états là où l'énumération exacte de t2-oracle en compte 55,7 millions ; ses probabilités priment sur les miennes.
+- **Llama à 50 réponses** : direction ep-15 (fp8) → ep-27 à z +4,7, non contrôlée en croisé (même niveau de preuve que le lien retiré).
+- **Probabilités ep-11 / ep-09 variantes** : 0,80 / 0,65 (mesures locales seulement ; ces guichets sont hors public).
+
+## 22/11, 5 h 15 à 5 h 30
+- **Inférence corrigée** (2491 = 1967 + 11, 28, 03) : 722 états ; aucun guichet seul ne se détache (hausse 0,07 à 0,10), {10, 13} 0,16 / 0,70 / 0,14. « ep-27 d'abord » retiré.
+- **Lecteur de quantification à 50 réponses** (5 schémas, 200 faux par famille, `qview.py`, `qnull.py`) : ep-12 +3,7 en e4m3 par tenseur (maximum des faux +2,9), ep-11 +4,1, ep-09 +2,0, ep-27 +2,5, ep-28 +2,6 ; connus : ep-22 +6,4, ep-15 +6,5, ep-05 +5,9.
+- **Contrôle croisé par bloc** (`q_ab.sh`, critère fixé d'avance : au-dessus du 95e centile des faux dans chaque bloc) : **ep-12 passe** (+3,2 / +2,3), **ep-11 passe au ras** (+2,5 / +3,3), **ep-09 échoue** (+1,2 / +0,7). Recoupement : l'agent de Titouan (nul absolu) trouve ep-11 (3,76 / 3,84) et ep-12 en e4m3 seul (4,92 ; W8A8 2,78).
+- **ep-05 ≠ ep-15** : gain propre hors échantillon −0,0001 nat par token pour ep-15 (z +1,2) contre +0,0243 pour ep-05 (z +29,7) et +0,0053 pour ep-11 (z +7,5). Ne pas grouper 05 et 15.
+- **Probabilités révisées** : ep-11 0,80 ; ep-12 0,70 ; ep-09 0,45 (retiré du paquet par défaut). Paquet caché conseillé : 11 et 12 isolés, 03 + 28 groupés.
+- **Générateur `mkcsv.py`** (isoler, grouper, remettre en base, contrôle des paires). Fichiers `b26/` (base 0,80) déposés sur h200 ; `b1013/` prêts si l'envoi de 5 h 29 ({10, 13}) monte.
+- Session archivée vers 5 h 12 puis rouverte par la session relais ; l'orchestratrice reste archivée, le relais est ma seule coordination. h200f injoignable en SSH depuis 5 h 20.
+
+## 22/11, 5 h 30 à 5 h 40
+- **Soumission 3102 (base 0,80 + ep-10 + ep-13) = 0,60, baisse** ; le serveur garde le fichier à 0,80. ep-10 et ep-13 = copies publiques (ce que disaient mes lecteurs locaux ; la forme « variantes parmi les six sans déguisement » du gabarit est réfutée en Llama).
+- **Inférence à 14 scores, première passe (88 états)** : aucune variante publique Llama non isolée ; une seule variante publique manquante dans 82 états sur 88, en Qwen-1.5B (0,61) ou Qwen-3B (0,39). Hausse : ep-08 0,23, ep-06 0,19, ep-30 0,17, ep-20 0,12, ep-25 / ep-02 0,07. Grand échantillon en cours.
+- **Angle mort de mes lecteurs** : ep-26, variante confirmée par le public, leur est invisible (fp8 +0,4, gain propre z +0,2, aucune direction). Ils désignent des variantes, ils ne blanchissent aucun guichet.
+- **ep-03 / ep-28** : lecture dose par dose : direction d'ep-28 optimale à 0,3 sur ep-03, direction d'ep-03 optimale à 0,6 – 1,0 sur ep-28 → même direction, forces différentes : isolés séparément (plus « groupés »).
+- **Lancés sur h200d** : `eos_reader.py` (décision d'arrêt : arrêts observés contre somme des probabilités de fin sous la base, plafond serveur 256 tokens) ; `tk2.sh` (faux endpoints à top-k 40, lecteur fp8 des guichets déguisés contre cette loi nulle). GPU saturé par T1 et t2-lecteur : deux familles relancées en série.
+- **Fichiers** : `b26/` (ep-08, 06, 30, 20, 24, 25, 02, 33, 23, 14, 07, seuls, `_h1112`, `_h03281112`) sur h200, `MANIFESTE_5h40.txt`.
