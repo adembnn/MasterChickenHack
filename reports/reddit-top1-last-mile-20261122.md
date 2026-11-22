@@ -1,0 +1,53 @@
+# Reddit + papers + repo cross-check, last-mile TOP1 (22 Nov 2026 ~04:40 Paris)
+
+**Decision:** spend additional effort on T2 *offline identity inference* first, then on T3's existing redistill ensemble. T1 has now reached first place per team's 03:08 report and public **0.8230** at 04:32. This report contains **hypotheses and test gates**, NOT new leaderboard scores. No EAC API calls, no SSH/GPU inference and no submissions from this agent.
+
+## Actual current baselines (the older PR #34 descriptions are stale)
+| Track | Most recent confirmed public | Evidence / implication |
+|---|---:|---|
+| **T1** | **0.8230** candidate38, submit2910, [#3](https://github.com/adembnn/EAC/issues/3) | +0.0099 over 0.8131 (candidate36). Cross-validated difference +0.0085, CI95 [+0.004,+0.013]; PixelSeal alone +0.0193 on train CV. Full maker-checker and relay approval. |
+| **T2** | **0.60** reference1967, [#4](https://github.com/adembnn/EAC/issues/4) | H was **0.30**; isolating ep01 scored **0.60 unchanged**, contradicting naive type/temperature assumptions. Public tests cover a constrained subset, private can be different. |
+| **T3** | **0.4107** `PG_RDq_70_l915c_s1`, submit2827, [#5](https://github.com/adembnn/EAC/issues/5) | Averaging wrong-class probabilities from **8 OOF redistill partitions at T=2** + loss m/s ≈5.09/4.62 beat SOUPs1 0.3942. More partitions 16/24 and matched-loss variants are **already running under Adem**. |
+
+**Coordination:** [#2](https://github.com/adembnn/EAC/issues/2) says sole relay managed by Adem submits all three tracks, not side agents. At this point n8/n9/n10 have been claimed by other agents; dashboard cannot be reached in this runtime; no availability/VRAM assertion here.
+
+## What Reddit actually contributes (and what it doesn't)
+- [inside-llm, Reddit 15 Nov 2026](https://www.reddit.com/r/LocalLLaMA/comments/1xx7qbf/i_have_created_a_tool_to_observe_what_happens/): useful **lockstep context** versus free-running comparison and sampler-gate traces. It gets exact logits for two **LOCAL** models; it does NOT magically reveal the contest endpoints' logits. Relevant to T2 *offline prompt selection*.
+- [KLD is misunderstood, Reddit 24 Oct 2026](https://www.reddit.com/r/LocalLLaMA/comments/1xeim3m/kld_is_misunderstood/): use **model-generated continuation contexts**, not random Wikipedia text, to distinguish two local models. This is a practitioner argument, not a validated EAC score.
+- [temperature/top-p sampler effects, Reddit Nov 2026](https://www.reddit.com/r/machinelearningnews/comments/1xvp3mb/temperature_topk_and_topp_explained_the_model/): sampler temperature preserves logits' rank ordering; top-p truncates support. Team already modeled these nuisance variables with T* and PIT, **do not rebuild a plain temperature reader**.
+- [segmentation boundary loss, r/computervision Feb 2026](https://www.reddit.com/r/computervision/comments/1r5vpd8/how_to_force_clean_boundaries_for_segmentation/): boundary weighting and background/border/interior supervision. Team has ALREADY measured boundary-weighted TrustMark **+0.007 CV, -0.002 reserve**; do not repeat.
+- [model soups Reddit / ICML 2022](https://www.reddit.com/r/MachineLearning/comments/tcp8ya): soup works in shared low-loss basins; team already has SOUPs1 and many ablations. Not a T3 novelty; don't spend a fresh GPU cycle on generic soup. [Paper](https://proceedings.mlr.press/v162/wortsman22a).
+
+## P1 (highest expected general-rank leverage): T2 **ep17→ep33 same-weights hypothesis**, zero API queries
+
+**New team observation:** t2-critique [#4](https://github.com/adembnn/EAC/issues/4) has a directional LoRA reader trained on ep17 explaining ep33 (T=1.0 endpoint) with **z=+5.8**, the only positive link in its 42 tests; empirical p≈0.02 from 52 false endpoints. **This is promising but NOT yet statistically established**, since p=.02 is uncorrected for 42 inspections. Could be a cross-target false positive.
+
+What to run, using the already collected 50 responses per endpoint and local twin logits only (T2-critique already has caches):
+1. **Split by prompts** into halves A/B (avoid random token-level split), fit a LoRA direction on ep17/A and evaluate ep33/B under a sampler model with free T and top_p. Reverse fit on B and evaluate A. Require reproducible signal. The **direction** ep33→ep17 is not guaranteed to transfer; test if possible, but don't label them identical solely based on reverse z if different training support.
+2. Build the **max-statistic null** by applying the complete 42-comparison search to EACH of the 52 simulated same-weights endpoints (new null simulation if necessary). A pair is supported only if its peak score beats e.g. 95th percentile **of the 42-way maxima**, not the per-pair z. Correct the multiple testing problem; record null tail resolution.
+3. Also compare `ep17 ↔ ep18` and `ep33 ↔ ep18` with *identical evaluation*, because 1967 groups ep17+18 and this changes which pair(s) would be added by grouping ep33. If ep33 matches ep17 but not ep18, create a **partition-consistent** candidate; do not accidentally identify all three as one model.
+4. If and only if this passes crossfit and max-null, ask Titouan to validate the partition and the official relay to slot a **single T2 CSV**. Isolating ep33 from base versus giving it ep17's label are different hypotheses and require different CSVs. Public is 30%/rounded and may not show the pair.
+
+**Time:** ~20–45 min existing GPU/CPU, **0 endpoint queries**. Risk medium-high because multiple testing. Source method: [MET ICLR 2025](https://proceedings.iclr.cc/paper_files/paper/2025/hash/d73234a13815fc1f9779dd17d89be9b4-Abstract-Conference.html), [RUT ICLR 2026](https://arxiv.org/abs/2506.06975). This is a strict validation of a *team-discovered* candidate, not a claim of a new variant.
+
+## P2 (new code, conditional): T2 choose the **remaining queries by local nuisance-robust information**
+- Added [`t2_select_prompts_offline.py`](../tracks/t2-model-equality/experiments/t2_select_prompts_offline.py). For each synthetic prompt/context, score how far base vs known **local simulated** quantization/LoRA variant token distributions remain after independently fitting T ∈ {0.6,0.8,1.0,1.2} and top-p ∈ {.95,1.0}; use conservative 25th percentile across variants to avoid overfitting to strong LoRA. Top-token rank reversal is temperature invariant. Contexts should be base-model-generated continuation prefixes under identical token histories across local models (**lockstep**), not separate free-running texts.
+- **Why not a duplicate:** previous I4 mini-questions / T* / PIT tried fixed candidate prompts and scored *answers*. This code optimizes an **offline bank** of candidate probes for expected detection of weak LoRA independent of nuisance, BEFORE burning any `ep-*` calls.
+- **Limit:** it requires precomputed logits from the correct local twins and plausible LoRA/fp8 variations. A random synthetic LoRA direction **cannot guarantee transfer to the actual unknown adapter**. Actual prompt selection should be blind to the public leaderboard.
+- **Gate:** leave 25% prompts plus all new seeds held out, compare to **random candidate prompt baseline** and existing Titouan probes on the real 9 `ref-*` (known truth), requiring a meaningful gain in MCC with zero false splits of the five same-weight refs. Only Titouan can authorize using the remaining per-ep budget.
+- **Compute:** ~15–45 min H200 for local twin forward logits if not already cached; ranking itself NumPy CPU. Unit synthetic check intentionally exercises temperature-only vs rank-changed logits; **no real EAC benchmark run by this agent**.
+
+## P3: T3 do NOT duplicate redistill; one diagnostic before another training run
+- Multi-seed averaging OOF teacher probabilities at T=2 **already won** and the 16/24 seed runs are already scheduled. The only unexploited detail worth a cheap check is **teacher uncertainty per forget image**, not more scalar temperature or loss margin: after caches exist, split independent seeds into two groups, compare per-image `JSD(p_8,p_24)` at T=2, top wrong-class agreement, and variation on light/strong copies; bin by ensemble disagreement and measure where the current learner's changed-class errors occur.
+- Only if disagreement predicts failures should Adem test a constrained confidence shrinkage on the high-disagreement decile, holding overall forget loss m/s and retain control fixed. **Not the same as TM_H4a**, which changed the selection of which images flip and was neutral (0.3953 vs SOUPs1 0.3942).
+- **No blind new file/submit**. T3 current public base 0.4107; need strict float32 ViT, control gate≥70%, exact + hidden-copy proxy metrics and relay.
+
+## P4: T1 selective refinement only if it beats 38 under clean CV
+- Candidate38 already 0.8230. PixelSeal per-track CV 0.7448; small rectangles <64px remain weak (watermark IoU ~0.20 on some slices). But **P3b small-rectangle oversampling, extra training steps, small-hole rebalancing and our counterfactual λ=.1** have all been neutral/negative in team's newest [#3](https://github.com/adembnn/EAC/issues/3) measurements. Do not rerun them.
+- The only genuinely different cheap test is **crop-and-refine inference with the already trained `f_x2`** (no retraining): on small-side<64px PixelSeal candidates only, crop 256px around rectangle with overlap, evaluate logits from f_x2 in aligned source coordinates and merge with current 128-grid logits using a fixed weight (0/.25/.5) chosen on out-of-fold samples. Must preserve full-image logits elsewhere, use official downsample, report group-specific and global CV + paired CI. If crop normalization shifts PixelSeal features or rectangles regress, **stop**. It may not pay against 0.8230, so lower priority than T2.
+- Team T1 verification now uses CI95 excluding 0 and checker approval, without old +.02 threshold (Adem 04:17 permanent override). **Only relay submits.**
+
+## Resource / submission rules
+- The dashboard is inaccessible from this ChatGPT sandbox; the supplied SSH private key cannot help when outbound port 22 is blocked. **No H200 jobs or contest scores generated here**. The six-node guides are old: GitHub bus now mentions **up to n10**, with n8/n9/n10 claimed. No card is declared free without `nvidia-smi` AND bus coordination.
+- No T2 queries unless Titouan signs off in #4. No submissions by this agent; Adem's relay owns the queue for all three tracks. Any candidate first needs local metrics, file hash, independent review.
+- **Do not treat Reddit anecdotes as evidence of an EAC improvement**. They inspire methods; scores come from EAC validation only.
