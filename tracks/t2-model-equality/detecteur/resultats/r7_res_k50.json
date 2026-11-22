@@ -1,0 +1,329 @@
+{
+ "k": 50,
+ "n_train_pairs": 10960,
+ "n_pos": 4128,
+ "thr_sweep_val": {
+  "0.1": 0.618,
+  "0.15": 0.606,
+  "0.2": 0.6,
+  "0.25": 0.602,
+  "0.3": 0.587,
+  "0.4": 0.585,
+  "0.5": 0.586,
+  "0.6": 0.582
+ },
+ "thr": 0.1,
+ "val_qwen3_val_s101": {
+  "mcc_practice_like": 0.594,
+  "mcc_ep_like11": 0.501
+ },
+ "val_llama1b_val_s101": {
+  "mcc_practice_like": 0.674,
+  "mcc_ep_like11": 0.659
+ },
+ "val_smol360_val_s101": {
+  "mcc_practice_like": 0.71,
+  "mcc_ep_like11": 0.664
+ },
+ "val_mcc_mean": 0.659,
+ "val_mcc_ep_like_mean": 0.608,
+ "val_errors_top": [
+  [
+   "base:persona / base:plain (dit diff\u00e9rent)",
+   321
+  ],
+  [
+   "base:persona / base:watermark (dit diff\u00e9rent)",
+   306
+  ],
+  [
+   "base:persona / base:temp1.0 (dit diff\u00e9rent)",
+   306
+  ],
+  [
+   "base:persona / base:system (dit diff\u00e9rent)",
+   297
+  ],
+  [
+   "base:system / lora@0.3:watermark (dit pareil)",
+   138
+  ],
+  [
+   "base:watermark / lora@0.3:watermark (dit pareil)",
+   134
+  ],
+  [
+   "base:temp1.0 / lora@0.3:watermark (dit pareil)",
+   134
+  ],
+  [
+   "base:persona / lora@0.3:temp1.0 (dit pareil)",
+   121
+  ],
+  [
+   "base:plain / lora@0.3:watermark (dit pareil)",
+   121
+  ],
+  [
+   "base:persona / lora@0.3:watermark (dit pareil)",
+   117
+  ],
+  [
+   "base:plain / lora@0.3:plain (dit pareil)",
+   82
+  ],
+  [
+   "base:system / lora@0.3:plain (dit pareil)",
+   81
+  ]
+ ],
+ "top_features": [
+  [
+   "max_lam_stories_r32_1.0",
+   42936
+  ],
+  [
+   "absdiff_lam_fp8_1.0",
+   11522
+  ],
+  [
+   "max_lam_alpaca_r16_1.0",
+   8797
+  ],
+  [
+   "max_zq_stories_r32_1.0",
+   8071
+  ],
+  [
+   "max_lam_stories_r32_0.8",
+   4818
+  ],
+  [
+   "min_rank10",
+   4189
+  ],
+  [
+   "max_lam_fp8_0.8",
+   3658
+  ],
+  [
+   "absdiff_zq_fp8_1.0",
+   3019
+  ],
+  [
+   "max_lam_int8_1.0",
+   2679
+  ],
+  [
+   "max_w_we",
+   2413
+  ],
+  [
+   "min_c_code",
+   2235
+  ],
+  [
+   "min_lam_fp8_1.0",
+   2093
+  ],
+  [
+   "min_lowp",
+   2024
+  ],
+  [
+   "min_c_dash",
+   1956
+  ],
+  [
+   "max_rep3",
+   1899
+  ],
+  [
+   "min_c_bold",
+   1876
+  ],
+  [
+   "max_c_excl",
+   1419
+  ],
+  [
+   "min_tok_per_resp",
+   1357
+  ],
+  [
+   "max_zq_nf4_0.8",
+   1327
+  ],
+  [
+   "min_c_list",
+   1326
+  ]
+ ],
+ "ref_P": [
+  [
+   1.0,
+   0.0,
+   0.87,
+   0.0,
+   0.69,
+   0.5,
+   0.0,
+   0.46,
+   0.57
+  ],
+  [
+   0.0,
+   1.0,
+   0.01,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   0.87,
+   0.01,
+   1.0,
+   0.0,
+   1.0,
+   1.0,
+   0.0,
+   1.0,
+   0.74
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   1.0,
+   0.0,
+   0.0,
+   0.0,
+   0.01,
+   0.0
+  ],
+  [
+   0.69,
+   0.0,
+   1.0,
+   0.0,
+   1.0,
+   1.0,
+   0.0,
+   1.0,
+   0.28
+  ],
+  [
+   0.5,
+   0.0,
+   1.0,
+   0.0,
+   1.0,
+   1.0,
+   0.0,
+   1.0,
+   0.38
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   1.0,
+   0.0,
+   0.0
+  ],
+  [
+   0.46,
+   0.0,
+   1.0,
+   0.01,
+   1.0,
+   1.0,
+   0.0,
+   1.0,
+   0.08
+  ],
+  [
+   0.57,
+   0.0,
+   0.74,
+   0.0,
+   0.28,
+   0.38,
+   0.0,
+   0.08,
+   1.0
+  ]
+ ],
+ "ref_labels": [
+  1,
+  3,
+  0,
+  2,
+  0,
+  0,
+  4,
+  0,
+  1
+ ],
+ "ref_score": "Practice score (MCC over 36 pairs, same model or not): 0.636\nRight: 31 pairs, wrong: 5 (1 wrongly called the same, 4 wrongly called different)\nWrong pairs:\n  ref-01 (plain) and ref-03 (system prompt): you said different, they are the same model\n  ref-01 (plain) and ref-05 (persona): you said different, they are the same model\n  ref-01 (plain) and ref-06 (watermark): you said different, they are the same model\n  ref-01 (plain) and ref-08 (sampling at temperature 1.0): you said different, they are the same model\n  ref-01 (plain) and ref-09 (LoRA at strength 0.3): you said same, they are different models\n",
+ "feature_names": [
+  "c_bold",
+  "c_code",
+  "c_colon",
+  "c_dash",
+  "c_excl",
+  "c_hash",
+  "c_list",
+  "c_nl",
+  "c_nonascii",
+  "c_paren",
+  "c_q",
+  "c_quote",
+  "frac_length",
+  "lam_alpaca_r16_0.8",
+  "lam_alpaca_r16_1.0",
+  "lam_fp8_0.8",
+  "lam_fp8_1.0",
+  "lam_gsm_r16_0.8",
+  "lam_gsm_r16_1.0",
+  "lam_int8_0.8",
+  "lam_int8_1.0",
+  "lam_nf4_0.8",
+  "lam_nf4_1.0",
+  "lam_stories_r32_0.8",
+  "lam_stories_r32_1.0",
+  "lowp",
+  "n_extract",
+  "n_identity",
+  "rank10",
+  "rep3",
+  "tok_per_resp",
+  "top1",
+  "ttr",
+  "w_i",
+  "w_smollm",
+  "w_sorry",
+  "w_we",
+  "w_you",
+  "words_per_resp",
+  "zq_alpaca_r16_0.8",
+  "zq_alpaca_r16_1.0",
+  "zq_fp8_0.8",
+  "zq_fp8_1.0",
+  "zq_gsm_r16_0.8",
+  "zq_gsm_r16_1.0",
+  "zq_int8_0.8",
+  "zq_int8_1.0",
+  "zq_nf4_0.8",
+  "zq_nf4_1.0",
+  "zq_stories_r32_0.8",
+  "zq_stories_r32_1.0"
+ ],
+ "setrel": false
+}

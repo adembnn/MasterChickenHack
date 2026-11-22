@@ -1,0 +1,329 @@
+{
+ "k": 25,
+ "n_train_pairs": 10960,
+ "n_pos": 4128,
+ "thr_sweep_val": {
+  "0.1": 0.572,
+  "0.15": 0.572,
+  "0.2": 0.578,
+  "0.25": 0.583,
+  "0.3": 0.573,
+  "0.4": 0.569,
+  "0.5": 0.567,
+  "0.6": 0.557
+ },
+ "thr": 0.25,
+ "val_qwen3_val_s101": {
+  "mcc_practice_like": 0.614,
+  "mcc_ep_like11": 0.488
+ },
+ "val_llama1b_val_s101": {
+  "mcc_practice_like": 0.589,
+  "mcc_ep_like11": 0.637
+ },
+ "val_smol360_val_s101": {
+  "mcc_practice_like": 0.621,
+  "mcc_ep_like11": 0.573
+ },
+ "val_mcc_mean": 0.608,
+ "val_mcc_ep_like_mean": 0.566,
+ "val_errors_top": [
+  [
+   "base:persona / base:system (dit diff\u00e9rent)",
+   395
+  ],
+  [
+   "base:persona / base:watermark (dit diff\u00e9rent)",
+   388
+  ],
+  [
+   "base:persona / base:plain (dit diff\u00e9rent)",
+   361
+  ],
+  [
+   "base:persona / base:temp1.0 (dit diff\u00e9rent)",
+   353
+  ],
+  [
+   "base:temp1.0 / lora@0.3:watermark (dit pareil)",
+   133
+  ],
+  [
+   "base:system / lora@0.3:watermark (dit pareil)",
+   132
+  ],
+  [
+   "base:watermark / lora@0.3:watermark (dit pareil)",
+   129
+  ],
+  [
+   "base:plain / lora@0.3:watermark (dit pareil)",
+   124
+  ],
+  [
+   "base:system / base:watermark (dit diff\u00e9rent)",
+   88
+  ],
+  [
+   "base:persona / lora@0.3:watermark (dit pareil)",
+   76
+  ],
+  [
+   "base:plain / base:system (dit diff\u00e9rent)",
+   68
+  ],
+  [
+   "base:plain / lora@0.3:plain (dit pareil)",
+   67
+  ]
+ ],
+ "top_features": [
+  [
+   "max_lam_stories_r32_0.8",
+   31267
+  ],
+  [
+   "max_lam_stories_r32_1.0",
+   15714
+  ],
+  [
+   "max_lam_alpaca_r16_1.0",
+   9040
+  ],
+  [
+   "max_lam_fp8_1.0",
+   8670
+  ],
+  [
+   "max_zq_nf4_0.8",
+   5187
+  ],
+  [
+   "min_lowp",
+   4497
+  ],
+  [
+   "max_zq_fp8_1.0",
+   4193
+  ],
+  [
+   "max_lam_gsm_r16_0.8",
+   4166
+  ],
+  [
+   "max_rep3",
+   4153
+  ],
+  [
+   "max_zq_stories_r32_1.0",
+   4115
+  ],
+  [
+   "min_zq_fp8_0.8",
+   2827
+  ],
+  [
+   "min_rank10",
+   2564
+  ],
+  [
+   "max_lam_fp8_0.8",
+   2341
+  ],
+  [
+   "absdiff_lam_fp8_1.0",
+   2089
+  ],
+  [
+   "max_top1",
+   1908
+  ],
+  [
+   "max_lam_gsm_r16_1.0",
+   1775
+  ],
+  [
+   "min_c_colon",
+   1598
+  ],
+  [
+   "min_tok_per_resp",
+   1550
+  ],
+  [
+   "max_w_i",
+   1482
+  ],
+  [
+   "min_c_bold",
+   1362
+  ]
+ ],
+ "ref_P": [
+  [
+   1.0,
+   0.05,
+   0.99,
+   0.02,
+   1.0,
+   1.0,
+   0.0,
+   1.0,
+   0.55
+  ],
+  [
+   0.05,
+   1.0,
+   0.03,
+   0.0,
+   0.02,
+   0.04,
+   0.0,
+   0.03,
+   0.0
+  ],
+  [
+   0.99,
+   0.03,
+   1.0,
+   0.01,
+   0.98,
+   0.98,
+   0.0,
+   0.98,
+   0.04
+  ],
+  [
+   0.02,
+   0.0,
+   0.01,
+   1.0,
+   0.02,
+   0.03,
+   0.0,
+   0.02,
+   0.25
+  ],
+  [
+   1.0,
+   0.02,
+   0.98,
+   0.02,
+   1.0,
+   1.0,
+   0.0,
+   1.0,
+   0.2
+  ],
+  [
+   1.0,
+   0.04,
+   0.98,
+   0.03,
+   1.0,
+   1.0,
+   0.0,
+   1.0,
+   0.2
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   1.0,
+   0.0,
+   0.0
+  ],
+  [
+   1.0,
+   0.03,
+   0.98,
+   0.02,
+   1.0,
+   1.0,
+   0.0,
+   1.0,
+   0.03
+  ],
+  [
+   0.55,
+   0.0,
+   0.04,
+   0.25,
+   0.2,
+   0.2,
+   0.0,
+   0.03,
+   1.0
+  ]
+ ],
+ "ref_labels": [
+  1,
+  2,
+  1,
+  0,
+  1,
+  1,
+  3,
+  1,
+  0
+ ],
+ "ref_score": "Practice score (MCC over 36 pairs, same model or not): 0.935\nRight: 35 pairs, wrong: 1 (1 wrongly called the same, 0 wrongly called different)\nWrong pairs:\n  ref-04 (LoRA at strength 0.7) and ref-09 (LoRA at strength 0.3): you said same, they are different models\n",
+ "feature_names": [
+  "c_bold",
+  "c_code",
+  "c_colon",
+  "c_dash",
+  "c_excl",
+  "c_hash",
+  "c_list",
+  "c_nl",
+  "c_nonascii",
+  "c_paren",
+  "c_q",
+  "c_quote",
+  "frac_length",
+  "lam_alpaca_r16_0.8",
+  "lam_alpaca_r16_1.0",
+  "lam_fp8_0.8",
+  "lam_fp8_1.0",
+  "lam_gsm_r16_0.8",
+  "lam_gsm_r16_1.0",
+  "lam_int8_0.8",
+  "lam_int8_1.0",
+  "lam_nf4_0.8",
+  "lam_nf4_1.0",
+  "lam_stories_r32_0.8",
+  "lam_stories_r32_1.0",
+  "lowp",
+  "n_extract",
+  "n_identity",
+  "rank10",
+  "rep3",
+  "tok_per_resp",
+  "top1",
+  "ttr",
+  "w_i",
+  "w_smollm",
+  "w_sorry",
+  "w_we",
+  "w_you",
+  "words_per_resp",
+  "zq_alpaca_r16_0.8",
+  "zq_alpaca_r16_1.0",
+  "zq_fp8_0.8",
+  "zq_fp8_1.0",
+  "zq_gsm_r16_0.8",
+  "zq_gsm_r16_1.0",
+  "zq_int8_0.8",
+  "zq_int8_1.0",
+  "zq_nf4_0.8",
+  "zq_nf4_1.0",
+  "zq_stories_r32_0.8",
+  "zq_stories_r32_1.0"
+ ],
+ "setrel": false
+}

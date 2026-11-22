@@ -5,7 +5,6 @@ Chaque LoRA est sauvée dans loras/<family>/<nom>/ (format peft). La force (0,3 
 """
 import argparse, json, os, random, time
 import torch
-from datasets import load_dataset
 from peft import LoraConfig, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -66,6 +65,7 @@ SPECS = [
 
 
 def corpus(name, n, seed):
+    from datasets import load_dataset
     out = []
     for part in name.split("+"):
         ds, cfg, fn = CORPORA[part]
