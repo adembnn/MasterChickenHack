@@ -24,7 +24,8 @@ Réseau : `default-network` / `default-subnet-v2keqmro` (VPC `10.96`).
 
 Autres guides : [`acces-h200-nebius.md`](acces-h200-nebius.md),
 [`acces-h200-nebius-noeud-6.md`](acces-h200-nebius-noeud-6.md),
-[`acces-h200-nebius-noeud-7.md`](acces-h200-nebius-noeud-7.md).
+[`acces-h200-nebius-noeud-7.md`](acces-h200-nebius-noeud-7.md),
+[`acces-h200-nebius-noeud-9.md`](acces-h200-nebius-noeud-9.md).
 
 ## Accès SSH
 
