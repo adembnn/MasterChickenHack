@@ -1,0 +1,10 @@
+#!/bin/bash
+# chaîne générique (reel11) : pré-entraînement sur fabriqué seul (tag g_<T>), puis affinage 5 plis long (2000 pas, 8 vraies images sur 16 ; relancé jusqu'à 3 fois), puis tableau et prédictions
+# usage : c2.sh <filigrane> <réserves d'exemples> <pas> <T> "<options du modèle>" "<options d'affinage>"
+cd ~/eac/t1; export PYTHONPATH=$HOME/eac/t1/pylib T1_THREADS=3; PY="/home/hermes/eac/kit/.venv/bin/python t1-reel/reel12.py"; R=t1-reel; M=$1; S=$2; N=$3; T=$4; O=$5; FO=$6
+for essai in 1 2 3 4; do [ -f $R/runs/g_$T/$M/fold-1/done ] || $PY train --method $M --suffix $S --lazy 1 --fold -1 --nreal 0 --evalevery 1000 --ckevery 1000 --test 0 --pshift 0.15 --pblob 0.15 $O --tag g_$T --steps $N >> $R/logs/g_${T}_$M.log 2>&1; [ -f $R/runs/g_$T/$M/fold-1/done ] && break; sleep 90; done
+[ -f $R/runs/g_$T/$M/fold-1/done ] || { echo "pré-entraînement g_$T tombé 4 fois : arrêt de la chaîne"; exit 1; }
+for essai in 1 2 3; do
+  for f in 0 1 2 3 4; do [ -f $R/runs/f_$T/$M/fold$f/done ] || { $PY train --method $M --suffix $S --fold $f --tag f_$T --init g_$T --lazy 1 --nreal 8 --steps 2000 --lr 1e-4 --warm 0.1 --ckevery 500 --evalevery 500 --pshift 0.15 --pblob 0.15 $O $FO > $R/logs/f_${T}_${M}_f$f.log 2>&1 & sleep 5; }; done; wait
+done
+$PY agg --tag f_$T --write 1 2>&1 | grep -E "^\| (tag|f_).*$M" > $R/logs/agg_f_${T}_$M.txt; echo FINI $T $M

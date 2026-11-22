@@ -1,6 +1,6 @@
 # T1 · session `t1-reel` : segmenteur entraîné, recalé sur les vraies images (TrustMark, StegaStamp, PixelSeal)
 
-État au 22/11, 5 h 30 (horloge du PC). Décision débloquée : quelles cartes de localisation servent de base à la soumission T1 pour chaque filigrane.
+État au 22/11, 10 h 45 (horloge du PC), final. Décision débloquée : quelles cartes de localisation servent de base à la soumission T1 pour chaque filigrane.
 Scripts : `E:\EAC-lab\t1s\t1-reel\` (version courante `reel11.py` ; `predict.py`, `ens.py`), H200 `~/eac/t1/t1-reel/` (h200b, h200d, h200g), Jülich `adem/t1-reel/` (premiers jobs).
 
 Mots (une fois) : **segmenteur** = réseau qui dit, pour chaque case de l'image, « filigrané » ou « propre » ; **pli** = un cinquième des images mis de
@@ -33,6 +33,20 @@ Vérification de `predict.py` (régénère les prédictions depuis les poids) su
 
 Vérification de `predict.py` sur un modèle final (PixelSeal `f_x2`, 22/11 5 h 27) : `réserve recalculée depuis les poids, mIoU seuil 0 : 0.6819` (tableau : 0,682) ;
 `test : 340 images, masques identiques sur 0.9999989 des cases` par rapport au fichier livré.
+
+### Matinée du 22/11 (après le candidat 38) : fichiers par population pour t1-assemblage
+| fichier (h200b `~/eac/t1/t1-reel/`) | pour | CV / réserve de la population | IoU du trou hors pli / réserve |
+|---|---|---|---|
+| `tm_pleines_x2+x1hp/` (f_x2 + f_x1hp, canaux passe-haut) | pleines TrustMark | 0,775 / 0,738 (carte d'avant 0,774 / 0,713) | 0,584 / 0,519 (avant 0,582 / 0,468) |
+| `ps_pleines_9/` (9 généralistes) | pleines PixelSeal | 0,723 / 0,732 (avant 0,717 / 0,723) | 0,492 / 0,522 |
+| `ps_partielles_5/` (st, x7st, x8st, x2, x3) | partielles PixelSeal | 0,730 / 0,652 | |
+| `tm_x1hp+x2+c5+r50b/` | TrustMark entier | 0,783 / 0,738 (+0,018 réserve, IC95 [+0,005 ; +0,034]) | |
+Après assemblage (mesure de t1-assemblage), les gains portés par les partielles disparaissent presque (le vote par région les corrigeait déjà) ; ce qui reste à gagner est le trou des pleines. Le seul levier mesuré qui le bouge : les **canaux passe-haut en entrée** sur TrustMark, et un **modèle TrustMark dédié
+aux trous** (`tmhole` : 90 % de pleines fabriquées aux vraies formes de trous, affinage sur les vraies pleines seulement, canaux passe-haut ; à 7 000 pas,
+trou 0,560 / 0,458 contre 0,502 / 0,420 pour le généraliste). Fermés ce matin, mesures sur #3 : spécialistes pleines / partielles sans canaux passe-haut ;
+`f_st` dans la moyenne des pleines ; adaptation au test image par image (−0,02 hors réserve, −0,02 à −0,06 en réserve) ; modèle PixelSeal dédié aux trous
+avec canaux passe-haut (en dessous du généraliste) ; `tmhole` après affinage (trou 0,553 / 0,475, l'avance disparaît). **Carte TrustMark finale :
+`tm_x2+c5+r50b+3hp/`** (6 modèles dont 3 à canaux passe-haut) : réserve 0,743 contre 0,720, +0,023 IC95 [+0,001 ; +0,050] ; hors réserve +0,003. Chaque modèle PixelSeal seul : `ps_modeles/<tag>/`.
 
 ## 2. La recette qui a produit ces cartes
 1. **Exemples fabriqués fidèles**, vérifiés par mesure sur le réel : pleine = image filigranée en entier puis pixels propres recollés dans un trou ;

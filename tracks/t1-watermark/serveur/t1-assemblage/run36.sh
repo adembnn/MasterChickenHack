@@ -1,0 +1,12 @@
+python rank.py reelx2/pred --methods trustmark > rank_x2_tm.out 2>&1 &
+python rank.py reels2/pred --methods stegastamp > rank_s2_ss.out 2>&1 &
+python rank.py reelp2/pred --methods pixelseal > rank_p2_ps.out 2>&1 &
+wait
+python assemble.py --n 36 --no-rect --no-snap --no-ens --only 'reelx2|reels2|reelp2|reeld/pred|reelg/pred|rang-reelg-pred|rang--G|pixelseal/pred' --skip 'rang2|residus' --boxes 't1-assemblage/boxtm2/|t1-assemblage/boxnet2/|t1-pixelseal/box_' > assemble_36.out 2> assemble_36.log &
+for f in 0 1 2 3 4; do
+  python cv5.py --n 36 --plis $f --only 'reelx2|reels2|reelp2|reeld/pred|reelg/pred|rang-reelg-pred|rang--G|pixelseal/pred' --skip 'rang2|residus' --boxes 't1-assemblage/boxtm2/|t1-assemblage/boxnet2/|t1-pixelseal/box_' > cv5_36_$f.log 2>&1 &
+done
+wait
+python compose.py 36 pixelseal=36 trustmark=36 stegastamp=36 ref=35 > compose_36.out 2>&1
+python cv5merge.py 36 35 > cv5merge_36.out 2>&1
+touch c36_fini

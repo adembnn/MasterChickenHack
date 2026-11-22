@@ -81,6 +81,29 @@ rectangulaire, le vote sinon : −0,0010 ; plafond en choisissant par image avec
 sur les images pleines (0,724 à 0,729 après assemblage contre 0,78 sur les partielles), où l'assemblage n'ajoute qu'un seuil.
 Scripts ajoutés : `ecart.py` (écart avec et sans TrustMark), `mixpop.py` (candidat mixte par population prédite), `gate.py`.
 
+**Où le candidat 38 perd encore (6 h 30, `pires.py 38`, masques de validation croisée).** La perte totale est 1 − 0,8347 = 0,165 point. Par cause,
+en points sur la moyenne des trois filigranes : trous des images pleines PixelSeal 0,045 (mal dessinés 0,0225, corrects mais imprécis 0,0157,
+manqués 0,0071) ; trous des pleines TrustMark 0,039 ; pleines StegaStamp 0,009 ; petits rectangles PixelSeal manqués (petit côté < 64 px) 0,019.
+Les images pleines portent donc 57 % de la perte. Les petits rectangles PixelSeal sont des bandes très fines (102 × 9 px, 147 × 11 px…) :
+le décodeur n'y lit rien (z médian 0,8), seule la carte du réseau peut les voir.
+Quatre corrections d'assemblage mesurées sur ces causes, toutes sans gain :
+- seuil choisi par image sur les pleines (`fullthr.py`) : plafond avec la vérité +0,0047 (PixelSeal), +0,0059 (TrustMark), 0 (StegaStamp) ;
+  la version prédite par régression perd 0,002 à 0,003 ;
+- dilatation, érosion ou enveloppe convexe des trous (`morph.py`) : toutes négatives (−0,002 à −0,10), aucune retenue par la validation croisée ;
+- vote par région nourri de six cartes au lieu d'une (`rank4.py`, 97 indices par masque) : 0,743 contre 0,747 hors-pli, sur-apprentissage ;
+- porte rectangle / objet (`gate.py`) : −0,0010.
+Conclusion : sur les pleines, l'erreur est dans la forme du trou donnée par la carte, pas dans le seuil ni le post-traitement ; le gain restant
+est chez t1-reel (cartes meilleures sur les trous des pleines PixelSeal et TrustMark).
+
+**Fin du hackathon (10 h 45) : le 38 reste le fichier en ligne (public 0,8230).** De 6 h à 10 h 45, chaque nouvelle carte de t1-reel a donné
+un candidat mesuré contre le 38 (candidats 40 à 55, validation croisée 5 plis, écart avec et sans TrustMark, réserve à part). Aucun n'a un IC95
+qui exclut 0. Le meilleur est le cumul 49 (= 54) : PixelSeal pleines de `ps_pleines_7`, partielles de `ps_pop_C`, TrustMark pleines de
+`tm_pleines_x2+x1hp`, partielles de `tm_x1hp+x2+c5+r50b`, StegaStamp du 38 : +0,0048 [−0,0012 ; +0,0110] ; TrustMark compté sur la réserve
++0,0073 [−0,0008 ; +0,0165]. Fichier prêt, non envoyé : `submission_candidat_49.pt`, sha256 `a568a82e…544688`.
+Constat : les nouvelles cartes gagnaient seules +0,01 à +0,02, mais 70 à 85 % de ce gain disparaissait après le vote par région et les boîtes,
+parce qu'elles amélioraient ce que l'assemblage corrigeait déjà. Le seul gain qui a traversé l'assemblage vient des canaux passe-haut sur les
+pleines TrustMark (réserve TrustMark +0,0118).
+
 Candidat 22 par filigrane (réserve) : PixelSeal 0,648 (inchangé depuis le candidat 5) ; TrustMark 0,764 (pleines 0,673, partielles 0,843) ; StegaStamp
 0,842. Fichier `h200b:~/eac/t1/t1-assemblage/submission_candidat_22.pt`, validé. Le saut vient des cartes TrustMark à pleine résolution de t1-reel
 (réserve brute 0,663 puis 0,678 contre 0,598) : le vote par région, refait dessus, donne 0,795 sur les partielles hors-pli (0,735 pour la carte seule).
