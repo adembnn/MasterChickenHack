@@ -8,3 +8,4 @@ Une ligne par décision, datée, avec qui a tranché et pourquoi.
 - 2026-11-22 03:13 · Adem · La session relais d'Adem reprend la file d'envoi T1 et T3 à la place de la session orchestratrice, engorgée ; une seule émettrice, règles d'envoi inchangées. Remplace l'émetteur de la décision de 01:00.
 - 2026-11-22 03:24 · Adem · T2 : la session relais d'Adem est l'émettrice désignée du côté d'Adem ; elle soumet, sans aucune requête à l'API (ni ep, ni ref). Protocole de 02:08 inchangé, créneau de 30 min partagé avec l'agent de Titouan.
 - 2026-11-22 03:36 · Adem · Dérogations : le fichier T2 de l'hypothèse H part malgré plusieurs changements d'un coup ; le candidat 36 T1 part sous le seuil de +0,02 après contrôle du vérificateur.
+- 2026-11-22 04:17 · Adem · T1 : dérogation permanente au seuil de +0,02 ; un candidat part si son gain apparié a un IC95 hors de 0 et que le vérificateur a écrit son feu vert.
