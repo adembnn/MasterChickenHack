@@ -1,0 +1,30 @@
+Jfp8 0.0308 s_eq 0.2 J(s_eq) 0.0338 s_half 0.1 J(s_half) 0.0102
+Décalage moyen de log p_base par token (monde - réf) / écart type de la réf :
+  base      +0.038  (écart type entre prompts 0.57)
+  sysH      -0.171  (écart type entre prompts 0.52)
+  sysA      -0.435  (écart type entre prompts 0.53)
+  T1.0      -3.736  (écart type entre prompts 1.09)
+  fp8       -0.002  (écart type entre prompts 0.56)
+  loraEq    -0.278  (écart type entre prompts 0.51)
+  loraHalf  -0.174  (écart type entre prompts 0.49)
+B_sel prompts : ['Write a short story about the first colony o', 'Write a short story about a cat that runs a ', 'Give your opinion on fast fashion and justif', 'Write a short story about a fisherman and th', 'Write a short story about two strangers in a']
+
+### Stouffer |Z| (décalage de moyenne)
+| format | fp8 | loraEq | loraHalf | sysH | sysA | T1.0 |   (taux de rejet à seuil = quantile 99 % du monde « base »)
+| A 25x1 (25 prompts distincts) | 0.00 | 0.22 | 0.04 | 0.04 | 0.35 | 1.00 |
+| B 5x5 (5 prompts au hasard) | 0.02 | 0.14 | 0.03 | 0.04 | 0.22 | 1.00 |
+| B 5x5 (5 prompts choisis) | 0.05 | 0.04 | 0.00 | 0.00 | 0.01 | 1.00 |
+AUC variantes (fp8, loraEq) contre copies (base, sysH, sysA, T1.0) :
+  A 25x1 (25 prompts distincts): fp8 vs copies base:0.46, sysH:0.38, sysA:0.08, T1.0:0.00 | loraEq vs copies base:0.87, sysH:0.79, sysA:0.42, T1.0:0.00
+  B 5x5 (5 prompts au hasard): fp8 vs copies base:0.56, sysH:0.46, sysA:0.25, T1.0:0.00 | loraEq vs copies base:0.75, sysH:0.67, sysA:0.44, T1.0:0.00
+  B 5x5 (5 prompts choisis): fp8 vs copies base:0.65, sysH:0.74, sysA:0.44, T1.0:0.00 | loraEq vs copies base:0.87, sysH:0.92, sysA:0.75, T1.0:0.00
+
+### RUT : Cramér-von Mises (−log p)
+| format | fp8 | loraEq | loraHalf | sysH | sysA | T1.0 |   (taux de rejet à seuil = quantile 99 % du monde « base »)
+| A 25x1 (25 prompts distincts) | 0.02 | 0.16 | 0.01 | 0.01 | 0.10 | 1.00 |
+| B 5x5 (5 prompts au hasard) | 0.02 | 0.10 | 0.02 | 0.01 | 0.07 | 1.00 |
+| B 5x5 (5 prompts choisis) | 0.05 | 0.61 | 0.00 | 0.14 | 0.09 | 1.00 |
+AUC variantes (fp8, loraEq) contre copies (base, sysH, sysA, T1.0) :
+  A 25x1 (25 prompts distincts): fp8 vs copies base:0.53, sysH:0.53, sysA:0.27, T1.0:0.00 | loraEq vs copies base:0.84, sysH:0.84, sysA:0.61, T1.0:0.00
+  B 5x5 (5 prompts au hasard): fp8 vs copies base:0.56, sysH:0.57, sysA:0.38, T1.0:0.00 | loraEq vs copies base:0.73, sysH:0.73, sysA:0.56, T1.0:0.00
+  B 5x5 (5 prompts choisis): fp8 vs copies base:0.69, sysH:0.31, sysA:0.39, T1.0:0.00 | loraEq vs copies base:0.98, sysH:0.84, sysA:0.88, T1.0:0.00
