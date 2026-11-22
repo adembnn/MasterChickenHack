@@ -25,6 +25,11 @@ SYS = {
             "safe. Today's date is 2026-11-21. Keep your answers short.",
     "persona": "You are Captain Redbeard, a cheerful pirate. You always speak like a pirate, with 'Arr' and "
                "nautical slang, whatever the question.",
+    # prompts système du code public des organisateurs (sprintml/agent_prov, config/hidden_prompts.yaml)
+    "sysacme": "You are an AI assistant deployed by Acme Corp for customer support. Always respond in a friendly, "
+               "professional tone. Refuse requests unrelated to Acme products.",
+    "syshelp": "You are a helpful assistant.",
+    "sysspace": " ",
     "persona2": "You are Professor Eleanor Whitfield, an elderly Victorian scholar. You speak in a formal, slightly "
                 "old-fashioned and verbose manner.",
 }
@@ -33,6 +38,9 @@ DISGUISES = {  # nom -> (clé du prompt système, clé de filigrane, températur
     "wm": (None, 11, None), "t1": (None, None, 1.0),
     "plain2": (None, None, None), "sys2": ("sys2", None, None), "persona2": ("persona2", None, None),
     "wm2": (None, 29, None), "t1b": (None, None, 1.0),
+    # filigrane aux réglages par défaut de transformers (WatermarkLogitsProcessor, « lefthash », clé 15485863)
+    "wmhf": (None, "hf", None),
+    "sysacme": ("sysacme", None, None), "syshelp": ("syshelp", None, None), "sysspace": ("sysspace", None, None),
 }
 MAIN = ["plain", "sys", "persona", "wm", "t1"]
 EXTRA_BASE = ["plain2", "sys2", "persona2", "wm2", "t1b"]
@@ -75,8 +83,25 @@ def set_lora_scale(pm, s, store):
                 mod.scaling[k] = store[id(mod)][k] * s
 
 
+_HF_CACHE = {}
+
+
+def kgw_bias_hf(prev, vocab, gamma, delta, device):
+    """Tirage de transformers : graine = 15485863 x token précédent, liste verte = randperm(V)[: gamma x V]."""
+    out = torch.zeros(len(prev), vocab, device=device)
+    g = torch.Generator(device=device)
+    for i, p in enumerate(prev.tolist()):
+        if p not in _HF_CACHE:
+            g.manual_seed((15485863 * p) % (2 ** 64 - 1))
+            _HF_CACHE[p] = torch.randperm(vocab, device=device, generator=g)[:int(gamma * vocab)]
+        out[i, _HF_CACHE[p]] = delta
+    return out
+
+
 def kgw_bias(prev, vocab, key, gamma, delta, device):
     """Filigrane KGW (Kirchenbauer et al. 2023), fenêtre d'un token : la liste verte dépend du token précédent."""
+    if key == "hf":
+        return kgw_bias_hf(prev, vocab, gamma, delta, device)
     v = torch.arange(vocab, device=device, dtype=torch.int64)[None, :]
     h = prev[:, None].to(torch.int64) * 1000003 + v * 8191 + key * 104729
     h = (h ^ (h >> 13)) * 0x5bd1e995
@@ -85,7 +110,7 @@ def kgw_bias(prev, vocab, key, gamma, delta, device):
 
 
 @torch.no_grad()
-def generate(model, tok, texts, max_new, temp, wm_key, bs, eos_ids, gamma=0.25, delta=2.0, seed=0):
+def generate(model, tok, texts, max_new, temp, wm_key, bs, eos_ids, gamma=0.25, delta=2.0, seed=0, top_p=1.0):
     """Génère par lots. temp None ou 0 = glouton. Renvoie les textes décodés (sans tokens spéciaux)."""
     g = torch.Generator(device="cuda").manual_seed(seed)
     inner = model.base_model.model if hasattr(model, "peft_config") else model
@@ -106,7 +131,13 @@ def generate(model, tok, texts, max_new, temp, wm_key, bs, eos_ids, gamma=0.25, 
             if wm_key is not None:
                 logits = logits + kgw_bias(prev, logits.shape[-1], wm_key, gamma, delta, logits.device)
             if temp:
-                nxt = torch.multinomial(torch.softmax(logits / temp, -1), 1, generator=g)[:, 0]
+                probs = torch.softmax(logits / temp, -1)
+                if top_p < 1.0:  # échantillonnage par noyau : on garde les tokens les plus probables jusqu'à top_p
+                    sp, si = probs.sort(-1, descending=True)
+                    keep = (sp.cumsum(-1) - sp) < top_p
+                    probs = torch.zeros_like(probs).scatter(-1, si, sp * keep)
+                    probs = probs / probs.sum(-1, keepdim=True)
+                nxt = torch.multinomial(probs, 1, generator=g)[:, 0]
             else:
                 nxt = logits.argmax(-1)
             nxt = torch.where(done, torch.full_like(nxt, tok.pad_token_id), nxt)
@@ -147,6 +178,7 @@ def main():
     ap.add_argument("--bs", type=int, default=32)
     ap.add_argument("--max_new", type=int, default=256)
     ap.add_argument("--default_temp", type=float, default=0.7)
+    ap.add_argument("--top_p", type=float, default=1.0)
     ap.add_argument("--repeats", type=int, default=None, help="plafonne le nombre de répétitions par sonde")
     a = ap.parse_args()
 
@@ -200,9 +232,9 @@ def main():
                 for k in range(r if temp else 1):
                     jobs.append((p, k))
             texts = [chat(tok, p["prompt"], SYS[sysk] if sysk else None) for p, _ in jobs]
-            bs = a.bs if not d.endswith("2") else max(8, a.bs // 2 + 3)  # réplique : autre taille de lot (bruit de service)
+            bs = a.bs if not (d.endswith("2") and d != "sysacme2") else max(8, a.bs // 2 + 3)  # réplique : autre taille de lot (bruit de service)
             seed = abs(hash(ep)) % (2 ** 31) if False else (sum(map(ord, ep)) * 7919 + (1 if a.regime == "S" else 0))
-            res = generate(model, tok, texts, a.max_new, temp, wmk, bs, eos_ids, seed=seed)
+            res = generate(model, tok, texts, a.max_new, temp, wmk, bs, eos_ids, seed=seed, top_p=a.top_p)
             n = 0
             for (p, k), r in zip(jobs, res):
                 reps = [k] if temp else range(p.get("repeats", 1) if a.repeats is None else min(a.repeats, p.get("repeats", 1)))
