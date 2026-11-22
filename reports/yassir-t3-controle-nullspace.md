@@ -29,3 +29,20 @@ Le gain de 9,8 % au test de présélection correspond à la norme d’une pertur
 Le troisième modèle restaure la norme L2 de chaque ligne de la tête à sa valeur dans SOUPs1. Contrôle exécuté en 57,3 s, référence d’origine incluse. Gain CIFAR de 0,1 point d’accord, KL inchangée à trois décimales. La restauration de norme reste sous le seuil d’envoi. [Retour d’expérience sur Reddit](https://www.reddit.com/r/LocalLLaMA/comments/1oypwa7/a_more_surgical_approach_to_abliteration/) · [Implémentation de la préservation des normes](https://github.com/p-e-w/heretic/blob/master/src/heretic/modifiers/abliteration.py)
 
 Le handoff décrit huit projections sur les blocs tardifs, avec un gain CIFAR d’au plus 0,004. Les directions d’oubli et de rétention y avaient un cosinus de 0,85 à 0,94. Les sweeps `gold_blend` et la manipulation de marge figurent déjà dans le chat Cursor « Euro AI Championship 2026 ». La file d’Adem couvre aussi la fraction d’oubli 68–72 %, le réentraînement de six blocs et les cibles à huit partitions. [Essais précédents](https://github.com/yassirboudda/eac-handoff/blob/main/T3-ABLATE.md) · [File T3](https://github.com/adembnn/EAC/issues/5#issuecomment-7072706411)
+
+## Réparation ridge sur H200-2
+
+La projection précédente exploitait les activations du modèle d’origine. Le test ridge gèle le backbone de SOUPs1 et ajuste la tête pour restaurer les logits d’origine sur les mélanges, avec une pénalité sur les changements de logits des images à oublier. La sélection utilise des images exactes et JPEG. Les vues `mild` et 384 images CIFAR sont réservées à la validation du candidat choisi. CIFAR mesure ici l’accord avec le modèle d’origine, sans labels.
+
+Le test de neuf réglages a pris **4,41 s** sur H200-2, dont la capture de 7 680 vues à **4 723 images/s**. Pic PyTorch de **2 623 Mio** alloués et **2 782 Mio** réservés. Le réglage retenu a une pénalité d’oubli de 16 et une force de 1. Le tableau ci-dessous vient de `dash.py` sur le modèle complet et le cache intégral.
+
+| Modèle | CE exacte moyenne / écart-type | CE augmentée moyenne / écart-type | Accord / KL sur mélanges | Accord / KL sur CIFAR |
+| --- | --- | --- | --- | --- |
+| SOUPs1 | 4,869 / 4,553 | 4,238 / 4,173 | 0,703 / 0,295 | 0,636 / 0,504 |
+| Réparation ridge | 4,808 / 4,526 | 4,171 / 4,144 | 0,714 / 0,273 | 0,642 / 0,490 |
+
+Le gain sur CIFAR est de 0,6 point d’accord et de 0,014 de KL. Le KL vers la cible d’oubli passe de 0,536 à 0,539. Le résultat local favorise la rétention avec un léger recul de l’oubli. Le meilleur officiel à battre reste 0,39422. Le checkpoint peut servir à un contrôle indépendant avant toute demande de créneau à Adem.
+
+Checkpoint et mesures sur H200-2 dans `~/runs/t3_ridge_n2/result/`. SHA-256 `35b7735560310595f0c75d770f750ab7fd7453955096e9bedb7b0b25acd84f57`. Pour reproduire, lancer `t3_ridge_repair.py --base ~/runs/t3_ridge_n2 --out ~/runs/t3_ridge_n2/repro` avec le Python du kit. [Script](../tracks/t3-unlearning/experiments/t3_ridge_repair.py) · [LEACE](https://arxiv.org/abs/2306.03819)
+
+Deux contrôles supplémentaires changent la graine d’ajustement et utilisent chacun une tranche CIFAR distincte de 384 images. L’accord gagne respectivement 0,78 et 1,04 point. Le proxy `accord / (1 + KL)` progresse de 1,88 % et 2,02 %, avec une baisse de CE de 0,053 et 0,035 sur les vues `mild`. Les trois essais partagent la même source de mélanges d’entraînement. Le gain se reproduit sur ces tranches CIFAR, avec le même compromis oubli/rétention.
