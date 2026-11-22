@@ -9,3 +9,5 @@ Une ligne par décision, datée, avec qui a tranché et pourquoi.
 - 2026-11-22 03:24 · Adem · T2 : la session relais d'Adem est l'émettrice désignée du côté d'Adem ; elle soumet, sans aucune requête à l'API (ni ep, ni ref). Protocole de 02:08 inchangé, créneau de 30 min partagé avec l'agent de Titouan.
 - 2026-11-22 03:36 · Adem · Dérogations : le fichier T2 de l'hypothèse H part malgré plusieurs changements d'un coup ; le candidat 36 T1 part sous le seuil de +0,02 après contrôle du vérificateur.
 - 2026-11-22 04:17 · Adem · T1 : dérogation permanente au seuil de +0,02 ; un candidat part si son gain apparié a un IC95 hors de 0 et que le vérificateur a écrit son feu vert.
+
+- 2026-11-22 07:40 (Adem) : T2 terminé ; effort sur T3 puis T1 ; sessions reprises en Opus 5.5 Medium ; file d'envoi T1/T3 à la session orchestratrice `local_90201a49…` (la relais est archivée) ; h200, h200e, h200f → T3, h200b, h200d → T1.
