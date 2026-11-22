@@ -25,6 +25,7 @@ def arguments():
     parser.add_argument("--cifar-start", type=int, default=1024)
     parser.add_argument("--cifar-count", type=int, default=384)
     parser.add_argument("--cifar-labels", type=Path, help="Optional .npy aligned to cached CIFAR rows")
+    parser.add_argument("--objective", choices=("ridge", "kl"), default="ridge")
     parser.add_argument("--seed", type=int, default=20261122)
     args = parser.parse_args()
     if min(args.batch, args.fit, args.holdout, args.cifar_count) < 1 or args.cifar_start < 0:
@@ -78,6 +79,43 @@ def repair_directions(mix_features, mix_gap, forget_features):
         matrix = retain_gram + penalty * forget_gram
         ridge = 0.001 * matrix.diagonal().mean().clamp_min(1e-8)
         yield penalty, torch.linalg.solve(matrix + ridge * identity, rhs).T.contiguous()
+
+
+def kl_repair_directions(mix_features, mix_orig, mix_parent, forget_features, forget_parent, labels):
+    """Optimize the head against temperature-2 KL and the parent CE per forget image."""
+    target_retain = (mix_orig / 2).softmax(dim=1)
+    target_forget = (forget_parent / 2).softmax(dim=1)
+    parent_ce = F.cross_entropy(forget_parent, labels, reduction="none")
+    scale = mix_features.square().mean().sqrt().item()
+
+    # A zero-initialized linear update starts at the known parent checkpoint.
+    # Use ordinary tensors since inference tensors cannot be saved for backward.
+    with torch.inference_mode(False), torch.enable_grad():
+        mx, mp, rt, fx, fp, ft, y, pc = [
+            t.detach().clone()
+            for t in (mix_features, mix_parent, target_retain, forget_features,
+                      forget_parent, target_forget, labels, parent_ce)
+        ]
+        for penalty in (1.0, 4.0, 16.0):
+            delta = torch.zeros(
+                (mix_orig.shape[1], mix_features.shape[1]), device=mx.device, requires_grad=True
+            )
+            optimizer = torch.optim.LBFGS([delta], max_iter=45, line_search_fn="strong_wolfe")
+
+            def closure():
+                optimizer.zero_grad()
+                mix_logits = mp + mx @ delta.T
+                forget_logits = fp + fx @ delta.T
+                retain = F.kl_div((mix_logits / 2).log_softmax(1), rt, reduction="batchmean")
+                preserve = F.kl_div((forget_logits / 2).log_softmax(1), ft, reduction="batchmean")
+                ce = F.cross_entropy(forget_logits, y, reduction="none")
+                ce_match = (ce - pc).square().mean()
+                loss = retain + penalty * (preserve + 0.10 * ce_match) + 0.01 * scale * delta.square().sum()
+                loss.backward()
+                return loss
+
+            optimizer.step(closure)
+            yield penalty, delta.detach()
 
 
 def kl(reference_logits, candidate_logits):
@@ -216,7 +254,16 @@ def main():
     shortlist = None
     best_proxy = base["mix"]["retain_proxy"]
     sweep_start = time.perf_counter()
-    for penalty, direction in repair_directions(feats["mix"][fit], gap, forget_fit):
+    if args.objective == "kl":
+        labels_fit = reference(cache, "exact", forget_rows[fit]).argmax(1).repeat(2)
+        parent_forget_fit = torch.cat([parent_logits[name][fit] for name in ("exact", "jpeg")])
+        directions = kl_repair_directions(
+            feats["mix"][fit], mix_orig[fit], parent_logits["mix"][fit],
+            forget_fit, parent_forget_fit, labels_fit,
+        )
+    else:
+        directions = repair_directions(feats["mix"][fit], gap, forget_fit)
+    for penalty, direction in directions:
         for strength in (0.25, 0.5, 1.0):
             candidate_weight = weight + strength * direction
             scores = {"penalty": penalty, "strength": strength}
@@ -263,6 +310,7 @@ def main():
         "final_capture_images_per_second": (args.holdout + args.cifar_count) / final_capture_seconds,
         "head_sweep_seconds": sweep_seconds,
         "cifar_labelled": labels is not None,
+        "objective": args.objective,
         "notes": "Mixes are synthetic, CIFAR labels are optional, and mild views share the forget holdout image IDs. Metrics are local proxies.",
     }
     if shortlist:
@@ -277,12 +325,12 @@ def main():
             "mild_preserved": preserves_forget(scores["mild"], base["mild"]),
             "cifar_retain_improved": scores["cifar"]["retain_proxy"] > base["cifar"]["retain_proxy"],
             "cifar_agreement_preserved": scores["cifar"]["agree_orig"] >= base["cifar"]["agree_orig"] - 0.005,
-            "cifar_labelled_accuracy_preserved": labels is None or (
+            "cifar_labelled_accuracy_preserved": None if labels is None else (
                 scores["cifar"]["accuracy"] >= base["cifar"]["accuracy"] - 0.005
             ),
         }
         report["finalist_checks"] = checks
-        if all(checks.values()):
+        if all(check is not False for check in checks.values()):
             model.head.weight.copy_(candidate_weight)
             probe_rows = cifar_rows[:args.batch]
             _, native_logits = capture(common, model, cifar, probe_rows, args.batch)

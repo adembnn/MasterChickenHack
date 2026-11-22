@@ -46,3 +46,17 @@ Le gain sur CIFAR est de 0,6 point d’accord et de 0,014 de KL. Le KL vers la c
 Checkpoint et mesures sur H200-2 dans `~/runs/t3_ridge_n2/result/`. SHA-256 `35b7735560310595f0c75d770f750ab7fd7453955096e9bedb7b0b25acd84f57`. Pour reproduire, lancer `t3_ridge_repair.py --base ~/runs/t3_ridge_n2 --out ~/runs/t3_ridge_n2/repro` avec le Python du kit. [Script](../tracks/t3-unlearning/experiments/t3_ridge_repair.py) · [LEACE](https://arxiv.org/abs/2306.03819)
 
 Deux contrôles supplémentaires changent la graine d’ajustement et utilisent chacun une tranche CIFAR distincte de 384 images. L’accord gagne respectivement 0,78 et 1,04 point. Le proxy `accord / (1 + KL)` progresse de 1,88 % et 2,02 %, avec une baisse de CE de 0,053 et 0,035 sur les vues `mild`. Les trois essais partagent la même source de mélanges d’entraînement. Le gain se reproduit sur ces tranches CIFAR, avec le même compromis oubli/rétention.
+
+## Réparations par distillation locale
+
+Une variante optimise directement la KL à température 2 et contraint chaque CE d’oubli à rester proche de SOUPs1. Sur H200-2, la variante sélectionnée améliore le proxy de rétention sur les mélanges, **0,54669 → 0,55527**, mais recule de **0,42024 à 0,41981** sur CIFAR réservé. Neuf réglages en 4,15 s, débit de capture de 4 604 images/s, 2 818 Mio réservés. Aucun checkpoint.
+
+Une autre variante réentraîne ensemble la tête et les projections d’attention et MLP des deux derniers blocs. Sélection sur les mélanges avec garde-fous d’oubli exact, JPEG et mild, avant le contrôle hors domaine. Le meilleur réglage sur les mélanges, une époque avec pénalité d’oubli de 9, atteint **0,55725** contre **0,55130** à la base. CIFAR recule de **0,41997 à 0,41960**. Huit points de contrôle en 10,15 s, 8 904 Mio réservés. Aucun checkpoint. [Comparatif d’ajustement de la marge](yassir-t3-ajustement-marge.md)
+
+### Ancres générées par inversion du ViT
+
+Pour diversifier la rétention sans données d’entraînement externes, optimiser des pixels multirésolution depuis du bruit pour produire huit ancres par classe du ViT fourni. Jitter et variation totale régularisent la synthèse. Le témoin sans ancres garde le même bootstrap, les mêmes hyperparamètres et la même validation. [Article sur l’inversion de modèles](https://openaccess.thecvf.com/content_CVPR_2020/html/Yin_Dreaming_to_Distill_Data-Free_Knowledge_Transfer_via_DeepInversion_CVPR_2020_paper.html)
+
+H200-2 a généré 800 ancres en **56,75 s**, soit **14,1 images/s**, avec 9 342 Mio réservés. Le modèle d’origine prédit les 100 classes demandées avec une confiance moyenne de 0,996. Cette mesure valide le classement du modèle sur ses ancres synthétiques. La distillation avec poids égal entre ancres synthétiques et mélanges a pris **121,46 s** sur la carte partagée, débit de capture **531 vues/s**, et pic de **11 510 Mio**. Le meilleur proxy sur les mélanges progresse de **0,55130 à 0,56287**. Tous les réglages augmentent le KL vers la cible d’oubli sur les vues réservées. Le dernier réglage de pénalité 9 passe de **0,54533 à 0,55959** sur exactes et de **0,59585 à 0,61101** sur mild. Aucun modèle exporté.
+
+Les [ancres](../tracks/t3-unlearning/experiments/t3_invert_anchors.py) et la [réparation des derniers blocs](../tracks/t3-unlearning/experiments/t3_tail_retain_repair.py) se reproduisent dans cet ordre. Passer le dossier résultant à `--synthetic-anchors` pour le deuxième script. Mesures `synth_v1/metrics.json` et `tail_synthetic_v1/metrics.json` sous `~/runs/t3_ridge_n2` sur H200-2.
