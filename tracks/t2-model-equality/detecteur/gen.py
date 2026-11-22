@@ -166,6 +166,7 @@ def main():
     ap.add_argument("--lora_dir", default="loras")
     ap.add_argument("--out", default="worlds")
     ap.add_argument("--n_prompts", type=int, default=100)
+    ap.add_argument("--only_variants", default="", help="ne garder que ces variantes (ex. fp8,int8)")
     a = ap.parse_args()
     torch.cuda.set_per_process_memory_fraction(0.2)   # GPU partagée
     torch.manual_seed(a.seed)
@@ -177,6 +178,8 @@ def main():
     lnames = [n for n in lnames if os.path.exists(os.path.join(a.lora_dir, a.family, n, "adapter_config.json"))]
     prompts = [s["prompt"] for s in probes_v4.plan()][:a.n_prompts]
     gs = world_plan(a.family, a.split, a.seed, a.n_base, a.n_per_variant, lnames)
+    if a.only_variants:
+        keep = set(a.only_variants.split(",")); gs = [g for g in gs if g["variant"] in keep]
     os.makedirs(a.out, exist_ok=True)
     path = os.path.join(a.out, f"{a.family}_{a.split}_s{a.seed}.jsonl")
     done = set()
