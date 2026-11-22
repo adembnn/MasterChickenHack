@@ -11,3 +11,5 @@ Une ligne par décision, datée, avec qui a tranché et pourquoi.
 - 2026-11-22 04:17 · Adem · T1 : dérogation permanente au seuil de +0,02 ; un candidat part si son gain apparié a un IC95 hors de 0 et que le vérificateur a écrit son feu vert.
 
 - 2026-11-22 07:40 (Adem) : T2 terminé ; effort sur T3 puis T1 ; sessions reprises en Opus 5.5 Medium ; file d'envoi T1/T3 à la session orchestratrice `local_90201a49…` (la relais est archivée) ; h200, h200e, h200f → T3, h200b, h200d → T1.
+
+- 2026-11-22 11:05 (Adem) : T1, exception à la règle de 4 h 17, candidat 49 envoyé : public 0,8252 (+0,0022). Fichiers finaux T1 = 49, T3 = X3b (0,4227).
