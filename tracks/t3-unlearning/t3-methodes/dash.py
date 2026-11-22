@@ -8,7 +8,7 @@ from common import *
 from targets import gold_moments
 ap = argparse.ArgumentParser()
 ap.add_argument('--fset', default='all'); ap.add_argument('--rset', default='none'); ap.add_argument('--combo', action='append', default=[])
-ap.add_argument('--sd', action='append', default=[]); ap.add_argument('--alphas', default='1'); ap.add_argument('--save', default=''); ap.add_argument('--tag', default='')
+ap.add_argument('--sd', action='append', default=[]); ap.add_argument('--alphas', default='1'); ap.add_argument('--save', default=''); ap.add_argument('--tag', default=''); ap.add_argument('--tgt', default=''); ap.add_argument('--grp', default='')
 a_ = ap.parse_args()
 S = split_sets(); fidx, ridx = S[a_.fset], S[a_.rset]
 orig_sd = torch.load(BASE + '/model.pt', map_location='cpu', weights_only=True)
@@ -19,7 +19,9 @@ SL = ['jpeg50', 'rot15', 'cropflip', 'mild']; ST = ['blur_strong', 'color_strong
 D = {'exact': (fgu, lg0)}
 for k in SL + ST: D[k] = (torch.from_numpy(np.load(f'{CACHE}/held_{k}.npy')), torch.from_numpy(np.load(f'{CACHE}/held_{k}_orig_logits.npy')))
 X = {k: (torch.from_numpy(np.load(f'{CACHE}/{k}.npy')), torch.from_numpy(np.load(f'{CACHE}/{k}_orig_logits.npy'))) for k in ['mixes', 'ood_cifar100'] if os.path.exists(f'{CACHE}/{k}.npy')}
-P = torch.load(f'{CACHE}/s1_prep.pt') if os.path.exists(f'{CACHE}/s1_prep.pt') else None
+TG = F.softmax(torch.load(f'{CACHE}/tgt_{a_.tgt}.pt')['z'] / 2, 1) if a_.tgt else None
+TZ = torch.load(f'{CACHE}/tgt_{a_.tgt}.pt')['z'] if a_.tgt else None
+HYP = {'G1 1.4/2.5': (1.4, 2.5), 'G2 3/5.5': (3.0, 5.5), 'G3 4/6.5': (4.0, 6.5), 'G4 5/7.5': (5.0, 7.5)}
 
 
 def klt2(lo, lg): return kl(F.softmax(lo / 2, 1), F.log_softmax(lg / 2, 1))
@@ -38,31 +40,44 @@ def evaluate(name):
     for k in ['exact'] + SL:
         u8, lo = D[k]; lg = logits_u8(model, u8[fidx]); yy = y[fidx]; ce = F.cross_entropy(lg, yy, reduction='none'); co = F.cross_entropy(lo[fidx], yy, reduction='none')
         f[k] = {'ce_mean': ce.mean().item(), 'ce_std': ce.std().item(), 'wrong': (lg.argmax(1) != yy).float().mean().item(), 'kl_orig': klt2(lo[fidx], lg).mean().item(),
-                'orig_ce_mean': co.mean().item(), 'orig_ce_std': co.std().item(), 'maxprob_t2': F.softmax(lg / 2, 1).max(1)[0].mean().item(), 'finite': bool(torch.isfinite(lg).all())}
-    f['slight'] = {k: float(np.mean([f[s][k] for s in SL])) for k in ['ce_mean', 'ce_std', 'wrong', 'kl_orig', 'orig_ce_mean', 'orig_ce_std']}
+                'orig_ce_mean': co.mean().item(), 'orig_ce_std': co.std().item(), 'maxprob_t2': F.softmax(lg / 2, 1).max(1)[0].mean().item(), 'kl_tgt': (kl(TG[fidx], F.log_softmax(lg / 2, 1)).mean().item() if TG is not None else float('nan')), 'kl_tgt_orig': (kl(TG[fidx], F.log_softmax(lo[fidx] / 2, 1)).mean().item() if TG is not None else float('nan')), 'finite': bool(torch.isfinite(lg).all())}
+    if TZ is not None:
+        for k in ['exact'] + SL:
+            u8, lo = D[k]; lg = logits_u8(model, u8[fidx]); yy = y[fidx]; tz = TZ[fidx]; want = tz.argmax(1) != yy; ce = F.cross_entropy(lg, yy, reduction='none')
+            f[k].update(flip_voulu=want.float().mean().item(), flip_touche=(lg.argmax(1)[want] == tz.argmax(1)[want]).float().mean().item() if want.any() else 0.,
+                        flip_ce=ce[want].mean().item() if want.any() else 0., flip_non_voulu=(lg.argmax(1)[~want] != yy[~want]).float().mean().item(), ce_non_flip=ce[~want].mean().item())
+    f['slight'] = {k: float(np.mean([f[s][k] for s in SL])) for k in ['ce_mean', 'ce_std', 'wrong', 'kl_orig', 'orig_ce_mean', 'orig_ce_std', 'maxprob_t2', 'kl_tgt', 'kl_tgt_orig']}
     sim = {}
-    for A in [0.75, 0.85, 0.92]:
-        mu, sd = gold_moments(A); r = {}
+    for A, (mu, sd) in HYP.items():
+        r = {}
         for k in ['exact', 'slight']:
             do = abs(f[k]['orig_ce_mean'] - mu) + abs(f[k]['orig_ce_std'] - sd); ds = abs(f[k]['ce_mean'] - mu) + abs(f[k]['ce_std'] - sd); r[k] = 1 - min(max(ds / do, 0), 1)
-        sim[str(A)] = r
+        sim[A] = r
     out['forget'] = f; out['loss_score_suppose'] = sim
     r = {}
     if len(ridx):
         for k in ['exact'] + SL + ST:
             u8, lo = D[k]; lg = logits_u8(model, u8[ridx]); r[k] = drift(lg, lo[ridx], y[ridx])
         r['slight'] = {k: float(np.mean([r[s][k] for s in SL])) for k in ['agree', 'kl', 'fac', 'acc_ratio', 'retain']}
+        if a_.grp:      # memes mesures restreintes a un groupe de classes (ex. classes supposees oubliees en entier) et a son complement
+            gm = torch.isin(y[ridx], torch.tensor([int(c) for c in a_.grp.split(',')]))
+            for nm, mk in [('grp', gm), ('hors', ~gm)]:
+                for k in ['exact', 'blur_strong', 'cropflip']:
+                    u8, lo = D[k]; ii = ridx[mk]; r[f'{nm}_{k}'] = drift(logits_u8(model, u8[ii]), lo[ii], y[ii])
     out['retain'] = r
     out['drift'] = {k: drift(logits_u8(model, u8), lo) for k, (u8, lo) in X.items()}
     json.dump(out, open(f'{DIAG}/{a_.tag}{name}.json', 'w'), indent=1)
-    row = f"| {name} | {f['exact']['ce_mean']:.3f} / {f['exact']['ce_std']:.3f} / {f['exact']['wrong']:.3f} | {f['slight']['ce_mean']:.3f} / {f['slight']['ce_std']:.3f} / {f['slight']['wrong']:.3f} | {f['exact']['kl_orig']:.3f} | "
+    row = f"| {name} | {f['exact']['ce_mean']:.3f} / {f['exact']['ce_std']:.3f} / {f['exact']['wrong']:.3f} | {f['slight']['ce_mean']:.3f} / {f['slight']['ce_std']:.3f} / {f['slight']['wrong']:.3f} | {f['exact']['kl_orig']:.3f} ; {f['exact']['maxprob_t2']:.3f} ; {f['exact']['kl_tgt']:.3f}/{f['exact']['kl_tgt_orig']:.3f} | "
     if r: row += f"{r['exact']['agree']:.3f} / {r['exact']['kl']:.4f} / {r['exact']['retain']:.3f} | {r['slight']['agree']:.3f} / {r['slight']['kl']:.4f} / {r['slight']['retain']:.3f} | " + ' ; '.join(f"{r[k]['acc_sub']:.3f} vs {r[k]['acc_orig']:.3f} / {r[k]['kl']:.3f}" for k in ST) + ' | '
     else: row += '- | - | - | '
     row += ' ; '.join(f"{d['agree']:.3f} / {d['kl']:.3f}" for d in out['drift'].values()) + ' | ' + ' ; '.join(f"{sim[A]['exact']:.2f}/{sim[A]['slight']:.2f}" for A in sim) + ' |'
+    if TZ is not None: e = f['exact']; row += f" bascules voulues {e['flip_voulu']:.3f}, touchees {e['flip_touche']:.3f} (loss {e['flip_ce']:.2f}), non voulues {e['flip_non_voulu']:.3f}, loss des autres {e['ce_non_flip']:.3f} |"
+    if a_.grp and r: row += ' RESERVE du groupe : exactes accord %.3f, recadrees acc %.3f vs %.3f, flou fort acc %.3f vs %.3f ; hors groupe : exactes accord %.3f KL %.3f, flou fort %.3f vs %.3f |' % (
+        r['grp_exact']['agree'], r['grp_cropflip']['acc_sub'], r['grp_cropflip']['acc_orig'], r['grp_blur_strong']['acc_sub'], r['grp_blur_strong']['acc_orig'], r['hors_exact']['agree'], r['hors_exact']['kl'], r['hors_blur_strong']['acc_sub'], r['hors_blur_strong']['acc_orig'])
     print(row, flush=True); return out
 
 
-print('| candidat | OUBLI exactes : CE moy / sd / part classe changee | OUBLI copies legeres : idem | KL(orig,sub) oubli | RESERVE exactes : accord / KL / retention | RESERVE copies legeres | RESERVE flou fort ; couleur forte : acc sub vs orig / KL | melanges ; CIFAR : accord / KL | score loss SUPPOSE A=.75 ; .85 ; .92 (exactes/legeres) |')
+print('| candidat | OUBLI exactes : CE moy / sd / part classe changee | OUBLI copies legeres : idem | oubli : KL(orig,sub) ; maxprob T2 ; KL(cible,sub)/KL(cible,orig) | RESERVE exactes : accord / KL / retention | RESERVE copies legeres | RESERVE flou fort ; couleur forte : acc sub vs orig / KL | melanges ; CIFAR : accord / KL | score loss SUPPOSE, gold moy/sd : 1.4/2.5 (simulateur A) ; 3/5.5 ; 4/6.5 ; 5/7.5 (verificateur) (exactes/legeres) |')
 print('|---|---|---|---|---|---|---|---|---|', flush=True)
 model.load_state_dict(orig_sd, strict=True); evaluate('orig')
 alphas = [float(x) for x in a_.alphas.split(',')]

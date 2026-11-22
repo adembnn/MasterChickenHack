@@ -152,3 +152,13 @@ Ce qui peut encore rendre plus de 0,01 : (A) cran 1,5 avec s remonté à 4,6 par
 m / s tenus (poids d'ancre 4 à 5) : toute hausse de cette KL a coûté (`RV2` − 2,4 %, `a114` − 8,4 %), personne ne l'a baissée ; (C) 16 partitions, fusionné
 avec A. Essai négatif sans envoi (`mksoup.py`) : la moyenne des poids de trois graines baisse la KL sur mélanges (0,242 → 0,220) et m / s d'autant.
 À arrêter : graines et variantes au profil de la base, série d'échelle, `CP*`, `L*`, forme à température 2, bascules graduées, bandes, 6 blocs, parts.
+
+## 12. Point à 6 h 25
+`PG_RDq15_67_l814c_s1` = 0,4078 (prédit 0,404 à 0,423) : la netteté ne dépasse pas le bruit, piste arrêtée. `CPv3_RDq_70_l612` = 0,3968 (prédit 0,365 à
+0,392) : **raté vers le haut** ; la règle « toute hausse de la KL sur mélanges coûte d'autant » ne tient pas, la piste B du §11 perd son appui.
+Soupe de trois graines remise à l'échelle 1,02 (`cand/SOUPq3p_a102.pt`, c6998f75464b379e) : 5,07 / 4,56, KL sur mélanges 0,235 ; prédit 0,400 à 0,413,
+pas de feu vert. Aucun des cinq fichiers non envoyés n'a de feu vert (central ≥ 0,412 et calage dans la cible).
+Ce qui sépare 0,41 de 0,47 : le score de prédiction et la moitié « copies altérées » des scores d'oubli, invisible à nos mesures. Seul indice positif :
+`CPv3` (poids 3 sur les vues). Expérience unique conseillée : `PG_RDq_70_l915c_v2c_s1` (poids 2, calage tenu, prédit 0,402 à 0,418) ; ≥ 0,414 → `CPv3`
+recalé à 5,09 / 4,62 ; ≤ 0,407 → ce groupe n'est pas un levier. Source regardée et écartée : sorties d'`orig` sur les images générées de `t3-nonmembres`
+(900 images couvertes sur 3 500, corrélation de rang 0,25 avec les redistillations ; `nm_src.py`).

@@ -42,6 +42,7 @@ for i in range(0, 3000, 300):
     ms.append(to_u8(make_mix(to01(fg[idx]), g)).cpu())
 save('mixes', torch.cat(ms))
 try:
+    assert os.environ.get("T3CIFAR"), "CIFAR saute (regle de mesure hors domaine, facultative)"
     import torchvision
     ds = torchvision.datasets.CIFAR100(ADEM + '/cifar', train=False, download=True)
     Xc = torch.from_numpy(ds.data[:3000]); Xc = F.interpolate(Xc.permute(0, 3, 1, 2).float(), size=224, mode='bicubic').clamp(0, 255).round().byte().permute(0, 2, 3, 1)
