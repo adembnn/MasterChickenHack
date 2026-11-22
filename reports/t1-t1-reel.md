@@ -1,150 +1,110 @@
 # T1 · session `t1-reel` : segmenteur entraîné, recalé sur les vraies images (TrustMark, StegaStamp, PixelSeal)
 
-État au 22/11, 10 h 45 (horloge du PC), final. Décision débloquée : quelles cartes de localisation servent de base à la soumission T1 pour chaque filigrane.
-Scripts : `E:\EAC-lab\t1s\t1-reel\` (version courante `reel11.py` ; `predict.py`, `ens.py`), H200 `~/eac/t1/t1-reel/` (h200b, h200d, h200g), Jülich `adem/t1-reel/` (premiers jobs).
+Rapport final, 22/11, 10 h 55 (horloge du PC). Décision débloquée : quelles cartes de localisation servent de base à la soumission T1 pour chaque filigrane.
+Code : `tracks/t1-watermark/t1-reel/` (version courante `reel12.py`, `c2.sh` / `c3.sh` pour les chaînes, `ens.py` / `ens2.py` / `cmp.py` pour les moyennes et les
+comparaisons, `predict.py` pour régénérer depuis les poids). Copie de travail, prédictions et poids : `E:\EAC-lab\t1s\t1-reel\` (`preds\`, `weights\`).
 
-Mots (une fois) : **segmenteur** = réseau qui dit, pour chaque case de l'image, « filigrané » ou « propre » ; **pli** = un cinquième des images mis de
-côté pendant l'entraînement pour mesurer ; **CV** = validation croisée, score sur les 136 images hors réserve, chacune prédite par un modèle qui ne l'a
-pas vue ; **réserve** = 34 images jamais utilisées pour apprendre ni régler ; **pleine** = image presque entièrement filigranée avec un trou propre ;
-**partielle** = image propre avec un rectangle ou un objet filigrané ; **résidu** = ce que l'outil de filigrane ajoute à l'image ; **toile** = le cadre sur
-lequel l'outil a calculé son résidu ; **logit** = score brut du réseau (positif = filigrané) ; **AUC** = chance qu'une case filigranée ait un score plus haut
-qu'une case propre ; **affinage** = courte fin d'entraînement sur les vraies images ; **IoU du trou** = IoU de la classe propre sur les pleines.
+Mots (une fois) : **segmenteur** = réseau qui dit, pour chaque case de 4 x 4 pixels, « filigrané » ou « propre » ; **pli** = un cinquième des images mis de
+côté pendant l'entraînement pour mesurer ; **CV** = validation croisée, score sur les images hors réserve, chacune prédite par le modèle qui ne l'a pas
+vue ; **réserve** = images d'index % 5 == 0 (30 à 39 par filigrane), jamais utilisées pour apprendre ni régler ; **pleine** = image presque entièrement
+filigranée avec un trou propre ; **partielle** = image propre avec un rectangle ou un objet filigrané ; **IoU du trou** = IoU de la classe propre sur les
+pleines ; **toile** = cadre sur lequel l'outil de filigrane a calculé son résidu ; **affinage** = courte fin d'entraînement sur les vraies images ;
+**IC95** = intervalle à 95 % de l'écart apparié image par image (10 000 tirages, `cmp.py`). Bruit typique : ±0,017 en CV, ±0,03 en réserve.
 
-## 1. Cartes livrées (mIoU officiel, seuil 0, sans post-traitement ; sorties de `reel*.py agg`)
-| filigrane | carte | CV 5 plis | pleines | partielles | réserve | pleines | partielles | IoU du trou, hors-pli / réserve |
-|---|---|---|---|---|---|---|---|---|
-| TrustMark | `p_mixr` (départ de la nuit) | 0,650 | 0,626 | 0,675 | 0,598 | 0,623 | 0,578 | |
-| TrustMark | **`f_s1`** (dans le candidat 22, 0,7695 public) | **0,735** | 0,716 | 0,755 | **0,678** | 0,673 | 0,682 | 0,485 / 0,402 |
-| StegaStamp | `p_mixr` | 0,833 | 0,872 | 0,795 | 0,842 | 0,834 | 0,851 | |
-| StegaStamp | **`f_s1`** | **0,913** | 0,927 | 0,900 | **0,907** | 0,898 | 0,919 | 0,863 / 0,804 |
-| PixelSeal | `f_deca` (tronc décodeur affiné) | 0,643 | 0,663 | 0,625 | 0,627 | 0,670 | 0,553 | |
-| PixelSeal | **`f_s1` + `f_deca`** (moyenne) | **0,669** | 0,687 | 0,652 | **0,656** | 0,692 | 0,594 | 0,387 / 0,442 (U-Net seul) |
-Sortie collée pour les trois lignes livrées :
+## 1. Cartes à prendre (h200b `~/eac/t1/t1-reel/`, clés `names` / `logits` float16 N x 128 x 128, > 0 = filigrané)
+| filigrane | dossier | composition | CV | réserve | IoU du trou hors pli / réserve |
+|---|---|---|---|---|---|
+| TrustMark | **`tm_x2+c5+r50b+3hp/`** | moyenne de 6 : `f_x2`, `f_c5`, `f_r50b` + 3 à canaux passe-haut `f_x1hp`, `f_xhp3`, `f_xhp5` | 0,787 | **0,743** | 0,587 / 0,506 |
+| StegaStamp | **`ss_f_x1+f_c4/`** | moyenne de 2 | 0,931 | 0,923 | 0,910 / 0,846 |
+| PixelSeal | **`ps_pop_C/`** | par population prédite : pleines = 9 généralistes ; partielles = `f_st`, `f_x7st`, `f_x8st`, `f_x2`, `f_x3` | 0,727 | 0,703 | 0,492 / 0,522 |
+Fichiers par population, pour le mélange de t1-assemblage : `ps_pleines_9/`, `ps_partielles_5/`, `tm_pleines_x2+x1hp/` ; chaque modèle seul :
+`ps_modeles/<tag>/`, `tm_modeles/<tag>/`. Écarts appariés contre les cartes livrées précédemment (sortie de `cmp.py`) :
 ```
-| f_s1 | trustmark | 5 | 0.725 | 0.735 | 0.716 | 0.755 | 0.993 | 0.000 | 0.735 | 0.678 | 0.673 | 0.682 | 0.678 |
-| f_s1 | stegastamp | 5 | 0.910 | 0.913 | 0.927 | 0.900 | 0.999 | -0.750 | 0.915 | 0.907 | 0.898 | 0.919 | 0.907 |
-| f_s1+f_deca | pixelseal | 5 | 0.668 | 0.669 | 0.687 | 0.652 | 0.989 | -0.500 | 0.670 | 0.656 | 0.692 | 0.594 | 0.652 |
+TrustMark tm_x2+c5+r50b+3hp contre tm_f_x2+f_c5+f_r50b : hors réserve 0.7874 contre 0.7849 +0.0025 IC95 [-0.0072 ; +0.0118] ; réserve 0.7426 contre 0.7198 +0.0228 IC95 [+0.0013 ; +0.0495]
+PixelSeal ps_pop_C contre ps_pop_x2+x2b+x1+dx__st+x2 : hors réserve 0.7267 contre 0.7232 +0.0035 IC95 [-0.0013 ; +0.0082] ; réserve 0.7029 contre 0.6973 +0.0056 IC95 [-0.0028 ; +0.0140]
+PixelSeal ps_pop_x2+x2b+x1+dx__st+x2 contre ps_f_x2+f_x1+f_dx : hors réserve +0.0195 IC95 [+0.0066 ; +0.0336] ; réserve +0.0128 IC95 [-0.0009 ; +0.0305]
 ```
-(colonnes : variante, filigrane, plis, CV sans moyenne sur symétries, CV, CV pleines, CV partielles, AUC, seuil réglé en CV, CV à ce seuil, réserve, réserve
-pleines, réserve partielles, réserve au seuil CV.) Fichiers : h200b `~/eac/t1/t1-reel/f_s1/pred_{train,test}_{trustmark,stegastamp}.npz` et
-`f_s1+f_deca/pred_{train,test}_pixelseal.npz` ; copies `E:\EAC-lab\t1s\t1-reel\preds\` ; poids des 5 plis TrustMark et StegaStamp `weights\`.
-Vérification de `predict.py` (régénère les prédictions depuis les poids) sur TrustMark `f_s1a` : `réserve recalculée depuis les poids, mIoU seuil 0 : 0.6632`
-(tableau : 0,663), `masques identiques à 0.9999992819393382`.
+Après assemblage (mesure de t1-assemblage, contre le candidat 38) : TrustMark à un modèle passe-haut +0,0027 en réserve, PixelSeal `ps_pop_C` +0,0088 ;
+les gains portés par les partielles sont en grande partie déjà captés par le vote par région et les boîtes. Ce qui reste à gagner est le trou des pleines.
+Vérification de `predict.py` (régénère depuis les poids) sur PixelSeal `f_x2` : `réserve recalculée depuis les poids, mIoU seuil 0 : 0.6819` (tableau 0,682) ;
+`test : 340 images, masques identiques sur 0.9999989 des cases`. Poids de tous les modèles livrés sur le PC (`weights\`, 5 plis chacun).
 
-Vérification de `predict.py` sur un modèle final (PixelSeal `f_x2`, 22/11 5 h 27) : `réserve recalculée depuis les poids, mIoU seuil 0 : 0.6819` (tableau : 0,682) ;
-`test : 340 images, masques identiques sur 0.9999989 des cases` par rapport au fichier livré.
-
-### Matinée du 22/11 (après le candidat 38) : fichiers par population pour t1-assemblage
-| fichier (h200b `~/eac/t1/t1-reel/`) | pour | CV / réserve de la population | IoU du trou hors pli / réserve |
+## 2. Progression des cartes livrées (CV / réserve)
+| étape | TrustMark | StegaStamp | PixelSeal |
 |---|---|---|---|
-| `tm_pleines_x2+x1hp/` (f_x2 + f_x1hp, canaux passe-haut) | pleines TrustMark | 0,775 / 0,738 (carte d'avant 0,774 / 0,713) | 0,584 / 0,519 (avant 0,582 / 0,468) |
-| `ps_pleines_9/` (9 généralistes) | pleines PixelSeal | 0,723 / 0,732 (avant 0,717 / 0,723) | 0,492 / 0,522 |
-| `ps_partielles_5/` (st, x7st, x8st, x2, x3) | partielles PixelSeal | 0,730 / 0,652 | |
-| `tm_x1hp+x2+c5+r50b/` | TrustMark entier | 0,783 / 0,738 (+0,018 réserve, IC95 [+0,005 ; +0,034]) | |
-Après assemblage (mesure de t1-assemblage), les gains portés par les partielles disparaissent presque (le vote par région les corrigeait déjà) ; ce qui reste à gagner est le trou des pleines. Le seul levier mesuré qui le bouge : les **canaux passe-haut en entrée** sur TrustMark, et un **modèle TrustMark dédié
-aux trous** (`tmhole` : 90 % de pleines fabriquées aux vraies formes de trous, affinage sur les vraies pleines seulement, canaux passe-haut ; à 7 000 pas,
-trou 0,560 / 0,458 contre 0,502 / 0,420 pour le généraliste). Fermés ce matin, mesures sur #3 : spécialistes pleines / partielles sans canaux passe-haut ;
-`f_st` dans la moyenne des pleines ; adaptation au test image par image (−0,02 hors réserve, −0,02 à −0,06 en réserve) ; modèle PixelSeal dédié aux trous
-avec canaux passe-haut (en dessous du généraliste) ; `tmhole` après affinage (trou 0,553 / 0,475, l'avance disparaît). **Carte TrustMark finale :
-`tm_x2+c5+r50b+3hp/`** (6 modèles dont 3 à canaux passe-haut) : réserve 0,743 contre 0,720, +0,023 IC95 [+0,001 ; +0,050] ; hors réserve +0,003. Chaque modèle PixelSeal seul : `ps_modeles/<tag>/`.
+| départ de la nuit `p_mixr` | 0,650 / 0,598 | 0,833 / 0,842 | 0,489 / 0,514 |
+| première couche pleine résolution `f_s1` (candidat 22) | 0,735 / 0,678 | 0,913 / 0,907 | 0,669 / 0,656 (avec tronc décodeur) |
+| toile réelle + tête résidu `f_x1` | 0,769 / 0,696 | 0,931 / 0,923 | 0,682 / 0,661 |
+| moyennes de modèles | 0,785 / 0,720 | 0,931 / 0,923 | 0,704 / 0,685 |
+| moyenne par population (PixelSeal) | | | 0,723 / 0,697 |
+| final | 0,787 / 0,743 | 0,931 / 0,923 | 0,727 / 0,703 |
 
-## 2. La recette qui a produit ces cartes
-1. **Exemples fabriqués fidèles**, vérifiés par mesure sur le réel : pleine = image filigranée en entier puis pixels propres recollés dans un trou ;
-   rectangle = image source filigranée dans son propre cadre puis collée ; objet = filigrane au cadre de l'image entière gardé sur une forme. Fonds =
-   images du hackathon des deux autres filigranes (propres pour le nôtre), formes = vrais masques des autres filigranes.
-2. **Toile agrandie** (découverte, puis précisée par t1-residus) : le filigrane réel n'est pas calculé sur le cadre 512 mais sur une toile carrée de côté
-   512 + s (s médian 32, jusqu'à ~80 ; rognage décentré ; rectangles : + 4 px). Preuve StegaStamp, 40 pleines : réel = bits justes 0,959, marge du décodeur
-   5,87, logit d'un réseau « fabriqué seul » +9,1 au centre et +4,8 aux bords ; kit au cadre 512 : 0,988 / 6,92 / +11,7 / +12,5 ; kit sur toile +8 px : 0,984
-   / 6,45 / +9,3 / +4,4. Effet : un réseau entraîné sans aucune vraie image passe de 0,658 à 0,820 (StegaStamp) et de 0,512 à 0,617 (TrustMark) en CV.
-3. **Première couche en pleine résolution** (pas 1 au lieu de 2, poids pré-entraînés gardés) : le levier principal. À nombre de pas égal sur fabriqué seul,
-   TrustMark réserve 0,691 à 8000 pas contre 0,588 à 20 000 pas pour la couche de pas 2 ; StegaStamp 0,891 contre ~0,83 ; PixelSeal : le U-Net apprend
-   enfin (0,612 ; avec le pas 2 il restait à AUC 0,66).
-4. **Pré-entraînement long sur fabriqué (8000 pas), puis affinage 1000 pas sur les vraies images, 5 plis**, moyenne des plis pour la réserve et le test,
-   moyenne avec l'image retournée horizontalement (pas plus : 8 symétries font baisser la réserve TrustMark de 0,678 à 0,643).
+## 3. La recette (ce qui a marché, dans l'ordre de ce que ça a rapporté)
+1. **Première couche en pleine résolution** (pas 1 au lieu de 2, poids pré-entraînés gardés) : le levier principal. À pas égal sur fabriqué seul,
+   TrustMark réserve 0,691 à 8000 pas contre 0,588 à 20 000 pas ; PixelSeal : le U-Net apprend enfin (avec le pas 2, AUC 0,66).
+2. **Toile agrandie** (découverte ici, précisée par t1-residus) : le filigrane réel est calculé sur une toile carrée de 512 + s px (s médian 32, jusqu'à ~80
+   pour TrustMark, ~100 pour PixelSeal), rognée au hasard. Un réseau entraîné sans aucune vraie image passe de 0,658 à 0,820 (StegaStamp) et de 0,512 à
+   0,617 (TrustMark) en CV.
+3. **Exemples fabriqués fidèles** : pleine = image filigranée en entier puis pixels propres recollés dans un trou aux vraies formes, gardées à leur place
+   (`--pshift 0.15`) ; rectangle = source filigranée dans son cadre puis collée ; objet = filigrane de l'image entière gardé sur une forme. Fonds = images
+   des deux autres filigranes.
+4. **Tête d'appoint qui prédit le résidu signé** (`--aux 1.0`, idée du critique, tour 3) : réserve TrustMark 0,707 contre 0,678 à 8000 pas.
+5. **Pré-entraînement long sur fabriqué (16 000 à 24 000 pas), affinage 1000 pas sur le réel, 5 plis**, moyenne des plis, image + image retournée.
+6. **Moyennes de modèles de la même recette, autres graines et autres exemples fabriqués** : +0,01 à +0,02 en CV à chaque fois.
+7. **PixelSeal : première couche à filtres passe-haut appris** (`--st 1 --hp 2`) pour les partielles : partielles 0,719 contre 0,701 ; vrais rectangles de
+   petit côté < 64 px lus à 0,289 contre 0,202 ; mais pleines 0,666 contre 0,706. D'où la **moyenne par population** (`ens2.py`) : population décidée par
+   la prédiction (plus de la moitié des cases > 0), juste sur 170 / 170 images.
+8. **TrustMark : canaux passe-haut en entrée** (`--hp 2`, image moins sa version floutée, 3 échelles) : CV égale, réserve nettement meilleure (`f_x1hp`
+   0,746 seul contre 0,729 pour le meilleur modèle sans ; trou des pleines en réserve 0,519 contre 0,468 dans la moyenne avec `f_x2`). Six modèles de ce
+   type entraînés : réserve 0,746, 0,720, 0,723, 0,746, 0,735 ; la moyenne à 3 (0,743) fait mieux que la moyenne à 5 (0,739).
 
-## 3. Ce qui améliore encore (mesuré à pas égal, pas encore livré)
-| variante TrustMark (un modèle, fabriqué seul, 8000 pas) | réserve | pleines | IoU du trou, hors réserve / réserve |
-|---|---|---|---|
-| `g_s1` : ancienne toile étroite | 0,691 | 0,683 | non relevé (0,39 à 5000 pas) |
-| `g_c1` : toile réelle + trous à leur vraie place | 0,678 | 0,686 | 0,529 / 0,424 |
-| `g_c4` : idem + tête d'appoint qui prédit le résidu signé (idée du critique, tour 3) | **0,707** | 0,726 | 0,549 / 0,496 |
-StegaStamp avec la recette `g_c4`, à 5000 pas : réserve 0,901, trou 0,890 hors réserve (`g_s1` finissait à 0,891 / 0,839). Les trois filigranes sont
-relancés avec cette recette (`g_x1` / `f_x1`, 12 000 à 16 000 pas ; puis `x2` à 20 000 – 24 000 pas, autre graine). **Cartes à prendre aujourd'hui** :
-| livré (dossier h200b `~/eac/t1/t1-reel/`, sortie de `ens.py`) | CV | réserve | IoU du trou, hors-pli / réserve |
-|---|---|---|---|
-| TrustMark `tm_f_x2+f_c5+f_r50b/` (moyenne de trois) | **0,785** | 0,720 | 0,582 / 0,468 |
-| StegaStamp `ss_f_x1+f_c4/` (moyenne de deux) | **0,931** | 0,923 | 0,910 / 0,846 |
-| PixelSeal `ps_pop_x2+x2b+x1+dx__st+x2/` (moyenne par population, voir ci-dessous) | **0,723** | 0,697 | 0,487 / 0,509 |
-Modèles seuls, CV / réserve : TrustMark `f_x1` 0,769 / 0,696, `f_c5` 0,775 / 0,699, `f_r50` (ResNet-50) 0,762 / 0,703, `f_x2` (24 000 pas) 0,776 / 0,729 ;
-PixelSeal `f_x1` 0,683 / 0,651, `f_x2` (20 000 pas, autre graine) 0,703 / 0,682, `f_dx` (tronc décodeur) 0,664 / 0,649.
-- **PixelSeal, moyenne par population** (`ens2.py`) : images prédites pleines (plus de la moitié des cases filigranées) = moyenne de `f_x2`, `f_x2b`,
-  `f_x1`, `f_dx` ; prédites partielles = moyenne de `f_st` et `f_x2`. Population juste sur 170 / 170 images. `f_st` = même recette avec une première couche à
-  filtres passe-haut appris (`--st 1 --hp 2`) : seul 0,694 / 0,678, mais partielles 0,719 (contre 0,701) et vrais rectangles de petit côté < 64 px lus à
-  0,289 (contre 0,202). Carte : pleines 0,721, partielles 0,725 ; petits rectangles 0,286 (carte d'avant : 0,142).
-- **TrustMark ne gagne plus avec le nombre de pas** : avant affinage, sur les 136 vraies images, 0,780 à 16 000 pas et 0,779 à 24 000 ; l'affinage sur le
-  réel n'ajoute plus rien (0,769 à 0,776 en CV). PixelSeal gagne encore à l'affinage (0,673 avant, 0,703 après).
-- **Affinage deux fois plus long** (2000 pas, 8 vraies images sur 16) : +0,005, +0,005, +0,001, +0,002 sur quatre répliques : sans effet établi.
+## 4. Ce qui a échoué (tout est mesuré, à pas égal contre un témoin)
+- **Cartes tirées du message ou du décodeur** (motif re-calculé, gradient, accord position par position, effaceur, effacement par fenêtres, re-tamponnage) :
+  AUC 0,49 à 0,77 contre 0,93 à 0,99 pour le réseau. Le contenu écrase un signal de 1,3 niveau sur 255.
+- **Tronc = décodeur du filigrane** : utile seulement pour PixelSeal, en moyenne (`f_dx`).
+- **Variantes d'entraînement sans effet ou nuisibles** : drapeau pleine/partielle, Lovász, perte à 512 px, 8 symétries à l'inférence, mélange de vraies
+  images, greffes SAM, trous alignés sur SAM, force attendue du résidu en entrée, sous-réduction s2, tige passe-haut sur TrustMark.
+- **Pistes « trous » d'Adem**, lues à 8000 pas (mIoU hors réserve / réserve, témoin `g_c5` 0,756 / 0,683) : petits trous sur-représentés 0,757 / 0,694
+  (neutre, PixelSeal négatif après affinage 0,673 / 0,645 contre 0,683 / 0,651) ; trous déplacés au hasard 0,749 / 0,704 (signes opposés) ; paires
+  contrefactuelles de Yassir 0,747 / 0,686 (négatif) ; classifieur vraie / fabriquée AUC 0,51 au bord et dans le trou (rien ne trahit le fabriqué).
+- **Tour PixelSeal du vérificateur** : petits rectangles sur-représentés 0,682 contre 0,683 ; perte doublée près des frontières 0,769 / 0,701 contre
+  0,762 / 0,703 ; détecteur local de vignettes AUC 0,74 / 0,86 / 0,89, sous la carte de `f_st` sur le même test (0,84 / 0,93 / 1,00) ; adaptation au test
+  image par image −0,02 hors réserve, −0,02 à −0,06 en réserve (elle grossit la zone et casse des images justes).
+- **Spécialistes** : pleines seules (`xfu` 0,702 / 0,719 sur les pleines contre 0,723 / 0,732 pour la moyenne), partielles seules (`xsp` 0,702 / 0,621),
+  modèle PixelSeal dédié aux trous avec canaux passe-haut (en dessous du généraliste au même pas). **Modèle TrustMark dédié aux trous** (`tmhole`, 90 % de
+  pleines fabriquées, affinage sur les vraies pleines seulement) : avant affinage, trou 0,560 / 0,458 contre 0,502 / 0,420 ; après affinage 0,553 / 0,475,
+  et il fait baisser la réserve dans la moyenne (0,737 contre 0,743).
+- **Pseudo-étiquetage des images de test** : 0,763 contre 0,775 et 0,759 contre 0,762. **Affinage deux fois plus long** : +0,001 à +0,005, non établi.
+- **Post-traitement** (seuils, composantes, remplissage, rectangle, « jamais vide ») : +0,00 à +0,006 en CV emboîtée. Seuil relatif pour les images
+  prédites partielles sans aucune case (logit lissé > maximum − 1) : PixelSeal 0,7280 / 0,6974 contre 0,7232 / 0,6973, TrustMark 0,7891 / 0,7270 contre
+  0,7849 / 0,7198 ; transmis au vérificateur, non livré dans mes fichiers.
 
-## 4. Mission « trou propre des pleines » : ce qui est établi
-- Sur `f_s1` TrustMark, par taille de trou (hors-pli) : < 2 % de l'image 0,24 ; 2-8 % 0,48 ; 8-20 % 0,65 ; > 20 % 0,60. Le meilleur seuil par image
-  ne donnerait que 0,58 : la carte limite, pas le seuil.
-- Critique tour 3, mesuré sur ces prédictions : les erreurs sont des régions entières, pas des bords (corriger toutes les cases à 2 cases du bord : 0,485 →
-  0,520 au mieux ; 48 % des erreurs à plus de 16 px du bord) ; les petits trous sont « avalés ».
-- `alpha.py` : en multipliant le résidu par 0,7 / 1 / 1,5 / 2 sur des pleines fabriquées fixes, l'IoU du trou vaut 0,498 / 0,627 / 0,689 / 0,694, et pour les
-  trous < 2 % : 0,186 / 0,349 / 0,387 / 0,385. Doubler le signal ne sauve pas les petits trous : c'est la décision du réseau sur une petite zone qui limite.
-- `detect.py` : la force du résidu TrustMark varie de ±76 % dans une image ; les faux trous tombent là où l'encodeur écrit peu (0,90 niveau contre 1,43).
-- Formes (`shapes.py`, `band.py`) : aucune pleine n'a une zone filigranée en rectangle plus petit que l'image ; mon décalage aléatoire supprimait les trous
-  qui longent 3 ou 4 côtés (1 % contre 31 % dans le réel), corrigé (`--pshift 0.15`).
-- **Taille des vrais trous** (`trous.py`) : médiane 5,6 % de l'image (TrustMark), 5,9 % (PixelSeal) ; 25 % et 20 % sous 2 %. Les trous fabriqués suivent
-  la même loi (vraies formes des deux autres filigranes).
-- **Les petits trous sont déjà mal lus sur le fabriqué** (`bandes.py`, modèle `g_c5` entraîné sur fabriqué seul, IoU du trou fabriqué / réel) : < 1 % :
-  0,28 / 0,49 ; 1–2 % : 0,60 / 0,07 (4 images) ; 2–4 % : 0,69 / 0,45 ; 4–8 % : 0,65 / 0,59 ; 8–20 % : 0,77 / 0,73 ; > 20 % : 0,87 / 0,78.
-- **Un classifieur ne sépare pas vraies pleines et pleines fabriquées** (`disc.py`, vignettes 64 px, ResNet-34 première couche en pleine résolution, 5 plis
-  par image) : AUC 0,541 loin du trou, 0,508 au bord, 0,510 dans le trou. Rien de propre au trou ne trahit le fabriqué : pas d'inpainting génératif.
-- **Petits rectangles PixelSeal** (`p3a.py`, `rects.py`) : 74 % des vrais rectangles ont un petit côté < 64 px ; IoU de leur zone filigranée 0,20 (`f_x2`).
-  Sur des rectangles fabriqués déjà vus à l'entraînement : 0,095 sous 32 px, 0,254 de 32 à 64 px, 0,500 de 64 à 128 px, 0,789 au-delà. Limite de signal.
+## 5. Ce qui est établi sur les trous et les petites zones
+- Les erreurs sont des régions entières, pas des bords (critique tour 3) ; doubler le résidu ne sauve pas les petits trous (`alpha.py`) : c'est la
+  décision du réseau sur une petite surface qui limite, pas la force du signal.
+- Taille des vrais trous : médiane 5,6 % (TrustMark), 5,9 % (PixelSeal) ; 25 % et 20 % sous 2 %. Les petits trous sont déjà mal lus sur le fabriqué
+  (< 1 % : 0,28 fabriqué / 0,49 réel), donc ce n'est pas un écart de domaine.
+- Petits rectangles PixelSeal : 74 % des vrais rectangles ont un petit côté < 64 px ; même fabriqués et vus à l'entraînement, ils sont lus à 0,095 sous
+  32 px et 0,254 de 32 à 64 px. Sur la carte PixelSeal livrée, les pleines au trou < 8 % portent 36 % de la perte, les rectangles < 3 % en portent 26 %.
+- TrustMark : la validation croisée est optimiste de 0,05 à 0,08 sur la réserve, dès les modèles entraînés sans aucune vraie image (0,782 / 0,702) ; aucune
+  fuite par la banque de formes (`jumeaux.py` : aucun masque identique entre filigranes). Seule la réserve TrustMark s'est retrouvée au public.
 
-## 5. Ce qui a échoué, et pourquoi (tout est mesuré)
-- **Cartes tirées du message ou du décodeur**, toutes à AUC 0,49 à 0,77 contre 0,93 à 0,99 pour le réseau : corrélation avec le motif re-calculé (même dans
-  le bon cadre), motif moyen du message, gradient du décodeur, accord du décodeur position par position, « effaceur » TrustMark, effacement par fenêtres lu
-  par le décodeur, carte de re-tamponnage de t1-residus en fusion (+0,007). Le contenu de l'image écrase un signal de 1,3 niveau sur 255.
-- **Tronc = décodeur du filigrane** : TrustMark CV 0,599 contre 0,650 au même stade (carte trop grossière, 8 px par case) ; utile seulement pour PixelSeal, en
-  moyenne avec le U-Net.
-- **Sans effet ou nuisible à pas égal** : drapeau pleine/partielle en entrée (0,603 contre 0,629) ; modèle dédié aux pleines (trou 0,256 contre 0,33) ;
-  perte de Lovász (approximation dérivable de l'IoU) générale ou sur la classe propre ; perte sur la carte 512x512 avant regroupement (instable) ; aucune
-  réduction sur deux étages (0,614 contre 0,640) ; tige à filtres passe-haut ; « force attendue du résidu » en canal d'entrée (fabriqué 0,73, réserve 0,50 :
-  ne se transfère pas au réel) ; mélange de deux vraies images ; moyenne de plusieurs variantes d'un même modèle ; greffes d'objets réalistes par masques
-  SAM (partielles 0,742 contre 0,751) ; trous alignés sur des régions SAM (hypothèse réfutée : IoU 0,28 entre régions SAM et vrais trous).
-- **Pseudo-étiquetage des images de test** (4 images de test par lot, étiquetées par le modèle du même pli) : 0,763 contre 0,775 et 0,759 contre 0,762.
-- **Post-traitement** (seuils par population, petites composantes, remplissage, rectangle, « jamais vide ») : +0,00 à +0,006 en CV emboîtée.
-- **Recalage de rectangle par le décodeur** en recherche locale : IoU de boîte 0,82 → 0,86 seulement (fait mieux, en balayage complet, par t1-residus).
-- Dégradations après filigrane (JPEG, WebP, flou, bruit, redimensionnement, zoom, rotation) : aucune n'explique l'écart au réel ; c'était la toile.
-- Incident : h200d préemptée vers 22 h 25 avec des poids non rapatriés (retrouvés au redémarrage). Depuis, poids et prédictions sont copiés sur le PC à chaque
-  étape ; des affinages sont aussi tombés par manque de mémoire GPU quand neuf entraînements partageaient la carte (relance automatique ajoutée).
+## 6. Mesuré / supposé ; critiques
+Mesuré : tout chiffre de ce rapport, avec la commande qui l'a produit (`reel12.py agg`, `ens.py`, `ens2.py`, `cmp.py`, `trous.py`, `bandes.py`, `disc.py`,
+`p3a.py`, `p5.py`, `p5cmp.py`, `rects.py`, `pertes.py`, `rel.py`, `adapt.py`, journaux `log.jsonl`). Supposé : que les 30 % publics du test ressemblent au
+train (part prédite filigranée 0,497 à 0,50 au test comme au train) ; que la loi de la toile mesurée sur TrustMark vaut pour StegaStamp.
+Critiques séparées : tours 1 à 3 (`reports/critique/t1-reel-tour1.md` à `-tour3.md`), tour PixelSeal du vérificateur (`t1-tour-pixelseal.md`) ; le
+vérificateur a recalculé et confirmé la carte PixelSeal par population (+0,0195 hors réserve, IC95 [+0,007 ; +0,033]). Tableau des pistes sur l'issue #3.
 
-## 6. Mesuré / supposé
-Mesuré : tout chiffre de ce rapport, avec la commande qui l'a produit (`agg`, `holes.py`, `alpha.py`, `pad.py`, `shapes.py`, `band.py`, `fuse.py`, journaux
-`log.jsonl` des entraînements). Bruit : ±0,017 en CV (136 images), ±0,03 sur la réserve (34 images), davantage par population.
-Supposé : que la loi de la toile mesurée sur TrustMark vaut pour StegaStamp (non mesuré) ; que les 30 % publics du test ressemblent au train (la part
-prédite filigranée est la même, 0,49 à 0,50) ; que l'avance de `g_c4` à 8000 pas se retrouve après affinage (en cours de mesure).
-
-## 7. Critiques (un agent séparé à chaque tour)
-- Tour 1 (`reports/critique/t1-reel-tour1.md`) : 4 défauts corrigés avant le premier job (fonds COCO attribués presque tous aux objets, confusion avec le
-  filigrane des autres méthodes dans les exemples « alignés », passe-haut calculé en demi-précision, plantage d'une option).
-- Tour 2 (`t1-reel-tour2.md`) : test de la marge par image, calibré sur fabriqué ; reprise aux points de contrôle corrigée.
-- Tour 3 (`t1-reel-tour3.md`) : diagnostic « régions entières, pas bords » ; jeu fabriqué de contrôle rendu fixe ; tête d'appoint du résidu (retenue).
-
-- Tour PixelSeal (`t1-tour-pixelseal.md`, vérificateur) : P3b (petits rectangles sur-représentés à l'affinage) sans effet, 0,682 contre 0,683 ; P2 (perte
-  doublée près des frontières, TrustMark) 0,769 / 0,701 contre 0,762 / 0,703, non retenu ; P5 (classifieur local de vignettes 64 px, 12 000 pas) : AUC sur
-  vrais rectangles 0,738 / 0,864 / 0,894 selon le petit côté (< 32, 32–64, 64–128 px), signal présent et transférable.
-- Pistes « trous » d'Adem, à pas égal contre `g_c5` / `g_x1`, lues à 8000 pas sur le réel (mIoU hors réserve / réserve ; témoin 0,756 / 0,683) : petits
-  trous sur-représentés (`--hsmall 0.4`) 0,757 / 0,694, neutre ; trous déplacés au hasard (`--pshift 1.0`) 0,749 / 0,704, signes opposés ; canaux passe-haut
-  (`--hp 2`) 0,771 contre 0,772 à 11 000 pas, neutre ; paires contrefactuelles de Yassir (`--cf 0.1`) 0,747 / 0,686, négatif. Tableau complet sur l'issue #3.
-
-- Panne du 22/11 vers 5 h 15 : h200f, h200g, h200h ne répondent plus. Perdu : PixelSeal `x4`, les affinages de `g_r50`, `g_x1h` (PixelSeal) et `g_x1hp`
-  (TrustMark). Relancé sur h200, h200b, h200d, h200e. Sur h200 et h200b, l'environnement Python est `~/eac/t1/.venv` (celui de `hermes` n'y est pas lisible).
+## 7. Incidents
+- h200d préemptée vers 22 h 25 (poids retrouvés au redémarrage) ; depuis, poids et prédictions copiés sur le PC à chaque étape.
+- Panne des nœuds 6 à 10 vers 5 h 15 (h200f, g, h) : perdu un PixelSeal à 15 000 pas et trois affinages, tous repris au retour des nœuds depuis leurs points
+  de contrôle. Sur h200 et h200b l'environnement Python est `~/eac/t1/.venv` ; ailleurs `/home/hermes/eac/kit/.venv`.
+- Deux lancements tombés par manque de mémoire graphique (cartes partagées avec T2 / T3) : la chaîne `c3.sh` relance désormais le pré-entraînement.
+- Tous les entraînements t1-reel arrêtés à 10 h 50, cartes rendues.
 
 ## 8. Pour reprendre
-`python reel11.py train --method <m> --suffix <réserves> --fold -1 --nreal 0 --s1 1 --bs 16 --aux 1.0 --pshift 0.15 --pblob 0.15 --steps 8000 --tag g`
-puis, pour f de 0 à 4 : `... --fold f --init g --nreal 6 --steps 1000 --lr 1e-4 --warm 0.1 --tag f`, puis `reel11.py agg --tag f --write 1`.
-Prédictions test depuis les poids : `python predict.py --method <m> --tags <variante>[+<variante>] --tta 2`.
+`bash c2.sh <filigrane> <réserves> <pas> <tag> "--s1 1 --bs 16 --aux 1.0 --seed <g> [--hp 2 | --st 1 --hp 2]" ""` : pré-entraînement `g_<tag>` sur fabriqué
+seul, affinage 5 plis `f_<tag>`, tableau `logs/agg_f_<tag>_<filigrane>.txt` et `runs/f_<tag>/<filigrane>/pred_{train,test}_<filigrane>.npz`.
+Moyennes : `python ens.py <filigrane> <dossiers…> --out <dossier>` ; par population : `python ens2.py <filigrane> --pleines <…> --partielles <…> --out <…>` ;
+comparaison appariée : `python cmp.py <filigrane> <nouveau> <base>`. Prédictions test depuis les poids : `python predict.py --method <m> --tags <a>[+<b>] --tta 2`.
